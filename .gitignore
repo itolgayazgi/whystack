@@ -1,0 +1,69 @@
+# ---------- Secrets (never commit) ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+secrets.json
+
+# ---------- .NET ----------
+bin/
+obj/
+*.user
+*.suo
+.vs/
+artifacts/
+TestResults/
+*.coverage
+*.trx
+
+# ---------- Node / pnpm ----------
+node_modules/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# ---------- Turborepo ----------
+.turbo/
+
+# ---------- Expo / React Native ----------
+.expo/
+.expo-shared/
+dist/
+web-build/
+*.jks
+*.keystore
+!debug.keystore
+
+# Android
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+
+# iOS
+ios/Pods/
+ios/build/
+ios/.xcode.env.local
+*.xcworkspace/xcuserdata/
+
+# ---------- Static site output (generated) ----------
+apps/site/out/
+apps/site/.cache/
+
+# ---------- Knowledge Pack artifacts (generated) ----------
+content/packs/**/*.wspack
+
+# ---------- IDE ----------
+.idea/
+*.swp
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+desktop.ini

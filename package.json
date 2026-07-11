@@ -1,0 +1,23 @@
+{
+  "name": "whystack",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WhyStack — an engineering learning platform that teaches why technologies exist.",
+  "packageManager": "pnpm@11.11.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "content:validate": "turbo run content:validate",
+    "api": "dotnet run --project apps/api/src/WhyStack.Api",
+    "api:test": "dotnet test apps/api/WhyStack.sln"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  }
+}

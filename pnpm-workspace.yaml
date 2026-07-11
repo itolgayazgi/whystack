@@ -1,0 +1,8 @@
+packages:
+  - "apps/client"
+  - "apps/site"
+  - "packages/*"
+
+# Metro (React Native's bundler) cannot resolve pnpm's symlinked node_modules.
+# Hoisting the dependency tree is the documented Expo + pnpm workaround (ADR-0007, ADR-0016).
+nodeLinker: hoisted
