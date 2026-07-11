@@ -1,23 +1,45 @@
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { PrimaryNavigation, useNavigationPlacement } from '../components/navigation/primary-navigation';
 import { fontAssets } from '../config/fonts';
 import { LanguageProvider } from '../state/language';
 import { ThemeProvider, useTheme } from '../state/theme';
 
 void SplashScreen.preventAutoHideAsync();
 
-function Chrome() {
-  // The status bar inverts with the scheme, so it has to sit inside ThemeProvider.
+/**
+ * The navigation shell. Sidebar first on a wide screen, bottom bar last on a phone — and note that
+ * this is a real reordering of the DOM/view tree, not a visual trick. Reading order and focus order
+ * follow the layout, which is what a screen reader and a keyboard actually traverse.
+ */
+function Shell() {
   const { colorScheme, color } = useTheme();
+  const placement = useNavigationPlacement();
+
   return (
     <>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.background } }} />
+      <View
+        style={{
+          flex: 1,
+          flexDirection: placement === 'side' ? 'row' : 'column',
+          backgroundColor: color.background,
+        }}
+      >
+        {placement === 'side' ? <PrimaryNavigation /> : null}
+
+        <View style={{ flex: 1 }}>
+          <Slot />
+        </View>
+
+        {placement === 'bottom' ? <PrimaryNavigation /> : null}
+      </View>
     </>
   );
 }
@@ -41,7 +63,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <LanguageProvider>
-            <Chrome />
+            <Shell />
           </LanguageProvider>
         </ThemeProvider>
       </SafeAreaProvider>

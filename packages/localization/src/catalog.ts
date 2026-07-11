@@ -21,8 +21,23 @@ export interface Messages {
   'empty.generic.title': string;
   'empty.generic.body': string;
 
+  'nav.learn': string;
+  'nav.settings': string;
+
+  'settings.title': string;
+  'settings.appearance': string;
+  'settings.appearance.followsSystem': string;
+
+  'learn.title': string;
+  'learn.empty.title': string;
+  'learn.empty.body': string;
+
   'language.app': string;
+  'language.app.hint': string;
   'language.content': string;
+  'language.content.hint': string;
+  'language.name.en': string;
+  'language.name.tr': string;
 
   /** Shown whenever content came back in a language other than the one asked for. Never suppressed. */
   'language.fallback.notice': string;
@@ -50,8 +65,26 @@ const en: Messages = {
   'empty.generic.title': 'Nothing here yet',
   'empty.generic.body': 'There is nothing to show on this screen at the moment.',
 
+  'nav.learn': 'Learn',
+  'nav.settings': 'Settings',
+
+  'settings.title': 'Settings',
+  'settings.appearance': 'Appearance',
+  'settings.appearance.followsSystem':
+    'Light and dark follow your device. There is no switch here on purpose — an app that disagrees with the system theme is an app you have to fight at night.',
+
+  'learn.title': 'Learn',
+  'learn.empty.title': 'No topics yet',
+  'learn.empty.body':
+    'Topics are written, reviewed and published from the content repository. The first ones land in Sprint 3. Nothing is broken — there is simply nothing here yet.',
+
   'language.app': 'Interface language',
+  'language.app.hint': 'Labels, buttons and messages.',
   'language.content': 'Content language',
+  'language.content.hint':
+    'Topics themselves. Independent of the interface — a topic may only exist in English, and you will be told when that happens.',
+  'language.name.en': 'English',
+  'language.name.tr': 'Türkçe',
 
   'language.fallback.notice': 'Shown in {returned} — not available in {requested}.',
   'language.fallback.reason.translation_not_available': 'This topic has not been translated yet.',
@@ -76,8 +109,26 @@ const tr: Messages = {
   'empty.generic.title': 'Burada henüz bir şey yok',
   'empty.generic.body': 'Bu ekranda şu an gösterilecek bir şey bulunmuyor.',
 
+  'nav.learn': 'Öğren',
+  'nav.settings': 'Ayarlar',
+
+  'settings.title': 'Ayarlar',
+  'settings.appearance': 'Görünüm',
+  'settings.appearance.followsSystem':
+    'Açık ve koyu tema cihazını izler. Burada bilerek bir anahtar yok — sistem temasıyla çelişen bir uygulama, geceleri seninle kavga eden bir uygulamadır.',
+
+  'learn.title': 'Öğren',
+  'learn.empty.title': 'Henüz konu yok',
+  'learn.empty.body':
+    'Konular içerik deposunda yazılır, incelenir ve yayımlanır. İlkleri Sprint 3’te gelecek. Bozuk bir şey yok — burada henüz bir şey yok, o kadar.',
+
   'language.app': 'Arayüz dili',
+  'language.app.hint': 'Etiketler, düğmeler ve mesajlar.',
   'language.content': 'İçerik dili',
+  'language.content.hint':
+    'Konuların kendisi. Arayüzden bağımsızdır — bir konu yalnızca İngilizce olabilir, ve bu olduğunda sana söylenir.',
+  'language.name.en': 'English',
+  'language.name.tr': 'Türkçe',
 
   'language.fallback.notice': '{returned} dilinde gösteriliyor — {requested} dilinde mevcut değil.',
   'language.fallback.reason.translation_not_available': 'Bu konu henüz çevrilmedi.',
