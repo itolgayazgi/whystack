@@ -20,6 +20,25 @@ pnpm --filter @whystack/client ios       # Expo Go on a physical iPhone (no Mac 
 There is no iOS simulator on Windows. iOS is tested through **Expo Go** on a physical device;
 binaries come from **EAS Build**. That constraint is the whole reason Expo was chosen.
 
+## Test
+
+```bash
+pnpm --filter @whystack/client test
+```
+
+Vitest, with `react-native` aliased to `react-native-web` — the same substitution Metro makes when it
+bundles for the browser. One test runner across the whole repo instead of pulling `jest-expo` in
+alongside it.
+
+**What this does not cover, stated plainly:** native-only rendering, gestures, real safe-area insets,
+and platform-specific files (`.ios.tsx` / `.android.tsx`). Native behaviour is verified on Expo Go, by
+a human. `jest-expo` would not have covered those either — it does not run on a device.
+
+**One trap, since it will bite the next person too.** `react-native-web` reads
+`document.documentElement.clientWidth`, not `window.innerWidth`. jsdom performs no layout, so it
+reports `0`, and every component believes it is on a 0px-wide phone — which makes every "compact" test
+pass at every width and prove nothing. `tests/helpers.tsx` sets both.
+
 ## Where things go
 
 | Folder | Holds |

@@ -10,8 +10,15 @@ import { useTheme } from '../../state/theme';
 // bottom navigation. The product meaning remains consistent. The presentation may adapt."
 //
 // The meaning — which areas exist, which one you are in — lives in PRODUCT_AREAS and in the pathname.
-// Only the arrangement changes with the screen. A phone that renders a desktop sidebar, or a desktop
-// that renders a bottom bar 2000px from where the eye is, are both the same mistake.
+// Only the arrangement changes with the screen.
+//
+// Items are tabs, not links, and that is an accessibility decision rather than a cosmetic one:
+// `aria-selected` is only meaningful on a tab. A link cannot carry "you are here" in ARIA, so a
+// screen reader user would have had nothing but the colour — which 09 Forbidden Pattern 06 forbids.
+//
+// The state is passed as `aria-selected`, NOT `accessibilityState`. react-native-web drops
+// accessibilityState silently: it renders the role and nothing else. Tests caught that; the eye did
+// not, because the colour still changed.
 
 function isActive(pathname: string, area: ProductArea): boolean {
   const href = area.href as string;
@@ -27,10 +34,8 @@ function NavItem({ area, orientation }: { area: ProductArea; orientation: 'row' 
   return (
     <Link href={area.href} asChild>
       <Pressable
-        accessibilityRole="link"
-        // Colour is never the only signal (09, Forbidden Pattern 06). Screen readers and anyone who
-        // cannot separate these two blues get "selected" from the state, not from the colour.
-        accessibilityState={{ selected: active }}
+        accessibilityRole="tab"
+        aria-selected={active}
         style={({ pressed }) => [
           {
             flexDirection: 'row',
@@ -95,15 +100,13 @@ function SidebarNavigation() {
   return (
     <View
       // `role`, not `accessibilityRole`: "navigation" is an ARIA landmark, and React Native's
-      // accessibilityRole list has no equivalent. The `role` prop maps to the landmark on web and
-      // degrades to the nearest native trait elsewhere, which is exactly the behaviour we want.
+      // accessibilityRole list has no equivalent. It is what lets a screen reader jump straight here.
       role="navigation"
       style={{
         width: 240,
         paddingTop: insets.top + space[24],
         paddingBottom: insets.bottom + space[24],
         paddingHorizontal: space[12],
-        gap: space[4],
         backgroundColor: color.surface,
         borderRightWidth: 1,
         borderRightColor: color.border,
@@ -118,9 +121,11 @@ function SidebarNavigation() {
         {t('home.title')}
       </Text>
 
-      {PRODUCT_AREAS.map((area) => (
-        <NavItem key={area.key} area={area} orientation="column" />
-      ))}
+      <View accessibilityRole="tablist" aria-orientation="vertical" style={{ gap: space[4] }}>
+        {PRODUCT_AREAS.map((area) => (
+          <NavItem key={area.key} area={area} orientation="column" />
+        ))}
+      </View>
     </View>
   );
 }
