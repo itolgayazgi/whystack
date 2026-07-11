@@ -1265,11 +1265,13 @@ Conceptual columns:
 Id
 Email
 NormalizedEmail
-EmailConfirmed
+IsEmailConfirmed
 PasswordHash
 DisplayName
 IsActive
 IsLocked
+LockedUntilUtc
+FailedLoginAttempts
 LastLoginAtUtc
 CreatedAtUtc
 UpdatedAtUtc
@@ -1277,10 +1279,26 @@ DeletedAtUtc
 RowVersion
 ```
 
+> **Corrections (2026-07-12, ADR-0017 implementation).**
+>
+> - `EmailConfirmed` → **`IsEmailConfirmed`**. This document's own Boolean Column Names rule requires an
+>   `Is` prefix and names bare participles (`Published`, `Deleted`) as bad. The rule wins over the example.
+> - **`LockedUntilUtc`** and **`FailedLoginAttempts`** added. `04` mandates lockout, and `IsLocked` alone
+>   cannot express it: a lock with no expiry is a denial of service any attacker can trigger against any
+>   account by guessing badly at it, and the victim — not the attacker — is the one locked out.
+> - There is **no `IsDeleted` column**. `DeletedAtUtc IS NULL` is the flag. Two columns meaning one thing
+>   are two columns that can disagree, and eventually do.
+
 Rules:
 
 - Passwords are never stored as plain text.
-- Email uniqueness must be enforced.
+- Email uniqueness must be enforced **by the database**, on `NormalizedEmail`, with a **filtered unique
+  index** (`WHERE DeletedAtUtc IS NULL`). Application-level checking cannot settle a race between two
+  concurrent registrations — both look, both find nothing, both insert. Only the index settles it.
+  The filter releases the address when an account is soft-deleted; without it, deletion would burn the
+  email permanently and the person could never return.
+- Normalisation is `ToUpperInvariant`, never `ToUpper`. In a Turkish culture `i` upper-cases to `İ`, so
+  a culture-sensitive normaliser would let the same address register twice on one machine and not another.
 - Deleted users require privacy-aware handling.
 - Display name should not be required for basic learning.
 - User records should avoid unnecessary personal data.
@@ -1371,23 +1389,40 @@ Conceptual columns:
 ```text
 Id
 UserId
+FamilyId
+RefreshTokenHash
+ReplacedBySessionId
 DeviceType
 Platform
-RefreshTokenHash
 CreatedAtUtc
 ExpiresAtUtc
-RevokedAtUtc
 LastUsedAtUtc
+RevokedAtUtc
+RevocationReason
 IpAddressHash
 UserAgentHash
 ```
 
+> **Addition (2026-07-12, ADR-0017 implementation).** `FamilyId`, `ReplacedBySessionId` and
+> `RevocationReason` were not in the original list, and **ADR-0008's reuse detection is impossible
+> without the first two.**
+>
+> **Rotation** replaces the refresh token on every use. **Reuse detection** is what turns rotation into
+> a defence: if a token that has *already been rotated* is presented again, exactly one of two things is
+> true — an attacker is replaying a stolen token, or the real user is — and both mean it leaked.
+>
+> `ReplacedBySessionId` is what makes a session *recognisably rotated*. `FamilyId` is what makes the
+> response correct: the entire chain descended from that sign-in is revoked, not just the replayed
+> token. Revoking only the replayed one leaves the thief holding a newer token in the same chain — still
+> signed in, while the victim is not.
+
 Rules:
 
 - Store token hashes, not raw tokens.
+- **Rotate on every use, and revoke the whole `FamilyId` on reuse** (ADR-0008).
 - Device metadata should be minimal.
-- Session revocation must be supported.
-- Sensitive metadata should be privacy-reviewed.
+- Session revocation must be supported, and must record **why**.
+- Sensitive metadata should be privacy-reviewed. IP address and user agent are stored **hashed**.
 
 ---
 
@@ -1404,12 +1439,20 @@ Id
 UserId
 Email
 EventType
-Succeeded
+IsSuccessful
 FailureReason
 CreatedAtUtc
 IpAddressHash
 UserAgentHash
 ```
+
+> **Correction (2026-07-12).** `Succeeded` → **`IsSuccessful`**, per this document's own Boolean Column
+> Names rule. Same defect as `Users.EmailConfirmed`.
+>
+> `UserId` is nullable and there is **no foreign key to `Users`**. A failed login against an address that
+> has no account is exactly the event worth recording, and an audit row must outlive the account it
+> describes — a cascade would delete the evidence along with the user, which is the opposite of what an
+> audit log is for.
 
 Event examples:
 
