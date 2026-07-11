@@ -203,7 +203,29 @@ Content contributions follow the editorial workflow in `10-content-architecture.
 
 ---
 
-## 12. Licensing
+## 12. Getting Started
+
+**Prerequisites:** Node 24 (`.nvmrc`), pnpm 11, .NET SDK 10 (`global.json`), Docker.
+
+```bash
+pnpm install
+./scripts/setup/dev-database.ps1     # SQL Server + connection string + migrations
+pnpm api                             # API      → /health, /health/ready
+pnpm --filter @whystack/client web   # Client   → http://localhost:8081
+```
+
+**Verify everything the way CI does:**
+
+```bash
+pnpm verify:all    # lint, design tokens, typecheck, 111 tests, .NET format + tests
+```
+
+No secret is ever written to a tracked file. `dev-database.ps1` generates the SQL Server password and
+stores the connection string in .NET user secrets; `infrastructure/docker/.env` is gitignored.
+
+---
+
+## 13. Licensing
 
 Full terms: **[`LICENSING.md`](LICENSING.md)**.
 
