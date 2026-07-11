@@ -69,7 +69,33 @@ jobs:
   api:
     name: API
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+
+    env:
+      # NOT a secret, and deliberately not stored as one. This database is created for this job,
+      # lives on the runner's private network, holds no data, and is destroyed minutes later.
+      # Putting it in GitHub Secrets would only mean pull requests from forks could not run the
+      # tests — trading real coverage for imaginary security. Do not reuse this value anywhere.
+      MSSQL_SA_PASSWORD: 'CiEphemeral_NotASecret_1!'
+      ConnectionStrings__WhyStackDatabase: 'Server=127.0.0.1,1433;Database=WhyStack;User Id=sa;Password=CiEphemeral_NotASecret_1!;Encrypt=True;TrustServerCertificate=True'
+
+    services:
+      # A real SQL Server, not an in-memory provider. An in-memory provider would happily accept a
+      # migration SQL Server rejects, and a health check against it would prove nothing.
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: 'CiEphemeral_NotASecret_1!'
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'CiEphemeral_NotASecret_1!' -C -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 20s
 
     steps:
       - uses: actions/checkout@v5
@@ -91,5 +117,18 @@ jobs:
       - name: Build
         run: dotnet build apps/api/WhyStack.sln --configuration Release --no-restore
 
+      # Migration validation (13-quality-assurance.md — "Clean database creation").
+      # The database here is empty, so this proves the migrations apply from nothing. A migration
+      # that only works against a database that already has the previous schema is a migration that
+      # will fail on the first fresh environment — usually production.
+      - name: Apply migrations to a clean database
+        working-directory: apps/api
+        run: |
+          dotnet tool restore
+          dotnet dotnet-ef database update \
+            --project src/WhyStack.Infrastructure \
+            --startup-project src/WhyStack.Api
+
+      # Includes the readiness check hitting the SQL Server service container above.
       - name: Test
         run: dotnet test apps/api/WhyStack.sln --configuration Release --no-build --verbosity normal
