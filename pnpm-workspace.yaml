@@ -3,6 +3,12 @@ packages:
   - "apps/site"
   - "packages/*"
 
+# pnpm blocks dependency install scripts by default — postinstall is the classic supply-chain
+# entry point. Every entry here is an explicit decision to let that package run code on install.
+allowBuilds:
+  # Vitest's bundler. Its install script places the platform-native binary; it cannot run without it.
+  esbuild: true
+
 # Metro (React Native's bundler) cannot resolve pnpm's symlinked node_modules.
 # Hoisting the dependency tree is the documented Expo + pnpm workaround (ADR-0007, ADR-0016).
 nodeLinker: hoisted

@@ -973,148 +973,84 @@ Names must remain consistent.
 
 ---
 
-# Web Application Structure
+# Client Application Structure
 
-The web application lives in:
+> **Supersedes the previous `Web Application Structure` and `Mobile Application Structure` sections.**
+> ADR-0001 consolidated them into **one** React Native application; ADR-0016 tools it with **Expo**.
+> Web, Android and iOS are render targets of this single application, not separate applications.
+
+The client application lives in:
 
 ```text
-apps/web/
+apps/client/
 ```
-
-The web application is responsible for the browser-based WhyStack experience.
 
 Approved structure:
 
 ```text
-apps/web/
+apps/client/
 │
 ├── src/
-│   ├── app/
-│   ├── screens/
-│   ├── features/
-│   ├── navigation/
-│   ├── layouts/
-│   ├── components/
+│   ├── app/          # Expo Router routes — file-based; the file tree IS the route tree
+│   ├── screens/      # Screen bodies, imported by routes
+│   ├── features/     # Feature-scoped logic (reading, roadmap, quiz, search…)
+│   ├── layouts/      # Reading canvas, table of contents, responsive shells
+│   ├── components/   # Presentational components not owned by packages/ui
 │   ├── hooks/
-│   ├── services/
+│   ├── services/     # API access, device services
 │   ├── state/
+│   ├── storage/      # Secure token storage, offline pack storage, local queue
 │   ├── assets/
 │   └── config/
 │
-├── public/
+├── public/           # Web-target static assets
 ├── tests/
+├── app.json          # Expo configuration
 ├── README.md
 └── package.json
 ```
 
----
-
-## Web Responsibilities
-
-The web application handles:
-
-- Public learning pages
-- Responsive reading experience
-- Web navigation
-- Browser routing
-- SEO where approved
-- Authentication UI
-- Roadmap UI
-- Search UI
-- Quiz UI
-- Offline pack management where supported
-- AI assistant UI entry points
-- Developer Lab UI
-- Architecture Explorer UI
-- Performance Lab UI
+**There is no `navigation/` folder.** Expo Router derives navigation from the file tree in `src/app/`,
+so a separate navigation module would be a second, divergent source of routing truth. Route-level
+configuration (layouts, tab and stack definitions) lives in `_layout.tsx` files inside `src/app/`.
+This is what maps the client onto the public URL structure required by ADR-0009
+(`/learn/{technology}/{version}/{topic-slug}`).
 
 ---
 
-## Web Non-Responsibilities
+## Client Responsibilities
 
-The web application must not:
+The client application handles:
+
+- The reading experience on all three targets
+- Responsive layout adaptation (`09` — web must not simply stretch the mobile UI)
+- Routing and deep links
+- Authentication UI and secure token storage
+- Roadmap, search, quiz and bookmark UI
+- Offline Knowledge Pack download and management
+- Local progress queue and sync
+- Accessibility: safe area, dynamic text, orientation, reduced motion
+- Developer Lab, Architecture Explorer and Performance Lab UI
+
+---
+
+## Client Non-Responsibilities
+
+The client application must not:
 
 - Own canonical educational content
 - Contain backend business rules
 - Contain AI provider secrets
 - Contain database logic
 - Approve content publication
-- Duplicate shared package code
-
----
-
-# Mobile Application Structure
-
-The mobile application lives in:
-
-```text
-apps/mobile/
-```
-
-The mobile application is responsible for Android and iOS.
-
-Approved structure:
-
-```text
-apps/mobile/
-│
-├── src/
-│   ├── app/
-│   ├── screens/
-│   ├── features/
-│   ├── navigation/
-│   ├── components/
-│   ├── hooks/
-│   ├── services/
-│   ├── state/
-│   ├── storage/
-│   ├── assets/
-│   └── config/
-│
-├── android/
-├── ios/
-├── tests/
-├── README.md
-└── package.json
-```
-
----
-
-## Mobile Responsibilities
-
-The mobile application handles:
-
-- Android learning experience
-- iOS learning experience
-- Mobile reading screens
-- Mobile roadmap navigation
-- Mobile search
-- Mobile authentication
-- Secure token storage
-- Offline Knowledge Pack storage
-- Local progress queue
-- Push notification placeholder if future approved
-- Mobile accessibility
-- Safe area handling
-- Dynamic text handling
-- Orientation handling
-- Mobile performance optimization
-
----
-
-## Mobile Non-Responsibilities
-
-The mobile application must not:
-
-- Own canonical educational content
-- Contain AI provider secrets
 - Sign Knowledge Packs
-- Approve editorial content
-- Store unnecessary sensitive data
 - Duplicate backend validation rules
 - Bypass API authorization
+- Duplicate shared package code
+- Hardcode design values — tokens come from `packages/theme`
 
 ---
+
 
 # Admin Application Structure
 
@@ -2724,8 +2660,8 @@ Content files must remain independent from application source code.
 Forbidden:
 
 ```text
-apps/web/src/content/
-apps/mobile/src/official-topics/
+apps/client/src/content/
+apps/client/src/official-topics/
 apps/api/src/HardcodedLessons/
 ```
 
@@ -2805,8 +2741,8 @@ Do not duplicate canonical content across applications.
 Forbidden:
 
 ```text
-apps/web/src/topics/csharp-intro.md
-apps/mobile/src/topics/csharp-intro.md
+apps/client/src/topics/csharp-intro.md
+apps/site/src/topics/csharp-intro.md
 ```
 
 Approved:

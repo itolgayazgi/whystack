@@ -1,7 +1,7 @@
 # WhyStack — Design Tokens
 
-- Version: 1.0.0
-- Status: Draft (pending implementation verification)
+- Version: 1.1.0
+- Status: Colour **verified** against WCAG AA (2026-07-11). Typography rendering still pending verification.
 - Owner: WhyStack Core Team
 - Parent: **`09-ui-design-system.md`** — that document owns the **rules**; this document owns the **values**.
 - Decided by: ADR-0013 (Typography Stack)
@@ -103,16 +103,16 @@ space.48=48 space.64=64 space.80=80 space.96=96
 | `surfaceMuted` | `#F4F2EF` |
 | `textPrimary` | `#1A1A18` |
 | `textSecondary` | `#55534E` |
-| `textMuted` | `#8A8781` |
+| `textMuted` | `#716E69` |
 | `border` | `#E6E3DE` |
 | `borderStrong` | `#CFCBC4` |
 | `accent` | `#1D5D8C` |
-| `success` | `#2E7D5B` |
-| `warning` | `#B0761E` |
+| `success` | `#2E7C5A` |
+| `warning` | `#96651A` |
 | `error` | `#B3423C` |
 | `info` | `#2D6A9F` |
 | `ai` | `#6A4FA3` |
-| `deprecated` | `#8A6D3B` |
+| `deprecated` | `#876A3A` |
 | `offline` | `#4A6B5C` |
 | `codeBackground` | `#F5F2EE` |
 | `codeText` | `#1A1A18` |
@@ -128,7 +128,7 @@ space.48=48 space.64=64 space.80=80 space.96=96
 | `surfaceMuted` | `#202126` |
 | `textPrimary` | `#E8E6E1` (warm off-white) |
 | `textSecondary` | `#A8A59E` |
-| `textMuted` | `#75726C` |
+| `textMuted` | `#8E8B85` |
 | `border` | `#2E2F35` |
 | `borderStrong` | `#43444B` |
 | `accent` | `#6FA8D6` |
@@ -143,9 +143,39 @@ space.48=48 space.64=64 space.80=80 space.96=96
 | `codeText` | `#E8E6E1` |
 | `focusRing` | `#6FA8D6` |
 
+### Contrast audit (2026-07-11) — **verified**
+
+Every text-bearing token was measured against **every surface it can land on**, in both schemes
+(WCAG 2.1 AA: 4.5:1 text, 3:1 non-text). Five tokens failed and were adjusted by changing lightness
+only — hue and saturation are unchanged, so the designed warmth is preserved. The worst-case
+background is `surfaceMuted` in light and `surfaceElevated` in dark.
+
+| Token | Was | Now | Worst ratio before | Worst ratio after |
+|---|---|---|---|---|
+| `light.textMuted` | `#8A8781` | **`#716E69`** | 3.21:1 ❌ | 4.54:1 ✅ |
+| `light.warning` | `#B0761E` | **`#96651A`** | 3.44:1 ❌ | 4.50:1 ✅ |
+| `light.success` | `#2E7D5B` | **`#2E7C5A`** | 4.47:1 ❌ | 4.53:1 ✅ |
+| `light.deprecated` | `#8A6D3B` | **`#876A3A`** | 4.34:1 ❌ | 4.53:1 ✅ |
+| `dark.textMuted` | `#75726C` | **`#8E8B85`** | 3.19:1 ❌ | 4.50:1 ✅ |
+
+`success` and `deprecated` were missed by a first, hand-listed audit that only checked them against
+`background` and `surface`. They fail only on `surfaceMuted` — a card on a muted panel. The audit is
+therefore **combinatorial, not hand-listed**: `packages/theme/src/contrast.test.ts` enumerates every
+text token × every surface, so no pair can be forgotten again.
+
+`border` (1.24:1) and `borderStrong` (1.56:1) do **not** meet 3:1 and are **knowingly left as they are**.
+WCAG 1.4.11 applies to visual information *required to identify* a component or state; a decorative
+separator between blocks of already-legible content is exempt. Raising them to 3:1 would produce hard
+grey rules and destroy the paper feel `09` asks for.
+
+> **This creates an open obligation, not a free pass:** the moment a control's boundary is the *only* thing
+> identifying it — a text input, a checkbox, an unfilled button — neither token may be used for that boundary,
+> because both fail 3:1. A dedicated interactive-boundary token must be decided before the first form ships
+> (Sprint 2, authentication UI). See Open items.
+
 ### Colour rules (from `09`, restated as obligations)
 
-- **Contrast must be verified, not assumed.** Every text/background pair must be checked against **WCAG AA** (4.5:1 body, 3:1 large text and UI components) with a contrast checker during implementation. Any pair that fails is adjusted — these values are a proposal, not a verified pass.
+- **Contrast is verified, not assumed.** Any token change re-runs the audit above. A failing pair is adjusted, never shipped.
 - **Colour is never the only signal.** Deprecated, AI-generated, offline, error and success states must each carry a text label and/or icon (`09` Forbidden Pattern 06).
 - `ai` (violet) is deliberately unlike every other semantic colour — AI-generated content must never be mistakable for official content.
 
@@ -212,7 +242,8 @@ This is a concrete, reviewable limit enforcing `09` Forbidden Pattern 01 (Featur
 
 ## Open items for implementation
 
-1. Verify all colour pairs against WCAG AA; adjust failures.
-2. Verify the Turkish test string renders correctly in all three families at all weights.
-3. Measure LCP impact of the preloaded body font on the static SEO surface (ADR-0009).
-4. The `accent` hue (`#1D5D8C`) is the one value most open to personal preference — it is the product's signature colour and may be revised without affecting any other token.
+1. ~~Verify all colour pairs against WCAG AA; adjust failures.~~ **Done 2026-07-11** — see Contrast audit above. Three tokens adjusted.
+2. **Decide an interactive-boundary colour before the first form ships (Sprint 2).** `border` and `borderStrong` are decorative and fail 3:1; they must not be used as the sole boundary of an input, checkbox or outlined button.
+3. ~~Verify the Turkish test string renders correctly in all three families at all weights.~~ **Done 2026-07-11** — rendered on the web target in Literata (body), Inter (headings) and JetBrains Mono (code). All Turkish diacritics correct, including the dotless `ı` and dotted `İ`. Native (Android/iOS) rendering is **not yet verified**.
+4. Measure LCP impact of the preloaded body font on the static SEO surface (ADR-0009).
+5. The `accent` hue (`#1D5D8C`) is the one value most open to personal preference — it is the product's signature colour and may be revised without affecting any other token.

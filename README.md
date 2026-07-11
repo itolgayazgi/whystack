@@ -138,6 +138,7 @@ An **Architecture Decision Record** captures a decision that changes or supersed
 | [ADR-0013](docs/adr/ADR-0013-typography-stack.md) | Typography Stack — Literata / Inter / JetBrains Mono |
 | [ADR-0014](docs/adr/ADR-0014-licensing.md) | Licensing — MIT (code) / CC BY-SA 4.0 (content) / brand reserved |
 | [ADR-0015](docs/adr/ADR-0015-product-name-and-brand-identity.md) | Product Name — **WhyStack**, `whystack.dev` |
+| [ADR-0016](docs/adr/ADR-0016-react-native-toolchain.md) | React Native Toolchain — **Expo** + Expo Router (iOS from Windows) |
 
 ---
 
@@ -196,6 +197,22 @@ tests/         integration, e2e, contract, content-validation, accessibility, pe
 
 ## 11. Contributing
 
-See `CONTRIBUTING.md` (branching, pull requests, review) and `SECURITY.md` (vulnerability disclosure — **never** report security issues as public issues).
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) (scope, standards, pull requests) and [`SECURITY.md`](SECURITY.md) (vulnerability disclosure — **never** report security issues as public issues).
 
 Content contributions follow the editorial workflow in `10-content-architecture.md`. **AI-generated content never publishes without human review.** That rule has no exceptions.
+
+---
+
+## 12. Licensing
+
+This repository contains **two different assets, and they are licensed differently** (ADR-0014). A single licence would either over-protect the code or under-protect the content.
+
+| Asset | Licence | Why |
+|---|---|---|
+| **Code** — `apps/`, `packages/`, `scripts/`, `infrastructure/`, `tests/`, config | [**MIT**](LICENSE) | The code is not the moat. Principle 12 wants this repository to *teach*, and that requires it to be open and readable. |
+| **Content** — everything under `content/` | [**CC BY-SA 4.0**](content/LICENSE) | The content **is** the product. Share-alike keeps it open: you may republish it, but you may not take it closed. |
+| **Brand** — the name *WhyStack*, the logo, the brand identity | **All rights reserved** | This is the actual protection, and it is separate from copyright. |
+
+**What that means in practice:** you may use this code, and you may republish the content with attribution under CC BY-SA. You may **not** call the result *WhyStack*, or imply it is affiliated with or endorsed by this project.
+
+AI training on the content is **permitted** — deliberately, and consistently with ADR-0011.
