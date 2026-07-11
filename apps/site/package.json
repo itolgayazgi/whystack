@@ -14,9 +14,9 @@
     "@whystack/theme": "workspace:*"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.4",
-    "@astrojs/sitemap": "^3.6.0",
-    "astro": "^5.16.2",
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/sitemap": "^3.7.3",
+    "astro": "^7.0.7",
     "typescript": "catalog:"
   }
 }

@@ -29,6 +29,12 @@ overrides:
   # people to ignore the next one. Remove once Expo's config-plugins ships a patched xcode.
   uuid: '>=11.1.1'
 
+  # GHSA: esbuild's dev server allows arbitrary file read on Windows. Only 0.27.3–0.28.0 are affected,
+  # so the override is scoped to that range rather than forcing every esbuild in the tree — 0.25.x is
+  # also present, is NOT affected, and dragging it forward two minors would be a breakage we chose for
+  # no benefit. An override should be as narrow as the advisory.
+  'esbuild@>=0.27.3 <0.28.1': '>=0.28.1'
+
 # Metro (React Native's bundler) cannot resolve pnpm's symlinked node_modules.
 # Hoisting the dependency tree is the documented Expo + pnpm workaround (ADR-0007, ADR-0016).
 nodeLinker: hoisted
