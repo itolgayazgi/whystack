@@ -205,6 +205,8 @@ Content contributions follow the editorial workflow in `10-content-architecture.
 
 ## 12. Licensing
 
+Full terms: **[`LICENSING.md`](LICENSING.md)**.
+
 This repository contains **two different assets, and they are licensed differently** (ADR-0014). A single licence would either over-protect the code or under-protect the content.
 
 | Asset | Licence | Why |

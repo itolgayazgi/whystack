@@ -59,10 +59,23 @@ This is the actual protection, and it is separate from copyright. Under CC BY-SA
 ### 4. File layout
 
 ```
-LICENSE              → MIT (code)
+LICENSE              → MIT (code) — unmodified licence text, nothing appended
 content/LICENSE      → CC BY-SA 4.0 (educational content)
-README.md            → states which licence covers what, plus the trademark reservation
+LICENSING.md         → how the two licences fit together, plus the trademark reservation
+README.md            → summary table, linking to LICENSING.md
 ```
+
+> **Amendment (2026-07-11, approved by the project owner).** This section originally placed the
+> scope and trademark terms *inside* `LICENSE`. That was implemented, pushed, and **failed in
+> practice**: GitHub's licence detector (`licensee`) matches a licence file against known licence
+> texts, and the appended prose broke the match. The repository reported
+> `"license": "NOASSERTION"` — it read as **unlicensed**, which is the exact opposite of this
+> ADR's intent.
+>
+> `LICENSE` is therefore now the unmodified MIT text, and the scope and trademark terms live in
+> `LICENSING.md`. **The decision is unchanged** — code is MIT, content is CC BY-SA 4.0, the brand
+> is reserved. Only the file that carries the trademark sentence moved. Trademark rights arise from
+> the terms themselves, not from which file states them.
 
 ### 5. Third-party content
 
