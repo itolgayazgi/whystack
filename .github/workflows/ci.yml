@@ -60,8 +60,11 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Build web bundle
-        run: pnpm --filter @whystack/client build
+      # Builds the client's web bundle AND the static site. The site's build ends by verifying its own
+      # output ships zero JavaScript — ADR-0009 promises a reader who came to read will not download an
+      # application, and a promise about bytes has to be measured.
+      - name: Build
+        run: pnpm build
 
   # ---------------------------------------------------------------------------------------------
   # .NET: the API.

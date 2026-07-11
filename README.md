@@ -133,7 +133,7 @@ An **Architecture Decision Record** captures a decision that changes or supersed
 | [ADR-0008](docs/adr/ADR-0008-authentication-strategy.md) | Authentication — JWT access + rotating refresh |
 | [ADR-0009](docs/adr/ADR-0009-public-content-seo-surface.md) | Public Content SEO Surface — static generation from `content/` |
 | [ADR-0010](docs/adr/ADR-0010-ai-scope-for-mvp.md) | AI Scope for MVP — content production only, no runtime assistant |
-| [ADR-0011](docs/adr/ADR-0011-discoverability-and-ai-crawler-policy.md) | Discoverability & AI Crawler Policy — allow citation, deny training |
+| [ADR-0011](docs/adr/ADR-0011-discoverability-and-ai-crawler-policy.md) | Discoverability & AI Crawler Policy — **allow all crawlers**, training included |
 | [ADR-0012](docs/adr/ADR-0012-monetization-deferral.md) | Monetization Deferral — no revenue model in MVP |
 | [ADR-0013](docs/adr/ADR-0013-typography-stack.md) | Typography Stack — Literata / Inter / JetBrains Mono |
 | [ADR-0014](docs/adr/ADR-0014-licensing.md) | Licensing — MIT (code) / CC BY-SA 4.0 (content) / brand reserved |

@@ -1,0 +1,22 @@
+{
+  "name": "@whystack/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The public, indexable static surface. A renderer of content/, not a second application (ADR-0009).",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node scripts/verify-static-output.mjs",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@whystack/theme": "workspace:*"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/sitemap": "^3.6.0",
+    "astro": "^5.16.2",
+    "typescript": "catalog:"
+  }
+}

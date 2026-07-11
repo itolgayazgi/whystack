@@ -15,7 +15,8 @@
       "!**/obj",
       "!**/pnpm-lock.yaml",
       "!**/*.md",
-      "!**/dotnet-tools.json"
+      "!**/dotnet-tools.json",
+      "!**/.astro"
     ]
   },
   "formatter": {
@@ -55,7 +56,7 @@
   },
   "overrides": [
     {
-      "includes": ["scripts/**"],
+      "includes": ["**/scripts/**"],
       "linter": {
         "rules": {
           "suspicious": {
