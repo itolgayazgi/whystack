@@ -1,0 +1,27 @@
+# Line endings are a repository decision, not a per-developer one. Without this file, whether a diff
+# shows real changes or invisible CRLF churn depends on each contributor's core.autocrlf setting.
+# Here, the repository stores LF and every platform checks out LF.
+
+* text=auto eol=lf
+
+# Windows-only tooling that genuinely needs CRLF.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+*.sln   text eol=crlf
+
+# Never touch these — normalisation corrupts them.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.pdf   binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+
+# Generated. Collapse in diffs and don't count towards language stats.
+pnpm-lock.yaml  linguist-generated=true -diff

@@ -1,0 +1,50 @@
+WhyStack Educational Content
+Copyright (c) 2026 Tolga Yazgı
+
+Licensed under the Creative Commons Attribution-ShareAlike 4.0 International
+License (CC BY-SA 4.0).
+
+    Human-readable summary: https://creativecommons.org/licenses/by-sa/4.0/
+    Full legal text:        https://creativecommons.org/licenses/by-sa/4.0/legalcode
+
+SPDX-License-Identifier: CC-BY-SA-4.0
+
+---
+
+WHAT THIS COVERS
+
+Everything under content/ — topics, roadmaps, quizzes, terminology, examples,
+diagrams and assets. This is the educational corpus, and it is the product's
+core asset.
+
+The SOURCE CODE of this repository is licensed separately under the MIT licence.
+See the LICENSE file at the repository root.
+
+WHAT YOU MAY DO
+
+  - Share and redistribute this content in any medium or format.
+  - Adapt it: remix, transform and build upon it, including translation.
+  - Use it commercially, including as training data for machine learning models
+    (this is deliberate and consistent with ADR-0011).
+
+UNDER TWO CONDITIONS
+
+  1. ATTRIBUTION. You must give appropriate credit, link to this licence, and
+     indicate whether changes were made.
+
+  2. SHARE-ALIKE. If you remix, transform or build upon this content, you must
+     distribute your contributions under this same licence. You may not take
+     this corpus closed.
+
+BRAND AND TRADEMARK ARE NOT LICENSED
+
+The name "WhyStack", the WhyStack logo and the WhyStack brand identity are NOT
+covered by this licence, and all rights in them are reserved.
+
+You may republish this content with attribution. You may NOT call the result
+"WhyStack", nor imply affiliation with or endorsement by this project.
+
+THIRD-PARTY MATERIAL
+
+This content does not reproduce third-party documentation verbatim. Where
+external sources are referenced, they are cited and remain under their own terms.
