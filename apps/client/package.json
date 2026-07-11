@@ -10,6 +10,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build": "expo export --platform web",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -38,7 +39,11 @@
     "react-native-worklets": "0.10.0"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
+    "jsdom": "^29.1.1",
+    "typescript": "~6.0.3",
+    "vitest": "^3.2.7"
   }
 }

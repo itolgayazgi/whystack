@@ -49,7 +49,12 @@ export function SegmentedChoice<T extends string>({
             <Pressable
               key={option.value}
               accessibilityRole="radio"
-              accessibilityState={{ selected }}
+              // aria-checked, not accessibilityState: react-native-web drops accessibilityState
+              // silently — it renders the role and nothing else. A radio whose state exists only as a
+              // border colour is invisible to a screen reader, which is precisely what 09 Forbidden
+              // Pattern 06 forbids. `checked` is also the correct property for a radio; `selected`
+              // belongs to a tab.
+              aria-checked={selected}
               onPress={() => onChange(option.value)}
               style={({ pressed }) => ({
                 minHeight: 44,

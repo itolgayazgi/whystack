@@ -43,10 +43,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
       if (active) setReducedMotion(enabled);
     });
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
+    // react-native-web returns undefined here rather than a subscription. Calling .remove() on it
+    // throws on unmount — which never surfaced in the app, because the root provider never unmounts.
+    // It surfaced the first time a test rendered and tore it down.
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion) as
+      | { remove: () => void }
+      | undefined;
+
     return () => {
       active = false;
-      subscription.remove();
+      subscription?.remove();
     };
   }, []);
 
