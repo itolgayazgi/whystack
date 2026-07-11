@@ -3,11 +3,21 @@ packages:
   - "apps/site"
   - "packages/*"
 
+# A single version for anything more than one workspace depends on. Packages reference these as
+# "catalog:" instead of a version range, so a second copy of TypeScript cannot drift in — which it did:
+# apps/client was on 6.x and everything else on 5.x, and the day a new package shifted which one pnpm
+# hoisted, tsc vanished from two packages that had not been touched.
+catalog:
+  typescript: ~6.0.3
+  vitest: ^3.2.7
+
 # pnpm blocks dependency install scripts by default — postinstall is the classic supply-chain
 # entry point. Every entry here is an explicit decision to let that package run code on install.
 allowBuilds:
   # Vitest's bundler. Its install script places the platform-native binary; it cannot run without it.
   esbuild: true
+  # Astro's image pipeline. Its install script fetches the platform-native libvips binding.
+  sharp: true
 
 # Forced resolutions for transitive dependencies we do not control.
 # Each one must say what it fixes and when it can be removed — an override with no expiry becomes

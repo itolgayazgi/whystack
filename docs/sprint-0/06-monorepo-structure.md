@@ -1051,6 +1051,70 @@ The client application must not:
 
 ---
 
+# Site Application Structure
+
+> **This is not a second application** (ADR-0001, ADR-0009). It is a **third renderer of the canonical
+> content**, exactly like a Knowledge Pack:
+>
+> ```text
+> content/**  (canonical Markdown + metadata — Single Source of Truth)
+>      ├─→ React Native app   (web + android + ios)   — interactive, authenticated
+>      ├─→ Knowledge Pack     (offline archive)
+>      └─→ Static HTML        (public, indexable)      ← apps/site
+> ```
+
+The public, indexable surface lives in:
+
+```text
+apps/site/
+```
+
+Built with **Astro** (chosen in Sprint 1 under the constraints ADR-0009 set: build-time only, ships no
+JavaScript by default, consumes `content/` and `packages/theme`, runs as a Turborepo task).
+
+Approved structure:
+
+```text
+apps/site/
+│
+├── src/
+│   ├── pages/        # File-based routes → the public URL structure of ADR-0009
+│   ├── layouts/      # Page shells; where JSON-LD, canonical and hreflang are emitted
+│   ├── components/
+│   ├── styles/       # Design tokens projected into CSS custom properties
+│   └── content/      # Astro content collections — READS content/, never owns it
+│
+├── public/           # Files served verbatim
+├── scripts/          # Build-output verification
+├── astro.config.mjs
+├── README.md
+└── package.json
+```
+
+---
+
+## Site Responsibilities
+
+- Render **public, read-only** content: topics, roadmaps, terminology, Developer Lab tool pages
+- Generate `sitemap.xml`, `robots.txt` and `llms.txt` — these are **build artifacts, never hand-edited** (ADR-0011)
+- Emit JSON-LD, canonical URLs and `hreflang` for `tr` / `en`
+- Generate internal links from the Knowledge Graph (ADR-0004) — the primary topical-authority mechanism
+- Offer a clear "continue in the app" entry point
+
+---
+
+## Site Non-Responsibilities
+
+The site must not:
+
+- **Load the React Native app bundle.** A reader who came to read must not download an application
+  (ADR-0009 — Core Web Vitals). This is verified on every build, not trusted.
+- Own canonical educational content
+- Contain authentication, progress, quizzes, bookmarks or offline packs — those live **only** in the app
+- Introduce a runtime framework
+- Hardcode design values — tokens come from `packages/theme`
+
+---
 
 # Admin Application Structure
 

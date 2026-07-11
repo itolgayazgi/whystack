@@ -1,0 +1,122 @@
+---
+import { tokensCss } from '../styles/tokens';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Content language of THIS page. Independent of the interface language in the app. */
+  lang?: 'en' | 'tr';
+}
+
+const { title, description, lang = 'en' } = Astro.props;
+
+// Canonical URL. Without it, the same topic reachable at two URLs splits its own ranking between them.
+const canonical = new URL(Astro.url.pathname, Astro.site);
+
+// hreflang (ADR-0009). It tells a search engine that the English and Turkish versions of a topic are
+// the same topic, not duplicate content competing with each other.
+const alternates = [
+  { hreflang: 'en', href: new URL(Astro.url.pathname, Astro.site).href },
+  { hreflang: 'tr', href: new URL(`/tr${Astro.url.pathname}`, Astro.site).href },
+];
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <link rel="canonical" href={canonical.href} />
+    {alternates.map((alt) => <link rel="alternate" hreflang={alt.hreflang} href={alt.href} />)}
+    <link rel="alternate" hreflang="x-default" href={alternates[0].href} />
+
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical.href} />
+
+    <!--
+      Tokens are inlined rather than fetched. A stylesheet in <head> is a render-blocking round trip,
+      and this one is under 2KB — the request costs more than the bytes.
+
+      The fonts of ADR-0013 (Literata, Inter, JetBrains Mono) are NOT loaded yet. Doing it properly
+      means subsetting to Latin + Latin Extended-A, self-hosting woff2, and preloading only the body
+      face. Loading them from a CDN instead would be one line and would quietly cost the Core Web
+      Vitals budget this ADR commits to. Until the files exist, the fallback stacks are what renders,
+      and this comment is here so nobody mistakes that for done.
+    -->
+    <style is:global set:html={tokensCss()}></style>
+
+    <style is:global>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--color-background);
+        color: var(--color-text-primary);
+        font-family: var(--font-body);
+        font-size: var(--text-body-size);
+        line-height: var(--text-body-line-height);
+      }
+
+      main {
+        /* The measure never grows. Extra width becomes gutter, not a longer line. */
+        max-width: var(--reading-measure);
+        margin: 0 auto;
+        padding: var(--space-48) var(--space-24);
+      }
+
+      h1,
+      h2,
+      h3 {
+        font-family: var(--font-ui);
+        line-height: 1.25;
+        margin-top: var(--reading-heading-top);
+        margin-bottom: var(--reading-heading-bottom);
+      }
+
+      h1 {
+        font-size: var(--text-page-title-size);
+        margin-top: 0;
+      }
+
+      h2 {
+        font-size: var(--text-section-title-size);
+      }
+
+      p {
+        margin: 0 0 var(--reading-paragraph-spacing);
+      }
+
+      a {
+        color: var(--color-accent);
+      }
+
+      code {
+        font-family: var(--font-code);
+        font-size: var(--text-code-size);
+        background: var(--color-code-background);
+        color: var(--color-code-text);
+        padding: 0.1em 0.3em;
+        border-radius: 4px;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>

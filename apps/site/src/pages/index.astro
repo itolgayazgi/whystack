@@ -1,0 +1,45 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// Sprint 1 scaffolds this surface; it becomes meaningful when content lands (ADR-0009 §6, Sprint 3+).
+// There are no topic pages yet because there are no topics — content/ is empty, and generating
+// placeholder topics would produce exactly the thin, worthless pages that SEO punishes.
+---
+
+<BaseLayout
+  title="WhyStack — learn why technologies exist"
+  description="An engineering learning platform that teaches why technologies exist, which problems they solve, and when not to use them. Version-aware, bilingual, offline-capable."
+>
+  <h1>WhyStack</h1>
+
+  <p>
+    Most documentation tells you <em>how</em>. WhyStack tells you <strong>why</strong> — why a
+    technology exists, which problem it actually solves, what it costs you, and when not to reach for
+    it.
+  </p>
+
+  <h2>This surface is not the product</h2>
+
+  <p>
+    These pages are the public, readable half. They are static HTML — no application bundle, no
+    JavaScript, no login — so that a search engine, an AI crawler, or someone on a slow connection can
+    read a topic without downloading an app first.
+  </p>
+
+  <p>
+    Progress, quizzes, bookmarks, roadmaps and offline Knowledge Packs live in the application. This
+    surface exists so the content can be <em>found</em>.
+  </p>
+
+  <h2>Nothing is published yet</h2>
+
+  <p>
+    Content is written, reviewed and published from the content repository, and the first topics land
+    in Sprint 3. This page is the generator proving it works — it is not a placeholder for a topic
+    that failed to build.
+  </p>
+
+  <p>
+    The code is open: <a href="https://github.com/itolgayazgi/whystack">github.com/itolgayazgi/whystack</a>
+  </p>
+</BaseLayout>

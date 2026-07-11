@@ -28,6 +28,11 @@ yarn-error.log*
 # ---------- Turborepo ----------
 .turbo/
 
+# ---------- Astro (apps/site) ----------
+# Generated types and the content-collection cache. Astro rewrites them on every build; committing
+# them means a diff on every build and a merge conflict on every branch.
+.astro/
+
 # ---------- Expo / React Native ----------
 .expo/
 .expo-shared/
