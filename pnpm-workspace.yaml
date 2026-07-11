@@ -9,6 +9,16 @@ allowBuilds:
   # Vitest's bundler. Its install script places the platform-native binary; it cannot run without it.
   esbuild: true
 
+# Forced resolutions for transitive dependencies we do not control.
+# Each one must say what it fixes and when it can be removed — an override with no expiry becomes
+# a permanent, unexplained pin that nobody dares touch.
+overrides:
+  # GHSA: missing buffer bounds check in uuid v3/v5/v6 when `buf` is supplied. Reaches us only via
+  # xcode@3.0.1 <- @expo/config-plugins, which calls uuid.v4() and nothing else — so the vulnerable
+  # path is unreachable here. Pinned anyway rather than dismissed: an unresolved advisory trains
+  # people to ignore the next one. Remove once Expo's config-plugins ships a patched xcode.
+  uuid: '>=11.1.1'
+
 # Metro (React Native's bundler) cannot resolve pnpm's symlinked node_modules.
 # Hoisting the dependency tree is the documented Expo + pnpm workaround (ADR-0007, ADR-0016).
 nodeLinker: hoisted
