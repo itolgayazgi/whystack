@@ -1,8 +1,11 @@
 name: CodeQL
 
 # Static security analysis (13-quality-assurance.md — "Security scanning").
-# Kept out of ci.yml deliberately: CodeQL takes minutes, and a slow required check is one people
-# learn to ignore. It gates merges, but it does not make you wait on every typo fix.
+#
+# Kept out of ci.yml, and deliberately NOT a required merge check: it takes minutes, and a slow
+# required gate is one people learn to route around. Findings surface in the Security tab and as
+# annotations on the pull request, where they are read rather than waited on. If a real
+# vulnerability class starts slipping through, promote it to a required check then — with reason.
 
 on:
   push:
