@@ -1,17 +1,17 @@
 import {
   type ColorScheme,
   type Density,
-  type LayoutMode,
-  type Palette,
-  type TextToken,
   gutter,
+  type LayoutMode,
   layoutModeFor,
+  type Palette,
   palettes,
   readingMaxWidth,
+  type TextToken,
   text,
 } from '@whystack/theme';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, useColorScheme, useWindowDimensions, type TextStyle } from 'react-native';
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { AccessibilityInfo, type TextStyle, useColorScheme, useWindowDimensions } from 'react-native';
 import { fontFamilyFor } from '../config/fonts';
 
 // Every design value a component needs comes from here. A component that reaches for a raw hex or a

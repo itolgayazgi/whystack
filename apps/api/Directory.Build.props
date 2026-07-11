@@ -8,6 +8,14 @@
     <!-- 12-engineering-standards.md: nullable reference types are mandatory and warnings must be
          taken seriously. Failing the build is how "seriously" is enforced. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- NuGet lock files (RestorePackagesWithLockFile) were tried here as the .NET counterpart of
+         pnpm's frozen-lockfile install, and removed: with this SDK, solution-level restore
+         synthesises a metaproject with no TargetFramework, and the lock-file machinery fails it.
+
+         Accepted for now, because the risk a lock file guards is small here. Every PackageReference
+         in this solution is pinned to an exact version, so there are no floating ranges to drift,
+         and Dependabot watches the transitive graph. Revisit if a floating version ever enters. -->
   </PropertyGroup>
 
 </Project>

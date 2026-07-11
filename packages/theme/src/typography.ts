@@ -82,4 +82,5 @@ export function readingMaxWidth(bodyFontSize: number): number {
 }
 
 /** Every font must render this before it is accepted (ADR-0013 — Turkish coverage is non-negotiable). */
-export const turkishVerificationString = "Iğdır'da sığınmış çilingir, İzmir'de öğün. — ı İ ğ Ğ ş Ş ç Ç ö Ö ü Ü";
+export const turkishVerificationString =
+  "Iğdır'da sığınmış çilingir, İzmir'de öğün. — ı İ ğ Ğ ş Ş ç Ç ö Ö ü Ü";

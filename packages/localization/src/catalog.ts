@@ -95,11 +95,7 @@ export const catalogs: Record<AppLanguage, Messages> = { en, tr };
  * error rather than a string like "home.titel" rendered to a user. That is the whole reason this is
  * hand-rolled instead of pulling in a runtime i18n library.
  */
-export function translate(
-  language: AppLanguage,
-  key: MessageKey,
-  params?: Record<string, string>,
-): string {
+export function translate(language: AppLanguage, key: MessageKey, params?: Record<string, string>): string {
   const template = catalogs[language][key];
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (match, name: string) => params[name] ?? match);

@@ -10,14 +10,23 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "content:validate": "turbo run content:validate",
+
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "lint:design": "node scripts/lint/no-hardcoded-design-values.mjs",
+
     "api": "dotnet run --project apps/api/src/WhyStack.Api",
-    "api:test": "dotnet test apps/api/WhyStack.sln"
+    "api:test": "dotnet test apps/api/WhyStack.sln",
+    "api:format": "dotnet format apps/api/WhyStack.sln --verify-no-changes",
+
+    "verify": "pnpm lint && pnpm lint:design && pnpm typecheck && pnpm test",
+    "verify:all": "pnpm verify && pnpm api:format && pnpm api:test"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.3",
     "turbo": "^2.5.0"
   }
 }

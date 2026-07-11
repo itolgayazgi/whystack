@@ -76,7 +76,11 @@ export const easing = {
  * When the user has asked for reduced motion, every duration collapses to 0 except opacity fades,
  * which may keep `fast`. Learning must remain fully functional without motion.
  */
-export function durationFor(token: keyof typeof duration, reducedMotion: boolean, isOpacityFade = false): number {
+export function durationFor(
+  token: keyof typeof duration,
+  reducedMotion: boolean,
+  isOpacityFade = false,
+): number {
   if (!reducedMotion) return duration[token];
   return isOpacityFade ? duration.fast : 0;
 }

@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A CI nobody waits for is a CI nobody trusts. Superseded runs on the same branch are cancelled
+# rather than queued behind work that is already obsolete.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege. Nothing here needs to write to the repository, and a workflow triggered by a
+# fork's pull request must never be able to.
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------------------------
+  # JavaScript / TypeScript: the client and the shared packages.
+  # ---------------------------------------------------------------------------------------------
+  web:
+    name: Client & packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # --frozen-lockfile is the point of this step: it fails if pnpm-lock.yaml does not match
+      # package.json. Without it, a dependency added but never locked would install fine here and
+      # break for the next person — the classic "works on my machine".
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint and format
+        run: pnpm lint
+
+      # Enforces CLAUDE.md 1.8: design values come from packages/theme, never from a literal.
+      # This is the rule we lost by choosing Biome over eslint-plugin-react-native, replaced with
+      # a check that actually knows where a colour is allowed to live.
+      - name: No hardcoded design values
+        run: pnpm lint:design
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # Includes the WCAG AA contrast audit — 96 token pairs. This is the whole reason that audit
+      # was written as a test rather than a one-off script: a colour change now fails here, loudly,
+      # instead of shipping.
+      - name: Test
+        run: pnpm test
+
+      - name: Build web bundle
+        run: pnpm --filter @whystack/client build
+
+  # ---------------------------------------------------------------------------------------------
+  # .NET: the API.
+  # ---------------------------------------------------------------------------------------------
+  api:
+    name: API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # global.json pins the SDK, so CI compiles with the same toolchain as the developer machine
+      # rather than whatever the runner image happens to ship this week.
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore apps/api/WhyStack.sln
+
+      - name: Format
+        run: dotnet format apps/api/WhyStack.sln --verify-no-changes --no-restore
+
+      # Directory.Build.props sets TreatWarningsAsErrors, so a warning fails the build here.
+      # --no-restore proves restore actually succeeded above rather than silently re-running.
+      - name: Build
+        run: dotnet build apps/api/WhyStack.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test apps/api/WhyStack.sln --configuration Release --no-build --verbosity normal

@@ -33,9 +33,7 @@ export function HomeScreen() {
           {t('home.tagline')}
         </Text>
 
-        <Text style={[textStyle('sectionTitle'), { marginTop: reading.headingTopSpacing }]}>
-          Typography
-        </Text>
+        <Text style={[textStyle('sectionTitle'), { marginTop: reading.headingTopSpacing }]}>Typography</Text>
 
         {/* ADR-0013 open item: every family must render the Turkish diacritics before it is accepted.
             Rendering the string is the test — a screenshot of this line is the evidence. */}
@@ -43,15 +41,28 @@ export function HomeScreen() {
           {turkishVerificationString}
         </Text>
 
-        <Text style={[textStyle('code'), { marginTop: reading.paragraphSpacing, color: color.codeText, backgroundColor: color.codeBackground, padding: space[12] }]}>
+        <Text
+          style={[
+            textStyle('code'),
+            {
+              marginTop: reading.paragraphSpacing,
+              color: color.codeText,
+              backgroundColor: color.codeBackground,
+              padding: space[12],
+            },
+          ]}
+        >
           {turkishVerificationString}
         </Text>
 
-        <Text style={[textStyle('sectionTitle'), { marginTop: reading.sectionSpacing }]}>
-          Language
-        </Text>
+        <Text style={[textStyle('sectionTitle'), { marginTop: reading.sectionSpacing }]}>Language</Text>
 
-        <Text style={[textStyle('bodySmall'), { color: color.textSecondary, marginTop: reading.headingBottomSpacing }]}>
+        <Text
+          style={[
+            textStyle('bodySmall'),
+            { color: color.textSecondary, marginTop: reading.headingBottomSpacing },
+          ]}
+        >
           {t('language.app')}: {appLanguage} · {t('language.content')}: {contentLanguage}
         </Text>
 

@@ -1,39 +1,37 @@
 export {
   type ColorScheme,
   type ColorToken,
-  type Palette,
   dark,
   light,
+  type Palette,
   palettes,
   worstCaseSurface,
 } from './colors';
+export { AA, contrastRatio, meetsAA, relativeLuminance } from './contrast';
 
 export {
-  type Density,
-  type FontRole,
-  type TextStyle,
-  type TextToken,
-  codeInlineScale,
-  fontFallback,
-  fontFamily,
-  reading,
-  readingMaxWidth,
-  text,
-  turkishVerificationString,
-} from './typography';
-
-export {
-  type LayoutMode,
   breakpoint,
   duration,
   durationFor,
   easing,
   elevation,
   gutter,
+  type LayoutMode,
   layoutModeFor,
   maxSecondaryActionsOnReadingScreen,
   radius,
   space,
 } from './layout';
-
-export { AA, contrastRatio, meetsAA, relativeLuminance } from './contrast';
+export {
+  codeInlineScale,
+  type Density,
+  type FontRole,
+  fontFallback,
+  fontFamily,
+  reading,
+  readingMaxWidth,
+  type TextStyle,
+  type TextToken,
+  text,
+  turkishVerificationString,
+} from './typography';

@@ -36,10 +36,7 @@ export function LanguageFallbackNotice({ resolution }: { resolution: LanguageRes
       // Colour is never the only signal (09, Forbidden Pattern 06) — the notice carries its own text,
       // so it still reads correctly in greyscale or to a screen reader.
       accessibilityRole="alert"
-      style={[
-        styles.container,
-        { backgroundColor: color.surfaceMuted, borderColor: color.borderStrong },
-      ]}
+      style={[styles.container, { backgroundColor: color.surfaceMuted, borderColor: color.borderStrong }]}
     >
       <Text style={[textStyle('label'), { color: color.textSecondary }]}>{notice}</Text>
       {resolution.fallbackReason ? (

@@ -17,9 +17,7 @@ function Chrome() {
   return (
     <>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.background } }}
-      />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.background } }} />
     </>
   );
 }

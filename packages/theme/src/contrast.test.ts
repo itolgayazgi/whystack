@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { AA, contrastRatio } from './contrast';
 import { type ColorToken, type Palette, palettes, worstCaseSurface } from './colors';
+import { AA, contrastRatio } from './contrast';
 
 // This is the executable form of the promise in design-tokens.md:
 // "Contrast is verified, not assumed. Any token change re-runs the audit."

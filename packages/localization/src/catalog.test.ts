@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type MessageKey, catalogs, translate } from './catalog';
+import { catalogs, type MessageKey, translate } from './catalog';
 import { APP_LANGUAGES, resolveAppLanguage } from './language';
 
 describe('catalogs', () => {
@@ -19,9 +19,9 @@ describe('catalogs', () => {
   });
 
   it('interpolates parameters', () => {
-    expect(
-      translate('tr', 'language.fallback.notice', { requested: 'Türkçe', returned: 'İngilizce' }),
-    ).toBe('İngilizce dilinde gösteriliyor — Türkçe dilinde mevcut değil.');
+    expect(translate('tr', 'language.fallback.notice', { requested: 'Türkçe', returned: 'İngilizce' })).toBe(
+      'İngilizce dilinde gösteriliyor — Türkçe dilinde mevcut değil.',
+    );
   });
 
   it('leaves an unknown placeholder visible rather than rendering "undefined"', () => {
