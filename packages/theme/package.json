@@ -1,0 +1,17 @@
+{
+  "name": "@whystack/theme",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WhyStack design tokens. The single source of truth for colour, type, spacing, radius, elevation, motion and breakpoints.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "sideEffects": false,
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
