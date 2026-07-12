@@ -25,8 +25,41 @@ export interface Messages {
   'nav.settings': string;
 
   'settings.title': string;
-  'settings.appearance': string;
-  'settings.appearance.followsSystem': string;
+
+  'settings.theme': string;
+  'settings.theme.hint': string;
+  'settings.theme.system': string;
+  'settings.theme.light': string;
+  'settings.theme.dark': string;
+
+  'settings.reading': string;
+  'settings.reading.scale': string;
+  'settings.reading.scale.hint': string;
+  'settings.reading.sample': string;
+
+  'settings.motion': string;
+  'settings.motion.hint': string;
+  'settings.motion.reduce': string;
+  'settings.motion.deviceAlreadyOn': string;
+
+  'settings.skill': string;
+  'settings.skill.hint': string;
+  'settings.skill.notStated': string;
+  'settings.skill.junior': string;
+  'settings.skill.midLevel': string;
+  'settings.skill.senior': string;
+  'settings.skill.expert': string;
+
+  'settings.account': string;
+
+  /** Shown after a save lands. Silence is not confirmation — a user who sees nothing assumes nothing happened. */
+  'settings.saved': string;
+  'settings.saved.body': string;
+  'settings.saveFailed': string;
+  /** The other device won. We reloaded; the user decides what to do about it. */
+  'settings.conflict.title': string;
+  'settings.conflict.body': string;
+  'settings.unreachable': string;
 
   'learn.title': string;
   'learn.empty.title': string;
@@ -155,9 +188,43 @@ const en: Messages = {
   'nav.settings': 'Settings',
 
   'settings.title': 'Settings',
-  'settings.appearance': 'Appearance',
-  'settings.appearance.followsSystem':
-    'Light and dark follow your device. There is no switch here on purpose — an app that disagrees with the system theme is an app you have to fight at night.',
+
+  'settings.theme': 'Theme',
+  'settings.theme.hint': 'System follows your device, and is what most people want.',
+  'settings.theme.system': 'System',
+  'settings.theme.light': 'Light',
+  'settings.theme.dark': 'Dark',
+
+  'settings.reading': 'Reading',
+  'settings.reading.scale': 'Text size',
+  'settings.reading.scale.hint':
+    'Changes the size of topics, not of the interface. Your device’s own text-size setting still applies.',
+  'settings.reading.sample':
+    'A garbage collector exists because manual memory management is a source of bugs that people, reliably, get wrong.',
+
+  'settings.motion': 'Motion',
+  'settings.motion.hint': 'Turns off animation and transitions.',
+  'settings.motion.reduce': 'Reduce motion',
+  'settings.motion.deviceAlreadyOn':
+    'Your device already asks for reduced motion, so this is on regardless. Turning it off here will not override your device.',
+
+  'settings.skill': 'Experience',
+  'settings.skill.hint': 'Used to pick a starting depth. You can always read anything.',
+  'settings.skill.notStated': 'Not stated',
+  'settings.skill.junior': 'Junior',
+  'settings.skill.midLevel': 'Mid-level',
+  'settings.skill.senior': 'Senior',
+  'settings.skill.expert': 'Expert',
+
+  'settings.account': 'Account',
+
+  'settings.saved': 'Saved',
+  'settings.saved.body': 'Saved to your account. Your other devices will pick this up.',
+  'settings.saveFailed': 'That could not be saved. Nothing was changed.',
+  'settings.conflict.title': 'Changed on another device',
+  'settings.conflict.body':
+    'These settings were changed somewhere else while this screen was open. What you see now is what is actually saved. Apply your change again if you still want it.',
+  'settings.unreachable': 'Cannot reach the server. Your settings were not saved.',
 
   'learn.title': 'Learn',
   'learn.empty.title': 'No topics yet',
@@ -271,9 +338,43 @@ const tr: Messages = {
   'nav.settings': 'Ayarlar',
 
   'settings.title': 'Ayarlar',
-  'settings.appearance': 'Görünüm',
-  'settings.appearance.followsSystem':
-    'Açık ve koyu tema cihazını izler. Burada bilerek bir anahtar yok — sistem temasıyla çelişen bir uygulama, geceleri seninle kavga eden bir uygulamadır.',
+
+  'settings.theme': 'Tema',
+  'settings.theme.hint': 'Sistem, cihazını izler — çoğu kişinin istediği de budur.',
+  'settings.theme.system': 'Sistem',
+  'settings.theme.light': 'Açık',
+  'settings.theme.dark': 'Koyu',
+
+  'settings.reading': 'Okuma',
+  'settings.reading.scale': 'Yazı boyutu',
+  'settings.reading.scale.hint':
+    'Konuların boyutunu değiştirir, arayüzün değil. Cihazının kendi yazı boyutu ayarı yine geçerli.',
+  'settings.reading.sample':
+    'Garbage Collector var, çünkü belleği elle yönetmek insanların düzenli olarak yanlış yaptığı bir hata kaynağıdır.',
+
+  'settings.motion': 'Hareket',
+  'settings.motion.hint': 'Animasyonları ve geçişleri kapatır.',
+  'settings.motion.reduce': 'Hareketi azalt',
+  'settings.motion.deviceAlreadyOn':
+    'Cihazın zaten azaltılmış hareket istiyor, bu yüzden bu ayar açık kalır. Buradan kapatmak cihazının kararını geçersiz kılmaz.',
+
+  'settings.skill': 'Deneyim',
+  'settings.skill.hint': 'Başlangıç derinliğini seçmek için kullanılır. Her şeyi her zaman okuyabilirsin.',
+  'settings.skill.notStated': 'Belirtilmedi',
+  'settings.skill.junior': 'Junior',
+  'settings.skill.midLevel': 'Orta seviye',
+  'settings.skill.senior': 'Senior',
+  'settings.skill.expert': 'Uzman',
+
+  'settings.account': 'Hesap',
+
+  'settings.saved': 'Kaydedildi',
+  'settings.saved.body': 'Hesabına kaydedildi. Diğer cihazların bunu alacak.',
+  'settings.saveFailed': 'Bu kaydedilemedi. Hiçbir şey değişmedi.',
+  'settings.conflict.title': 'Başka bir cihazda değiştirildi',
+  'settings.conflict.body':
+    'Bu ekran açıkken ayarlar başka bir yerde değiştirildi. Şu an gördüğün, gerçekten kayıtlı olan. Değişikliğini hâlâ istiyorsan tekrar uygula.',
+  'settings.unreachable': 'Sunucuya ulaşılamıyor. Ayarların kaydedilmedi.',
 
   'learn.title': 'Öğren',
   'learn.empty.title': 'Henüz konu yok',
