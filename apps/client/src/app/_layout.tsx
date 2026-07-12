@@ -11,6 +11,7 @@ import { SessionGate } from '../components/session-gate';
 import { fontAssets } from '../config/fonts';
 import { AuthProvider } from '../state/auth';
 import { LanguageProvider } from '../state/language';
+import { PreferencesProvider } from '../state/preferences';
 import { ThemeProvider, useTheme } from '../state/theme';
 
 void SplashScreen.preventAutoHideAsync();
@@ -74,9 +75,15 @@ export default function RootLayout() {
                 session", the offline notice), so it needs `t`. Reversing them would leave the very
                 screens a user sees when something is wrong as the only untranslated ones. */}
             <AuthProvider>
-              <SessionGate>
-                <Shell />
-              </SessionGate>
+              {/* PreferencesProvider is INSIDE AuthProvider (it needs the client) and BELOW Theme and
+                  Language (it writes into them). The direction is deliberate: those two render the
+                  sign-in screen, which has to exist before anyone knows who is looking at it, so they
+                  start from the device — and the server's answer replaces that the moment it lands. */}
+              <PreferencesProvider>
+                <SessionGate>
+                  <Shell />
+                </SessionGate>
+              </PreferencesProvider>
             </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
