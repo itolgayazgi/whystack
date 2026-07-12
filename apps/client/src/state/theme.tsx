@@ -11,7 +11,7 @@ import {
   type TextToken,
   text,
 } from '@whystack/theme';
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { AccessibilityInfo, type TextStyle, useColorScheme, useWindowDimensions } from 'react-native';
 import type { ThemeMode } from '../api/preferences';
 import { fontFamilyFor } from '../config/fonts';
