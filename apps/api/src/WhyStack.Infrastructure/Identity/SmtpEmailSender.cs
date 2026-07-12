@@ -25,11 +25,41 @@ public sealed class SmtpOptions
     public string FromName { get; init; } = "WhyStack";
 
     /// <summary>
-    /// Off only for a local mail catcher, which speaks plain SMTP on a loopback port and has no
-    /// certificate. Anywhere else, a reset link crossing the network in the clear is a reset link
-    /// somebody else now has.
+    /// How the connection is secured. Defaults to the strict option, so a missing setting fails closed.
     /// </summary>
-    public bool UseTls { get; init; } = true;
+    public SmtpSecurity Security { get; init; } = SmtpSecurity.StartTls;
+}
+
+/// <summary>
+/// The three ways to reach an SMTP server, and the reason this is not a <c>bool</c>.
+/// </summary>
+/// <remarks>
+/// <b>It used to be <c>UseTls</c>, mapped to MailKit's <c>StartTlsWhenAvailable</c>, and that was a
+/// downgrade attack waiting to happen.</b> "When available" means: ask the server whether it supports
+/// TLS, and if it says no — or if somebody sitting between us strips the STARTTLS advertisement from
+/// its greeting, which is a well-known and trivial attack — send the message in the clear anyway,
+/// silently, with no error.
+///
+/// The body of these messages is a password-reset link. A reset link IS the password: whoever reads it
+/// owns the account. Sending one in plaintext because a hostile network said "no TLS here" is the exact
+/// silent fallback CLAUDE.md §1.6 forbids, and it would never have appeared in any log.
+///
+/// <see cref="StartTls"/> REQUIRES the upgrade and fails the send if it cannot get it. A failed email is
+/// a visible, fixable problem. A plaintext email is not a problem anyone finds out about.
+/// </remarks>
+public enum SmtpSecurity
+{
+    /// <summary>
+    /// Plaintext. Legitimate for exactly one thing: a local mail catcher on the loopback interface,
+    /// which has no certificate and where there is no network to eavesdrop on. Never for a real server.
+    /// </summary>
+    None = 0,
+
+    /// <summary>Connect in the clear, then REQUIRE an upgrade to TLS. The usual choice, on port 587.</summary>
+    StartTls = 1,
+
+    /// <summary>TLS from the first byte — no plaintext phase at all, so nothing to strip. Port 465.</summary>
+    SslOnConnect = 2,
 }
 
 /// <summary>
@@ -72,7 +102,20 @@ public sealed partial class SmtpEmailSender(
         await client.ConnectAsync(
             _options.Host,
             _options.Port,
-            _options.UseTls ? SecureSocketOptions.StartTlsWhenAvailable : SecureSocketOptions.None,
+            _options.Security switch
+            {
+                SmtpSecurity.None => SecureSocketOptions.None,
+
+                // StartTls, and NOT StartTlsWhenAvailable. The difference is the whole point: "when
+                // available" hands the decision to whoever is on the other end of the wire, including
+                // an attacker who has stripped the STARTTLS advertisement — and then sends a
+                // password-reset link in plaintext without a word in any log.
+                SmtpSecurity.StartTls => SecureSocketOptions.StartTls,
+
+                SmtpSecurity.SslOnConnect => SecureSocketOptions.SslOnConnect,
+
+                _ => throw new InvalidOperationException($"Unknown SMTP security mode: {_options.Security}."),
+            },
             cancellationToken);
 
         // Both, or neither. A local mail catcher wants no credentials at all; every hosted provider
