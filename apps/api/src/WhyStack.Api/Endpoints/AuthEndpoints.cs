@@ -32,6 +32,7 @@ public enum ClientPlatform
     Native = 1,
 }
 
+/// <summary>What a client sends to create an account.</summary>
 /// <param name="DeviceLocale">
 /// The device's locale ("tr-TR", "en-GB", "de-DE"), which picks the starting application language:
 /// Turkish device → Turkish, everything else → English (`04`). Optional; absent means English.

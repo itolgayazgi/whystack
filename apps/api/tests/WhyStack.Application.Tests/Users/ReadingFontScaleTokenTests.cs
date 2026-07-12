@@ -56,7 +56,10 @@ public class ReadingFontScaleTokenTests
 
     private static Token LoadToken()
     {
-        var path = Path.Combine(RepositoryRoot(), "packages", "theme", "src", "reading-font-scale.json");
+        // Path.Join, not Path.Combine. Combine SILENTLY DISCARDS everything before any segment that
+        // looks rooted — Path.Combine("a", "/b") is "/b", not "a/b" — which turns a bad segment into a
+        // path that points somewhere else entirely rather than into an error. Join concatenates, always.
+        var path = Path.Join(RepositoryRoot(), "packages", "theme", "src", "reading-font-scale.json");
 
         Assert.True(
             File.Exists(path),
@@ -82,7 +85,7 @@ public class ReadingFontScaleTokenTests
 
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "pnpm-workspace.yaml")))
+            if (File.Exists(Path.Join(directory.FullName, "pnpm-workspace.yaml")))
             {
                 return directory.FullName;
             }

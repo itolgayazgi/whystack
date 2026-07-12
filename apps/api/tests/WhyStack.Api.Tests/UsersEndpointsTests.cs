@@ -47,18 +47,28 @@ public class UsersEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Why
         return await BodyOf(response);
     }
 
-    /// <summary>A complete PUT body, built from a fresh read. Tests then break one field at a time.</summary>
-    private static object ValidBody(JsonElement current) =>
-        new
-        {
-            applicationLanguage = "tr",
-            contentLanguage = "en",
-            themeMode = "Dark",
-            readingFontScale = 1.25,
-            reducedMotionEnabled = true,
-            preferredSkillLevel = "MidLevel",
-            rowVersion = current.GetProperty("rowVersion").GetString(),
-        };
+    /// <summary>
+    /// The PUT body, as a named type rather than an anonymous object.
+    ///
+    /// Anonymous objects cannot hold a bare <c>null</c> — the compiler cannot infer a type for it — so
+    /// every test that wanted to omit the skill level had to write <c>(string?)null</c>. A record with
+    /// nullable properties says the same thing once, and says it in the type instead of at five call
+    /// sites.
+    /// </summary>
+    private sealed record PreferencesBody
+    {
+        public string? ApplicationLanguage { get; init; } = "tr";
+        public string? ContentLanguage { get; init; } = "en";
+        public string? ThemeMode { get; init; } = "Dark";
+        public double? ReadingFontScale { get; init; } = 1.25;
+        public bool? ReducedMotionEnabled { get; init; } = true;
+        public string? PreferredSkillLevel { get; init; } = "MidLevel";
+        public string? RowVersion { get; init; }
+    }
+
+    /// <summary>A complete, valid body built from a fresh read. Tests then break one field at a time.</summary>
+    private static PreferencesBody ValidBody(JsonElement current) =>
+        new() { RowVersion = current.GetProperty("rowVersion").GetString() };
 
     // ---------------------------------------------------------------------------------------------
     // Authorization
@@ -76,7 +86,9 @@ public class UsersEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Why
     {
         var client = factory.CreateClient();
 
-        var response = await client.SendAsync(new HttpRequestMessage(new HttpMethod(method), path));
+        using var request = new HttpRequestMessage(new HttpMethod(method), path);
+
+        var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -235,15 +247,11 @@ public class UsersEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Why
         // The laptop saves, holding the rowVersion it loaded before the phone wrote.
         var laptop = await client.PutAsJsonAsync(
             "/api/v1/users/me/preferences",
-            new
+            ValidBody(asSeenByLaptop) with
             {
-                applicationLanguage = "en",
-                contentLanguage = "en",
-                themeMode = "Light",
-                readingFontScale = 1.0,
-                reducedMotionEnabled = false,
-                preferredSkillLevel = (string?)null,
-                rowVersion = asSeenByLaptop.GetProperty("rowVersion").GetString(),
+                ThemeMode = "Light",
+                ReadingFontScale = 1.0,
+                PreferredSkillLevel = null,
             });
 
         Assert.Equal(HttpStatusCode.Conflict, laptop.StatusCode);
@@ -283,16 +291,8 @@ public class UsersEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Why
 
         var response = await client.PutAsJsonAsync(
             "/api/v1/users/me/preferences",
-            new
-            {
-                applicationLanguage = "en",
-                contentLanguage = "en",
-                themeMode = "System",
-                readingFontScale = 500.0,   // the one that breaks every screen in the product
-                reducedMotionEnabled = false,
-                preferredSkillLevel = (string?)null,
-                rowVersion = current.GetProperty("rowVersion").GetString(),
-            });
+            // 500x — the one that breaks every screen in the product.
+            ValidBody(current) with { ReadingFontScale = 500.0 });
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
 
@@ -310,19 +310,11 @@ public class UsersEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Why
     {
         var (client, _) = await SignedIn();
 
+        // rowVersion left null — a client that may skip it is a client that can silently overwrite a
+        // change it never saw.
         var response = await client.PutAsJsonAsync(
             "/api/v1/users/me/preferences",
-            new
-            {
-                applicationLanguage = "tr",
-                contentLanguage = "tr",
-                themeMode = "Dark",
-                readingFontScale = 1.0,
-                reducedMotionEnabled = false,
-                preferredSkillLevel = (string?)null,
-                // rowVersion omitted — a client that may skip it is a client that can silently
-                // overwrite a change it never saw.
-            });
+            new PreferencesBody { ReadingFontScale = 1.0 });
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
 
@@ -338,16 +330,7 @@ public class UsersEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Why
 
         var response = await client.PutAsJsonAsync(
             "/api/v1/users/me/preferences",
-            new
-            {
-                applicationLanguage = "de",
-                contentLanguage = "en",
-                themeMode = "System",
-                readingFontScale = 1.0,
-                reducedMotionEnabled = false,
-                preferredSkillLevel = (string?)null,
-                rowVersion = current.GetProperty("rowVersion").GetString(),
-            });
+            ValidBody(current) with { ApplicationLanguage = "de" });
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }
