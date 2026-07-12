@@ -6,8 +6,14 @@ import type { RefreshTokenStore } from '../src/auth/refresh-token-store';
 // A store that behaves like the NATIVE one — it actually holds a token — so these tests can exercise
 // the path where the client owns the refresh token. The web store returns null by design (the token is
 // in an HttpOnly cookie), which is tested separately in refresh-token-store.test.ts.
+//
+// It declares `platform: 'Native'` itself, and that is the point of the platform living on the store.
+// While it was a module-level constant, this fake held a token while the client read `Web` from the web
+// module — so the native code path was never actually the one under test. It passed for the wrong
+// reason. CodeQL is what surfaced that, by noticing the constant could only ever be one value.
 function fakeStore(initial: string | null = null): RefreshTokenStore & { token: string | null } {
   return {
+    platform: 'Native',
     token: initial,
     async read() {
       return this.token;
@@ -269,6 +275,32 @@ describe('ApiClient', () => {
       // second copy of a credential that is supposed to die with the process.
       expect(store.token).toBe('refresh-2');
       expect(JSON.stringify(store)).not.toContain('access-1');
+    });
+
+    /**
+     * The store's platform must reach the API, because the API cannot guess it — and getting it wrong
+     * is not cosmetic. A Web caller told the API it was Native would be handed the refresh token in the
+     * response BODY, where JavaScript can read it, which undoes the entire reason the cookie exists.
+     */
+    it('tells the API which half of ADR-0008 it is, and takes that from the store', async () => {
+      let refreshBody: { platform?: string } = {};
+
+      const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).endsWith('/auth/refresh')) {
+          refreshBody = JSON.parse(String(init?.body)) as { platform?: string };
+          return jsonResponse(200, TOKENS);
+        }
+
+        return jsonResponse(401, { code: 'authentication_required' });
+      }) as unknown as typeof fetch;
+
+      const client = clientWith(fetchImpl);
+
+      expect(client.platform).toBe('Native'); // because the fake store says so — not a module constant
+
+      await client.request('/api/v1/users/me').catch(() => undefined);
+
+      expect(refreshBody.platform).toBe('Native');
     });
 
     it('sends the cookie on every request, or the web session dies fifteen minutes after sign-in', async () => {

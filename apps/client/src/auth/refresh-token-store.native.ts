@@ -20,10 +20,10 @@ import type { RefreshTokenStore } from './refresh-token-store';
  */
 const KEY = 'whystack.refresh_token';
 
-/** Native holds the token itself, so the refresh call must put it in the request body. */
-export const refreshTokenIsReadable = true;
-
 export const refreshTokenStore: RefreshTokenStore = {
+  /** Native holds the token itself, so the refresh call must put it in the request body. */
+  platform: 'Native',
+
   async read() {
     // A read failure is not the same as "no token". A corrupt Keychain entry, or a device where the
     // hardware store is unavailable, throws — and treating that as "signed out" is the honest outcome

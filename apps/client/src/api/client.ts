@@ -1,4 +1,4 @@
-import { type RefreshTokenStore, refreshTokenIsReadable } from '../auth/refresh-token-store';
+import type { RefreshTokenStore, TokenPlatform } from '../auth/refresh-token-store';
 import { ApiError, NetworkError, toApiError } from './problem';
 
 export interface AuthTokens {
@@ -18,12 +18,6 @@ export interface ApiClientOptions {
   onTokensRenewed?: (tokens: AuthTokens) => void;
   fetchImpl?: typeof fetch;
 }
-
-/**
- * Which half of ADR-0008's token strategy this client is. The API needs to know: a web caller must get
- * its refresh token in a cookie and NOT in the body; a native caller must get it in the body.
- */
-const PLATFORM = refreshTokenIsReadable ? 'Native' : 'Web';
 
 /**
  * Requests that must NEVER trigger a refresh-and-retry.
@@ -78,8 +72,16 @@ export class ApiClient {
     this.#fetch = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
   }
 
-  get platform(): 'Web' | 'Native' {
-    return PLATFORM;
+  /**
+   * Asked of the STORE, not of a module-level constant.
+   *
+   * The store is what actually knows: it is the thing that either holds the token or cannot. A separate
+   * constant would be a second source for one fact, and the two would eventually disagree — in a test
+   * first, silently, where a native-like fake store would still read the web constant and pass for the
+   * wrong reason.
+   */
+  get platform(): TokenPlatform {
+    return this.#store.platform;
   }
 
   get isSignedIn(): boolean {
@@ -189,7 +191,7 @@ export class ApiClient {
 
     // On native, no stored token means no session. On web, read() always returns null and the cookie
     // does the talking — so we must still make the call and let the server decide.
-    if (refreshTokenIsReadable && refreshToken === null) {
+    if (this.#store.platform === 'Native' && refreshToken === null) {
       return false;
     }
 
@@ -198,7 +200,7 @@ export class ApiClient {
     try {
       response = await this.#send('/api/v1/auth/refresh', 'POST', {
         refreshToken,
-        platform: PLATFORM,
+        platform: this.#store.platform,
       });
     } catch (error) {
       // The network is down. This is NOT a refused refresh, and must not end the session: a user in a

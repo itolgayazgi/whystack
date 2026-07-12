@@ -16,13 +16,9 @@ const secureStore = {
 
 vi.mock('expo-secure-store', () => secureStore);
 
-const { refreshTokenStore: nativeStore, refreshTokenIsReadable: nativeIsReadable } = await import(
-  '../src/auth/refresh-token-store.native'
-);
+const { refreshTokenStore: nativeStore } = await import('../src/auth/refresh-token-store.native');
 
-const { refreshTokenStore: webStore, refreshTokenIsReadable: webIsReadable } = await import(
-  '../src/auth/refresh-token-store'
-);
+const { refreshTokenStore: webStore } = await import('../src/auth/refresh-token-store');
 
 describe('the web refresh token store', () => {
   /**
@@ -42,11 +38,11 @@ describe('the web refresh token store', () => {
     expect(document.cookie).not.toContain('a-refresh-token');
   });
 
-  it('reports that the token is not readable, so the refresh call relies on the cookie', () => {
-    // This flag is what stops the web client asking the API to put the refresh token in the response
-    // BODY — which would hand the browser a JavaScript-readable copy of the very token the cookie
-    // exists to hide, and quietly undo the entire strategy.
-    expect(webIsReadable).toBe(false);
+  it('declares itself Web, so the API leaves the refresh token in the cookie', () => {
+    // This is what stops the web client asking the API to put the refresh token in the response BODY —
+    // which would hand the browser a JavaScript-readable copy of the very token the cookie exists to
+    // hide, and quietly undo the entire strategy.
+    expect(webStore.platform).toBe('Web');
   });
 });
 
@@ -55,10 +51,10 @@ describe('the native refresh token store', () => {
     vi.clearAllMocks();
   });
 
-  it('reports that the token IS readable, so the refresh call sends it in the body', () => {
+  it('declares itself Native, so the refresh call sends the token in the body', () => {
     // A native app has no cookie jar. It must hold the token and present it — which is exactly why it
     // has to be held somewhere the operating system encrypts.
-    expect(nativeIsReadable).toBe(true);
+    expect(nativeStore.platform).toBe('Native');
   });
 
   it('reads and writes through the Keychain / Keystore, and only while the device is unlocked', async () => {

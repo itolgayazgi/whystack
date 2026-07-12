@@ -15,23 +15,33 @@
  *
  * Metro resolves `refresh-token-store.native.ts` on iOS and Android instead of this file.
  */
+/** Which half of ADR-0008's token strategy a store implements. */
+export type TokenPlatform = 'Web' | 'Native';
+
 export interface RefreshTokenStore {
+  /**
+   * Which half of ADR-0008 this store is — and therefore what the API must be asked for.
+   *
+   * A Web caller must have its refresh token left in the HttpOnly cookie and NOT returned in the body;
+   * a Native caller must have it in the body, because it has no cookie jar. Handing out BOTH would give
+   * the browser a JavaScript-readable copy of the very token the cookie exists to hide.
+   *
+   * It lives ON THE STORE rather than as a module-level constant, and that is not cosmetic. The store
+   * is injected; a constant is not. With two sources for one fact, a test that passes a native-like
+   * store would still read the web constant — and would pass by accident, proving nothing. Asking the
+   * store makes the two impossible to disagree.
+   */
+  readonly platform: TokenPlatform;
+
   /** Web always returns null: the token exists, but in a place this code is not allowed to see. */
   read(): Promise<string | null>;
   write(token: string): Promise<void>;
   clear(): Promise<void>;
 }
 
-/**
- * True when the platform keeps the refresh token somewhere this code can read it.
- *
- * Callers need to know, because it changes what they must do. On web, `POST /auth/refresh` sends no
- * body and relies on the cookie; on native it must put the token in the body. Handing out BOTH would
- * give the web client a JavaScript-readable copy of the very token the cookie exists to hide.
- */
-export const refreshTokenIsReadable = false;
-
 export const refreshTokenStore: RefreshTokenStore = {
+  platform: 'Web',
+
   // Never localStorage. Never sessionStorage. Never a cookie this script can write.
   async read() {
     return null;
