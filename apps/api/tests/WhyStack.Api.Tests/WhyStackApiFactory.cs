@@ -94,6 +94,12 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
                 ["Jwt:Audience"] = "https://whystack.test",
                 ["App:ClientBaseUrl"] = "https://whystack.test",
                 ["RateLimiting:Auth:PermitLimit"] = AuthPermitLimit.ToString(),
+
+                // The prune job is tested where it is the subject (WhyStack.Infrastructure.Tests),
+                // against the same database. Leaving it running here would have two test assemblies
+                // contending for one sp_getapplock, and the loser would fail for a reason that has
+                // nothing to do with what it asserts.
+                ["SessionMaintenance:Enabled"] = "false",
             });
         });
 

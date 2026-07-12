@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using WhyStack.Application.Abstractions;
 using WhyStack.Application.Identity.Confirmation;
@@ -12,6 +13,7 @@ using WhyStack.Application.Identity.Register;
 using WhyStack.Application.Identity.Sessions;
 using WhyStack.Application.Identity.Tokens;
 using WhyStack.Infrastructure.Identity;
+using WhyStack.Infrastructure.Maintenance;
 using WhyStack.Infrastructure.Persistence;
 
 namespace WhyStack.Infrastructure;
@@ -78,6 +80,24 @@ public static class DependencyInjection
             .AddDbContextCheck<WhyStackDbContext>(name: "sql-server", tags: [ReadinessTag]);
 
         services.AddScoped<IIdentityRepository, IdentityRepository>();
+
+        AddMaintenance(services, configuration);
+    }
+
+    private static void AddMaintenance(IServiceCollection services, IConfiguration configuration)
+    {
+        services
+            .AddOptions<SessionMaintenanceOptions>()
+            .Bind(configuration.GetSection(SessionMaintenanceOptions.SectionName))
+            .Validate(options => options.BatchSize is > 0 and <= 5_000,
+                "SessionMaintenance:BatchSize must be between 1 and 5000. Past roughly 5000 row locks, "
+                    + "SQL Server escalates to a TABLE lock — and nobody can sign in until the delete finishes.")
+            .Validate(options => options.Interval > TimeSpan.Zero, "SessionMaintenance:Interval must be positive.")
+            .ValidateOnStart();
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<SessionPruner>();
+        services.AddHostedService<SessionPruneService>();
     }
 
     private static void AddIdentity(
