@@ -15,8 +15,14 @@ module.exports = {
   userInterfaceStyle: 'automatic',
   ios: {
     supportsTablet: true,
+
+    // Required to generate a native project at all — `expo prebuild` refuses without it. It is also the
+    // identifier the operating system uses to scope the Keychain, so it is not a label: change it and
+    // every session on every phone is gone, because the app can no longer read its own stored token.
+    bundleIdentifier: 'dev.whystack.app',
   },
   android: {
+    package: 'dev.whystack.app',
     adaptiveIcon: {
       backgroundColor: light.background,
       foregroundImage: './src/assets/images/android-icon-foreground.png',
