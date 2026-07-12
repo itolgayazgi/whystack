@@ -55,7 +55,10 @@ public sealed partial class SmtpEmailSender(
 
     public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
     {
-        var mail = new MimeMessage
+        // MimeMessage is disposable, and it is not ceremony: it owns the streams behind its body parts.
+        // Leaving it to the finaliser means those streams live until a GC that may not come under load,
+        // which is exactly when you are sending the most mail.
+        using var mail = new MimeMessage
         {
             Subject = message.Subject,
             Body = new TextPart("plain") { Text = message.Body },
