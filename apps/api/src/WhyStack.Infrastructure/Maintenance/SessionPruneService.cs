@@ -92,11 +92,24 @@ public sealed partial class SessionPruneService(
         {
             // Shutdown. Not a failure.
         }
+        // A catch-all, on purpose. CodeQL flags this rule (cs/catch-of-all-exceptions) and it is right
+        // almost everywhere — but this is a top-level loop in a long-running background service, which
+        // is the case the rule exists to make an exception for.
+        //
+        // An unhandled exception from a BackgroundService takes THE WHOLE HOST DOWN by default. A
+        // transient SQL timeout at 3am would kill the API because a maintenance job hiccuped. The rows
+        // can wait an hour; the users cannot.
+        //
+        // Narrowing it does not help: the list of "expected" failures cannot be enumerated, and the one
+        // we forget is the one that kills the process. Setting
+        // BackgroundServiceExceptionBehavior.Ignore is worse still — the host survives, the LOOP dies,
+        // and pruning silently stops forever, which is precisely the silent failure CLAUDE.md 1.6
+        // forbids.
+        //
+        // It is not swallowed. It is logged at Error, loudly, so a job that has been failing all week
+        // is visible rather than invisible.
         catch (Exception exception)
         {
-            // Swallowed on purpose, and LOUDLY. An unhandled exception from a BackgroundService takes
-            // the whole host down by default — so a transient SQL timeout at 3am would kill the API.
-            // The rows can wait an hour. The users cannot.
             PruneFailed(logger, exception);
         }
     }
