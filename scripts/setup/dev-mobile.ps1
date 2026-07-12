@@ -1,23 +1,30 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Puts the app on a real phone, over Expo Go, in about a minute.
+    Puts the app on a real phone — the fast human feedback loop.
 
 .DESCRIPTION
-    Expo Go runs the JavaScript of this app inside Expo's own container. It is the fast human feedback
-    loop: real fonts, real keyboard, real gestures, real Turkish text overflowing a real button — none
-    of which CI can see and none of which I can see.
+    Real fonts, real keyboard, real gestures, real Turkish text overflowing a real button. None of which
+    CI can see, and none of which I can see. This is the loop that answers "does it feel right?".
 
-    WHAT IT DOES NOT PROVE, and this matters:
+    IT USES A DEVELOPMENT BUILD, NOT EXPO GO.
 
-      Expo Go is EXPO'S app, not ours. Its bundle identifier, its signature and its entitlements are
-      Expo's. So it cannot tell you anything about OUR binary — the one a user would install. The
-      iCloud-sync bug we found in the refresh token would NOT have appeared here, because SecureStore
-      writes under Expo Go's keychain entitlements rather than ours. Nothing in app.config.js's native
-      configuration applies either.
+      Expo Go ships a FIXED set of native modules, compiled against one Expo SDK. The published version
+      supports SDK 54; this project is on SDK 57, so it refuses to open the project at all. There is
+      nothing to be done about that from here.
 
-      Expo Go answers "does this feel right?". The native CI workflow answers "does the thing we ship
-      actually work?". They are different questions. Keep both.
+      Which is just as well, because Expo Go was always the weaker tool. It is EXPO'S app: its bundle
+      identifier, its signature and its entitlements belong to Expo, so it could never have told us
+      anything about the binary we actually ship. The iCloud-sync bug we found in the refresh token
+      would not have appeared there — SecureStore writes under Expo Go's keychain entitlements rather
+      than ours.
+
+      A development build is OUR app: our bundle id, our signature, our entitlements. It still loads its
+      JavaScript from Metro at runtime, so a code change appears on the phone in a second — the same
+      loop Expo Go offered, with none of its blind spots.
+
+      Get the APK from the "Development build" workflow in GitHub Actions. Install it once; re-install
+      only when a NATIVE dependency changes.
 
     THE ONE REAL OBSTACLE this script exists to remove: a phone cannot reach `localhost`. The API binds
     to the loopback interface by default, which is unreachable from anything but this machine. So the
@@ -100,22 +107,32 @@ Write-Host "  Wrote apps/client/.env" -ForegroundColor Green
 # Windows blocks inbound connections to a port nothing has asked it to open. The phone's request is
 # dropped silently — no error on either side, the app simply shows its offline state, and there is
 # nothing anywhere to explain why. It is the single most likely thing to go wrong here.
-$rule = Get-NetFirewallRule -DisplayName 'WhyStack dev API' -ErrorAction SilentlyContinue
+#
+# TWO ports, and forgetting the second is the classic mistake:
+#
+#   5207  the API. Without it the app opens and then cannot sign anybody in.
+#   8081  Metro — the JavaScript bundler. Without it the app does not open AT ALL: it scans the QR,
+#         tries to fetch the bundle from this machine, and hangs on a white screen. That looks like a
+#         broken build rather than a blocked port.
+$rule = Get-NetFirewallRule -DisplayName 'WhyStack dev' -ErrorAction SilentlyContinue
 
 if ($null -eq $rule) {
     Write-Host ''
-    Write-Host '  The Windows firewall will drop the phone''s requests until port 5207 is open.' -ForegroundColor Yellow
-    Write-Host '  It fails SILENTLY: the app just shows "offline", and nothing says why.' -ForegroundColor Yellow
+    Write-Host '  The Windows firewall will drop the phone''s requests until two ports are open.' -ForegroundColor Yellow
+    Write-Host '  It fails SILENTLY: no error on either side, and nothing says why.' -ForegroundColor Yellow
+    Write-Host ''
+    Write-Host '    5207  the API   - without it, the app opens but nobody can sign in' -ForegroundColor DarkGray
+    Write-Host '    8081  Metro     - without it, the app does not open at all (white screen)' -ForegroundColor DarkGray
     Write-Host ''
     Write-Host '  Run this ONCE, in a PowerShell started as Administrator:' -ForegroundColor Yellow
     Write-Host ''
-    Write-Host '    New-NetFirewallRule -DisplayName "WhyStack dev API" -Direction Inbound `' -ForegroundColor White
-    Write-Host '      -Protocol TCP -LocalPort 5207 -Action Allow -Profile Private' -ForegroundColor White
+    Write-Host '    New-NetFirewallRule -DisplayName "WhyStack dev" -Direction Inbound `' -ForegroundColor White
+    Write-Host '      -Protocol TCP -LocalPort 5207,8081 -Action Allow -Profile Private' -ForegroundColor White
     Write-Host ''
     Write-Host '  -Profile Private: your home Wi-Fi, not a coffee shop''s. The rule should not follow' -ForegroundColor DarkGray
     Write-Host '  you onto a public network and quietly expose a development API to strangers.' -ForegroundColor DarkGray
 } else {
-    Write-Host '  Firewall rule for port 5207 is already in place.' -ForegroundColor Green
+    Write-Host '  Firewall rule for ports 5207 and 8081 is already in place.' -ForegroundColor Green
 }
 
 # ── What to run ────────────────────────────────────────────────────────────────────────────────────
@@ -131,8 +148,12 @@ Write-Host ''
 Write-Host '  3.  The app' -ForegroundColor White
 Write-Host '      pnpm mobile' -ForegroundColor DarkGray
 Write-Host ''
-Write-Host 'Then open Expo Go on your phone and scan the QR code.' -ForegroundColor Cyan
+Write-Host 'Then open WhyStack on your phone and scan the QR code.' -ForegroundColor Cyan
 Write-Host 'The phone and this machine must be on the SAME Wi-Fi.' -ForegroundColor Cyan
+Write-Host ''
+Write-Host 'No app on the phone yet? Download the APK from GitHub Actions:' -ForegroundColor Cyan
+Write-Host '  Actions > Development build > the newest run > whystack-android-dev-build' -ForegroundColor DarkGray
+Write-Host 'Install it once. Re-install only when a NATIVE dependency changes.' -ForegroundColor DarkGray
 Write-Host ''
 Write-Host 'Read the mail the app sends at  http://localhost:8025  (Mailpit).' -ForegroundColor DarkGray
 Write-Host 'Confirmation and reset links point at the web client, not the phone. Deep linking into' -ForegroundColor DarkGray
