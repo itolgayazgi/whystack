@@ -91,4 +91,20 @@ public static class ErrorCodes
     public const string InvalidResetToken = "invalid_reset_token";
 
     public const string InvalidConfirmationToken = "invalid_confirmation_token";
+
+    public const string ResourceNotFound = "resource_not_found";
+
+    /// <summary>
+    /// Somebody else changed this row between the caller's read and their write.
+    /// </summary>
+    /// <remarks>
+    /// `07` names preferences as an area where concurrency matters, and the failure it prevents is a
+    /// quiet one: a phone and a laptop both open the settings screen, each changes one thing, and the
+    /// second save silently reverts the first. Nobody sees an error. The user just finds the setting
+    /// they changed this morning has changed back, and has no idea why.
+    /// </remarks>
+    public const string ConcurrencyConflict = "concurrency_conflict";
+
+    /// <summary>A language we do not have an interface or content for. `08`'s approved code.</summary>
+    public const string ContentLanguageNotSupported = "content_language_not_supported";
 }

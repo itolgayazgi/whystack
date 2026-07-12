@@ -29,6 +29,7 @@ export {
   fontFallback,
   fontFamily,
   reading,
+  readingFontScale,
   readingMaxWidth,
   type TextStyle,
   type TextToken,

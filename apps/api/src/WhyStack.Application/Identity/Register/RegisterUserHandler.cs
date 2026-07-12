@@ -1,7 +1,9 @@
 using WhyStack.Application.Abstractions;
 using WhyStack.Application.Common;
 using WhyStack.Application.Identity.Tokens;
+using WhyStack.Application.Users;
 using WhyStack.Domain.Identity;
+using WhyStack.Domain.Users;
 
 namespace WhyStack.Application.Identity.Register;
 
@@ -10,12 +12,21 @@ namespace WhyStack.Application.Identity.Register;
 /// <c>null</c> for any field, so a non-nullable string here would be a lie the compiler believes and
 /// the runtime disproves with a NullReferenceException on the first malformed request.
 /// </summary>
+/// <param name="DeviceLocale">
+/// The device's locale, as the client reports it ("tr-TR", "en-GB", "de-DE"). It picks the starting
+/// application language and nothing else — `04`: Turkish device → Turkish, everything else → English.
+///
+/// It is a HINT, not a setting. An unsupported or absent locale is normal and yields English; it is
+/// never a reason to reject a registration. The user changes it afterwards on the preferences screen,
+/// and from that moment their choice is the only thing that matters.
+/// </param>
 public sealed record RegisterUserCommand(
     string? Email,
     string? Password,
     string? DisplayName,
     string? IpAddressHash,
-    string? UserAgentHash);
+    string? UserAgentHash,
+    string? DeviceLocale = null);
 
 /// <summary>
 /// Deliberately says nothing about whether the address was already taken.
@@ -128,6 +139,33 @@ public sealed class RegisterUserHandler(
         };
 
         repository.AddUser(user);
+
+        // Created WITH the account, in this same transaction — not lazily on first read.
+        //
+        // `08` forbids a GET from mutating server state, so GET /users/me/preferences cannot create the
+        // row it is missing. Which means either it exists from the start, or that endpoint 404s for an
+        // account that plainly exists. This is the invariant: one user, one preferences row, always.
+        var applicationLanguage = LanguageCode.FromDeviceLocale(command.DeviceLocale);
+
+        repository.AddPreferences(new UserPreferences
+        {
+            Id = Guid.CreateVersion7(),
+            UserId = user.Id,
+            ApplicationLanguageCode = applicationLanguage,
+
+            // Content starts in the same language as the interface, and then the two go their own ways
+            // — they are independent axes (`07`), not one setting wearing two hats. Seeding them the
+            // same is a first guess, not a coupling: a Turkish reader most likely wants Turkish content
+            // too, and the day they want the English original they change one of them and the other
+            // stays put.
+            ContentLanguageCode = applicationLanguage,
+
+            ThemeMode = ThemeMode.System,
+            ReadingFontScale = ReadingFontScale.Default,
+            ReducedMotionEnabled = false,
+            PreferredSkillLevel = null,
+            CreatedAtUtc = now,
+        });
 
         repository.AddUserRole(new UserRole
         {

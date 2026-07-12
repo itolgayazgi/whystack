@@ -32,7 +32,24 @@ public enum ClientPlatform
     Native = 1,
 }
 
-public sealed record RegisterRequest(string? Email, string? Password, string? DisplayName);
+/// <summary>What a client sends to create an account.</summary>
+/// <param name="DeviceLocale">
+/// The device's locale ("tr-TR", "en-GB", "de-DE"), which picks the starting application language:
+/// Turkish device → Turkish, everything else → English (`04`). Optional; absent means English.
+///
+/// Taken from the body, not from the Accept-Language header. The header would work in a browser and
+/// tells you nothing useful from a native app, so relying on it would give the two clients different
+/// behaviour for the same person — and the one place that behaviour is visible is the moment they first
+/// open the app. The client knows its own locale exactly; it says so.
+///
+/// It is only a STARTING value. Whatever the user chooses afterwards is the only thing that matters,
+/// and GET /users/me/preferences always reports what was actually stored.
+/// </param>
+public sealed record RegisterRequest(
+    string? Email,
+    string? Password,
+    string? DisplayName,
+    string? DeviceLocale);
 
 public sealed record LoginRequest(string? Email, string? Password, ClientPlatform Platform = ClientPlatform.Web);
 
@@ -210,7 +227,13 @@ public static class AuthEndpoints
         try
         {
             var result = await handler.HandleAsync(
-                new RegisterUserCommand(request.Email, request.Password, request.DisplayName, ipHash, userAgentHash),
+                new RegisterUserCommand(
+                    request.Email,
+                    request.Password,
+                    request.DisplayName,
+                    ipHash,
+                    userAgentHash,
+                    request.DeviceLocale),
                 cancellationToken);
 
             return result.IsSuccess

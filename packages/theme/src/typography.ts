@@ -1,5 +1,7 @@
 // Values owned by docs/design-system/design-tokens.md section 1. Families decided by ADR-0013.
 
+import readingFontScaleTokens from './reading-font-scale.json';
+
 export type FontRole = 'body' | 'ui' | 'code';
 
 /**
@@ -80,6 +82,26 @@ const LITERATA_AVERAGE_CHAR_WIDTH_EM = 0.52;
 export function readingMaxWidth(bodyFontSize: number): number {
   return Math.round(bodyFontSize * LITERATA_AVERAGE_CHAR_WIDTH_EM * reading.measureCh);
 }
+
+/**
+ * How much larger a reader may make the reading type (`04` — "Reading settings").
+ *
+ * Discrete steps, not a slider. Type is a SCALE, not a number: the size, the line height and the
+ * 4px vertical rhythm in `layout.ts` are chosen together, and an arbitrary 1.0732x lands the baseline
+ * between grid lines on every screen in the product. Four steps are four layouts that can actually be
+ * tested; a continuous range is infinitely many that cannot.
+ *
+ * The steps live in JSON because two runtimes need them and they cannot share TypeScript — the client
+ * imports this module, and the API validates against the same numbers in C#. A test on each side reads
+ * this file, so the two cannot silently drift apart.
+ *
+ * It does NOT replace the operating system's own text-size setting, which the client honours anyway.
+ * This is for the reader who wants long-form prose bigger without enlarging every other app they own.
+ */
+export const readingFontScale = {
+  steps: readingFontScaleTokens.steps as readonly number[],
+  default: readingFontScaleTokens.default,
+} as const;
 
 /** Every font must render this before it is accepted (ADR-0013 — Turkish coverage is non-negotiable). */
 export const turkishVerificationString =

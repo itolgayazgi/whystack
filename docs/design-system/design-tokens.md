@@ -69,6 +69,25 @@ Sizes are density-independent (React Native) / `px` (web). Two columns: **Compac
 
 Headings sit **close to the paragraph below** and far from the one above — this is what makes structure legible without borders.
 
+### Reading font scale
+
+`04` requires "Reading settings" and `07` carries a `ReadingFontScale` column, but neither document gave it a range. This defines it.
+
+| Step | Value | Body size (compact → expanded) |
+|---|---|---|
+| Small | `0.875` | 15.75 → 16.6 |
+| **Default** | **`1.0`** | 18 → 19 |
+| Large | `1.25` | 22.5 → 23.75 |
+| Largest | `1.5` | 27 → 28.5 |
+
+**Discrete steps, not a slider.** Type is a scale, not a number: size, line height and the 4px vertical rhythm are chosen together, so an arbitrary `1.0732×` puts the baseline between grid lines on every screen in the product. Four steps are four layouts that can be tested. A continuous range is infinitely many that cannot.
+
+The floor is `0.875` and not lower because the body token is already the smallest comfortable long-form size; the ceiling is `1.5` because past it the reading measure collapses below ~45 characters on a phone and the line-start becomes hard to find — the same failure the character-based measure above exists to prevent.
+
+This **does not replace the operating system's text-size setting**, which the client honours regardless. It is for the reader who wants long-form prose larger without enlarging every other app they own.
+
+> **Single source:** `packages/theme/src/reading-font-scale.json`. The API validates against the same numbers in C#, and a test on each side reads that file — so the two cannot drift apart silently.
+
 ---
 
 ## 2. Spacing

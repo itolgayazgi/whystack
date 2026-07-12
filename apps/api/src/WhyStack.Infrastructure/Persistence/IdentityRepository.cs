@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using WhyStack.Application.Abstractions;
 using WhyStack.Domain.Identity;
+using WhyStack.Domain.Users;
 
 namespace WhyStack.Infrastructure.Persistence;
 
@@ -62,6 +63,8 @@ public sealed class IdentityRepository(WhyStackDbContext context, IClock clock) 
     public void AddUserRole(UserRole userRole) => context.UserRoles.Add(userRole);
 
     public void AddLoginEvent(UserLoginEvent loginEvent) => context.UserLoginEvents.Add(loginEvent);
+
+    public void AddPreferences(UserPreferences preferences) => context.UserPreferences.Add(preferences);
 
     public void AddSession(UserSession session) => context.UserSessions.Add(session);
 

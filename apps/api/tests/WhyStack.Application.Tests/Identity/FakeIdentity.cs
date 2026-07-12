@@ -1,5 +1,6 @@
 using WhyStack.Application.Abstractions;
 using WhyStack.Domain.Identity;
+using WhyStack.Domain.Users;
 
 namespace WhyStack.Application.Tests.Identity;
 
@@ -97,6 +98,7 @@ public sealed class FakeIdentityRepository : IIdentityRepository
     public List<UserRole> UserRoles { get; } = [];
     public List<UserLoginEvent> LoginEvents { get; } = [];
     public List<UserSession> Sessions { get; } = [];
+    public List<UserPreferences> Preferences { get; } = [];
     public int SaveCount { get; private set; }
 
     private static readonly Dictionary<RoleName, Guid> RoleIds =
@@ -127,6 +129,8 @@ public sealed class FakeIdentityRepository : IIdentityRepository
         Task.FromResult(Users.SingleOrDefault(user => user.Id == userId));
 
     public void AddUser(User user) => Users.Add(user);
+
+    public void AddPreferences(UserPreferences preferences) => Preferences.Add(preferences);
 
     public void AddUserRole(UserRole userRole) => UserRoles.Add(userRole);
 
@@ -196,4 +200,129 @@ public sealed class FakeAppLinks : IAppLinks
     public string ConfirmEmail(string token) => $"https://test.local/auth/confirm-email?token={token}";
 
     public string ResetPassword(string token) => $"https://test.local/auth/reset-password?token={token}";
+}
+
+/// <summary>
+/// Preferences, plus a rowversion that behaves like SQL Server's: it CHANGES ON EVERY WRITE.
+/// </summary>
+/// <remarks>
+/// That last part is the whole point of this fake. A stub that simply saved and returned true would let
+/// every optimistic-concurrency test pass without optimistic concurrency existing at all — the conflict
+/// would never be detected because nothing would ever change the version. Incrementing it here is what
+/// makes "the second writer is rejected" a claim the test can actually falsify.
+/// </remarks>
+public sealed class FakeUserPreferencesRepository : IUserPreferencesRepository
+{
+    private readonly List<UserPreferences> _stored = [];
+
+    public int SaveCount { get; private set; }
+
+    /// <summary>What the "database" holds — never what an in-flight, unsaved handler is holding.</summary>
+    public IReadOnlyList<UserPreferences> Preferences => _stored;
+
+    /// <summary>
+    /// Returns a COPY, and that detail is the whole reason this fake is trustworthy.
+    /// </summary>
+    /// <remarks>
+    /// The first version handed back the stored reference. The handler then mutated it BEFORE calling
+    /// TrySaveAsync — as it must; that is how EF Core change tracking works — and the mutation was
+    /// instantly visible in the fake's list even when the save was REJECTED. So a rejected write still
+    /// appeared to have overwritten the row, and the conflict test failed while the real code was right.
+    ///
+    /// A real database does not work that way: an UPDATE that matches zero rows changes nothing, and the
+    /// entity the failed request was holding dies with its DbContext. Copying on read and committing
+    /// only on a successful save is what makes this fake model that, instead of modelling a shared
+    /// mutable list that happens to be called a repository.
+    /// </remarks>
+    public Task<UserPreferences?> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken) =>
+        Task.FromResult(Copy(_stored.SingleOrDefault(row => row.UserId == userId)));
+
+    public Task<bool> TrySaveAsync(
+        UserPreferences preferences,
+        byte[] expectedRowVersion,
+        CancellationToken cancellationToken)
+    {
+        var stored = _stored.SingleOrDefault(row => row.Id == preferences.Id);
+
+        if (stored is null)
+        {
+            return Task.FromResult(false);
+        }
+
+        // Exactly what SQL Server does: the UPDATE matches zero rows once the version has moved on, and
+        // nothing is written.
+        if (!(stored.RowVersion ?? []).SequenceEqual(expectedRowVersion))
+        {
+            return Task.FromResult(false);
+        }
+
+        stored.ApplicationLanguageCode = preferences.ApplicationLanguageCode;
+        stored.ContentLanguageCode = preferences.ContentLanguageCode;
+        stored.ThemeMode = preferences.ThemeMode;
+        stored.ReadingFontScale = preferences.ReadingFontScale;
+        stored.ReducedMotionEnabled = preferences.ReducedMotionEnabled;
+        stored.PreferredSkillLevel = preferences.PreferredSkillLevel;
+        stored.UpdatedAtUtc = preferences.UpdatedAtUtc;
+        stored.RowVersion = NextVersion(stored.RowVersion);
+
+        // The caller's entity gets the new version too — EF Core does this after a successful save, and
+        // the handler returns it to the client as the token for the NEXT write. Skip it and every second
+        // write from a well-behaved client would 409.
+        preferences.RowVersion = stored.RowVersion;
+
+        SaveCount++;
+
+        return Task.FromResult(true);
+    }
+
+    public UserPreferences Seed(Guid userId, DateTime createdAtUtc)
+    {
+        var preferences = new UserPreferences
+        {
+            Id = Guid.CreateVersion7(),
+            UserId = userId,
+            ApplicationLanguageCode = "en",
+            ContentLanguageCode = "en",
+            ThemeMode = ThemeMode.System,
+            ReadingFontScale = 1.0,
+            ReducedMotionEnabled = false,
+            CreatedAtUtc = createdAtUtc,
+            RowVersion = NextVersion(null),
+        };
+
+        _stored.Add(preferences);
+
+        return Copy(preferences)!;
+    }
+
+    private static UserPreferences? Copy(UserPreferences? source) =>
+        source is null
+            ? null
+            : new UserPreferences
+            {
+                Id = source.Id,
+                UserId = source.UserId,
+                ApplicationLanguageCode = source.ApplicationLanguageCode,
+                ContentLanguageCode = source.ContentLanguageCode,
+                ThemeMode = source.ThemeMode,
+                ReadingFontScale = source.ReadingFontScale,
+                ReducedMotionEnabled = source.ReducedMotionEnabled,
+                PreferredSkillLevel = source.PreferredSkillLevel,
+                CreatedAtUtc = source.CreatedAtUtc,
+                UpdatedAtUtc = source.UpdatedAtUtc,
+                RowVersion = source.RowVersion?.ToArray(),
+            };
+
+    /// <summary>Eight bytes, big-endian, incremented — the shape of a SQL Server rowversion.</summary>
+    private static byte[] NextVersion(byte[]? current)
+    {
+        var value = current is { Length: 8 }
+            ? System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(current)
+            : 0UL;
+
+        var next = new byte[8];
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt64BigEndian(next, value + 1);
+
+        return next;
+    }
 }
