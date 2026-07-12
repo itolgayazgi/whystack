@@ -97,23 +97,44 @@ jobs:
         working-directory: apps/client
         run: npx expo prebuild --platform android --no-install
 
-      # EXPO_PUBLIC_API_URL is baked into the JS bundle at BUILD time, so it has to be right here and
-      # not at launch.
+      # Through a .env file, not a step-level environment variable.
       #
-      # 10.0.2.2 is how an Android emulator reaches the machine it is running on. `localhost` inside the
-      # emulator is the emulator — pointing the app there would have it call itself, fail to connect,
-      # and land in the offline state, which is a perfectly plausible-looking test failure with nothing
-      # to do with the code.
+      # The env-var version silently did not reach the bundler, and the app fell back to
+      # `http://localhost:5207` — which inside an emulator is the EMULATOR. Every request failed, the
+      # app landed in its offline state, and the screenshot said "You appear to be offline". A perfectly
+      # plausible-looking app bug, caused entirely by a missing environment variable.
       #
-      # assembleRelease, not assembleDebug: a debug build fetches its JavaScript from a Metro server
-      # that would have to stay alive for the whole run, and its failures look like app bugs. A release
-      # build carries the bundle inside it, which is also what a user would install. The React Native
-      # template signs release with the debug keystore unless told otherwise, so this needs no secrets.
+      # iOS hid the same fault, because on a simulator `localhost` happens to be the right answer. One
+      # platform broke and the other passed for the wrong reason — which is the worst possible outcome,
+      # and the reason for the assertion below.
+      - name: Point the app at the stub
+        run: echo "EXPO_PUBLIC_API_URL=http://10.0.2.2:5207" > apps/client/.env
+
+      # assembleRelease, not assembleDebug: a debug build fetches its JavaScript from a Metro server that
+      # would have to stay alive for the whole run, and its failures look like app bugs. A release build
+      # carries the bundle inside it, which is also what a user would install. The React Native template
+      # signs release with the debug keystore unless told otherwise, so this needs no secrets.
       - name: Build the APK
         working-directory: apps/client/android
-        env:
-          EXPO_PUBLIC_API_URL: http://10.0.2.2:5207
         run: ./gradlew assembleRelease --no-daemon
+
+      # Assert the thing we depend on, rather than hoping.
+      #
+      # The URL is inlined into the JavaScript bundle at build time. If it is not there, the app talks
+      # to the wrong host, and the failure arrives forty minutes later disguised as an app bug. Ten
+      # seconds here turns that into a build error that names its own cause.
+      - name: Prove the API URL reached the bundle
+        run: |
+          APK=apps/client/android/app/build/outputs/apk/release/app-release.apk
+
+          if ! unzip -p "$APK" assets/index.android.bundle | grep -q "10.0.2.2:5207"; then
+            echo "::error::EXPO_PUBLIC_API_URL is not in the bundle. The app would fall back to"
+            echo "::error::localhost, which inside an emulator is the emulator itself, and every"
+            echo "::error::request would fail as if the app were offline."
+            exit 1
+          fi
+
+          echo "The bundle points at 10.0.2.2:5207."
 
       - name: Install Maestro
         run: |
@@ -250,10 +271,15 @@ jobs:
       # The simulator's localhost IS the host machine's, so the default API URL already points at the
       # stub. It is set explicitly anyway, because relying on a default that happens to be right is how
       # a test starts passing for the wrong reason.
+      # The same .env as Android, for the same reason — and this platform is why the bug was so hard to
+      # see. A simulator's `localhost` IS the host machine's, so when the environment variable failed to
+      # reach the bundler, iOS fell back to the default and **worked anyway**. It passed for the wrong
+      # reason while Android failed for the right one.
+      - name: Point the app at the stub
+        run: echo "EXPO_PUBLIC_API_URL=http://localhost:5207" > apps/client/.env
+
       - name: Build for the simulator
         working-directory: apps/client/ios
-        env:
-          EXPO_PUBLIC_API_URL: http://localhost:5207
         run: |
           WORKSPACE=$(ls -d ./*.xcworkspace | head -1)
           SCHEME=$(basename "$WORKSPACE" .xcworkspace)
@@ -267,6 +293,19 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO
+
+      # Not "it happens to work" — asserted, like Android's.
+      - name: Prove the API URL reached the bundle
+        run: |
+          BUNDLE=$(find apps/client/ios/build/Build/Products -name 'main.jsbundle' | head -1)
+          test -n "$BUNDLE" || { echo "::error::No JS bundle in the built app."; exit 1; }
+
+          if ! grep -q "localhost:5207" "$BUNDLE"; then
+            echo "::error::EXPO_PUBLIC_API_URL is not in the bundle."
+            exit 1
+          fi
+
+          echo "The bundle points at localhost:5207."
 
       - name: Install Maestro
         run: |
@@ -318,6 +357,17 @@ jobs:
       - name: Run the flow
         run: maestro test tests/e2e/flows --format junit --output maestro-ios.xml
 
+      # What the APP said, as opposed to what Maestro saw. console.error from the JS reaches the device
+      # log, and on a machine nobody can attach a debugger to that is the only channel there is — the
+      # difference between "the app is broken" and "the Keychain refused to store the token, here is the
+      # OSStatus".
+      - name: Collect the device log
+        if: failure()
+        run: |
+          xcrun simctl spawn booted log show --last 10m --style compact             --predicate 'eventMessage CONTAINS "whystack" OR processImagePath CONTAINS "WhyStack"'             > device.log 2>&1 || true
+
+          tail -60 device.log || true
+
       - name: Upload what Maestro saw
         if: always()
         uses: actions/upload-artifact@v4
@@ -326,5 +376,6 @@ jobs:
           path: |
             maestro-ios.xml
             stub-api.log
+            device.log
             ~/.maestro/tests/**
           if-no-files-found: ignore
