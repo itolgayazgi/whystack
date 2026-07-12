@@ -34,6 +34,27 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  # A mail server that catches everything and delivers nothing.
+  #
+  # The alternative — pointing development at a real provider — means confirmation and reset emails go
+  # to real inboxes, from a test account, while you are iterating on the wording. It also means the
+  # flow cannot be tested at all without an account and an API key.
+  #
+  # This speaks plain SMTP on 1025 and shows every message at http://localhost:8025. The flow is
+  # exercised end to end, with a real link a human actually clicks — which is the only way to find out
+  # that the link is wrong.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: whystack-mailpit
+    ports:
+      - '127.0.0.1:1025:1025' # SMTP
+      - '127.0.0.1:8025:8025' # web UI
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    restart: unless-stopped
+
 volumes:
   whystack-sqlserver-data:
     name: whystack-sqlserver-data

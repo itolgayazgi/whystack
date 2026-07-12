@@ -106,6 +106,25 @@ public interface IIdentityRepository
 
     Task<IReadOnlyCollection<UserSession>> GetActiveSessionsAsync(Guid userId, CancellationToken cancellationToken);
 
+    void AddEmailConfirmationToken(EmailConfirmationToken token);
+
+    Task<EmailConfirmationToken?> FindEmailConfirmationTokenAsync(string tokenHash, CancellationToken cancellationToken);
+
+    void AddPasswordResetToken(PasswordResetToken token);
+
+    Task<PasswordResetToken?> FindPasswordResetTokenAsync(string tokenHash, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Marks every outstanding reset token for this user as used.
+    ///
+    /// Issuing a second reset link must kill the first. Otherwise "I clicked reset twice because the
+    /// mail was slow" leaves two live keys to the account sitting in an inbox, and the older one — the
+    /// one more likely to have been forwarded, synced, or read over a shoulder — stays valid.
+    /// </summary>
+    Task InvalidateOutstandingPasswordResetTokensAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task InvalidateOutstandingEmailConfirmationTokensAsync(Guid userId, CancellationToken cancellationToken);
+
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }
 
@@ -119,3 +138,15 @@ public interface IEmailSender
 }
 
 public sealed record EmailMessage(string To, string Subject, string Body);
+
+/// <summary>
+/// Builds the links that go in email. The client's base URL is deployment configuration, not something
+/// a use case should know — and hardcoding it would mean the reset link in a staging email points at
+/// production.
+/// </summary>
+public interface IAppLinks
+{
+    string ConfirmEmail(string token);
+
+    string ResetPassword(string token);
+}

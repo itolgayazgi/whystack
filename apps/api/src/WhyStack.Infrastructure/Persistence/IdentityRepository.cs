@@ -8,7 +8,7 @@ namespace WhyStack.Infrastructure.Persistence;
 /// The EF Core side of <see cref="IIdentityRepository"/>. Every query in the identity domain is here,
 /// and nowhere else — which is what lets the Application layer be tested without a database at all.
 /// </summary>
-public sealed class IdentityRepository(WhyStackDbContext context) : IIdentityRepository
+public sealed class IdentityRepository(WhyStackDbContext context, IClock clock) : IIdentityRepository
 {
     public Task<User?> FindByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken) =>
         context.Users
@@ -93,6 +93,59 @@ public sealed class IdentityRepository(WhyStackDbContext context) : IIdentityRep
         await context.UserSessions
             .Where(session => session.UserId == userId && session.RevokedAtUtc == null)
             .ToListAsync(cancellationToken);
+
+    public void AddEmailConfirmationToken(EmailConfirmationToken token) =>
+        context.EmailConfirmationTokens.Add(token);
+
+    /// <summary>
+    /// Finds spent and expired tokens too. Filtering them out here would make a replayed link look
+    /// like a link that never existed — the same answer, but the handler would lose the ability to
+    /// tell them apart if it ever needed to, and the audit trail would lose it permanently.
+    /// </summary>
+    public Task<EmailConfirmationToken?> FindEmailConfirmationTokenAsync(
+        string tokenHash,
+        CancellationToken cancellationToken) =>
+        context.EmailConfirmationTokens.SingleOrDefaultAsync(
+            token => token.TokenHash == tokenHash,
+            cancellationToken);
+
+    public void AddPasswordResetToken(PasswordResetToken token) =>
+        context.PasswordResetTokens.Add(token);
+
+    public Task<PasswordResetToken?> FindPasswordResetTokenAsync(
+        string tokenHash,
+        CancellationToken cancellationToken) =>
+        context.PasswordResetTokens.SingleOrDefaultAsync(
+            token => token.TokenHash == tokenHash,
+            cancellationToken);
+
+    public async Task InvalidateOutstandingPasswordResetTokensAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var outstanding = await context.PasswordResetTokens
+            .Where(token => token.UserId == userId && token.UsedAtUtc == null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var token in outstanding)
+        {
+            token.UsedAtUtc = clock.UtcNow;
+        }
+    }
+
+    public async Task InvalidateOutstandingEmailConfirmationTokensAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var outstanding = await context.EmailConfirmationTokens
+            .Where(token => token.UserId == userId && token.UsedAtUtc == null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var token in outstanding)
+        {
+            token.UsedAtUtc = clock.UtcNow;
+        }
+    }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) =>
         context.SaveChangesAsync(cancellationToken);

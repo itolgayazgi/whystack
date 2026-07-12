@@ -90,8 +90,9 @@ if ($Reset) {
     Invoke-Native { docker compose -f $composeFile down -v } 'docker compose down failed.'
 }
 
-Write-Step 'Starting SQL Server'
+Write-Step 'Starting SQL Server and Mailpit'
 Invoke-Native { docker compose -f $composeFile up -d } 'docker compose up failed.'
+Write-Ok 'Mailpit catches every email at http://localhost:8025 — nothing leaves this machine'
 
 # "Container started" is not "SQL Server accepts connections" — it is roughly 30 seconds short of it.
 # Wait on the container's own healthcheck instead of sleeping and hoping.
@@ -170,4 +171,5 @@ finally {
 Write-Host "`nDone. The database is up and migrated." -ForegroundColor Green
 Write-Host "  Start the API:   pnpm api"
 Write-Host "  Check it:        curl http://localhost:5xxx/health/ready"
-Write-Host "  Stop the DB:     docker compose -f infrastructure/docker/docker-compose.yml down"
+Write-Host "  Read the email:  http://localhost:8025  (confirmation and reset links land here)"
+Write-Host "  Stop everything: docker compose -f infrastructure/docker/docker-compose.yml down"

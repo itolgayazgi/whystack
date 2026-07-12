@@ -75,6 +75,12 @@ public static class ResultMapping
         // just been signed out to retry, and it would retry forever.
         ErrorCodes.InvalidRefreshToken => (StatusCodes.Status401Unauthorized, "Session ended"),
 
+        // 400, not 401. The caller is not failing to authenticate — they are presenting a link that is
+        // spent or expired, and the fix is to request a new one, not to sign in. A 401 would send a
+        // client that has no session anyway into an authentication loop.
+        ErrorCodes.InvalidResetToken => (StatusCodes.Status400BadRequest, "Reset link is no longer valid"),
+        ErrorCodes.InvalidConfirmationToken => (StatusCodes.Status400BadRequest, "Confirmation link is no longer valid"),
+
         ErrorCodes.AuthenticationRequired => (StatusCodes.Status401Unauthorized, "Authentication required"),
         ErrorCodes.AccessDenied => (StatusCodes.Status403Forbidden, "Access denied"),
         ErrorCodes.AccountLocked => (StatusCodes.Status403Forbidden, "Account locked"),

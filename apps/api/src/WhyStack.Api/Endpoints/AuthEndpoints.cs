@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using WhyStack.Api.Common;
 using WhyStack.Application.Abstractions;
 using WhyStack.Application.Common;
+using WhyStack.Application.Identity.Confirmation;
 using WhyStack.Application.Identity.Login;
 using WhyStack.Application.Identity.Logout;
+using WhyStack.Application.Identity.Passwords;
 using WhyStack.Application.Identity.Refresh;
 using WhyStack.Application.Identity.Register;
 using WhyStack.Application.Identity.Sessions;
@@ -37,6 +39,14 @@ public sealed record LoginRequest(string? Email, string? Password, ClientPlatfor
 public sealed record RefreshRequest(string? RefreshToken, ClientPlatform Platform = ClientPlatform.Web);
 
 public sealed record LogoutRequest(string? RefreshToken, bool AllDevices = false);
+
+public sealed record ConfirmEmailRequest(string? Token);
+
+public sealed record ResendConfirmationRequest(string? Email);
+
+public sealed record ForgotPasswordRequest(string? Email);
+
+public sealed record ResetPasswordRequest(string? Token, string? NewPassword);
 
 public sealed record AuthResponse(
     string AccessToken,
@@ -88,7 +98,104 @@ public static class AuthEndpoints
             .WithName("Logout")
             .WithSummary("End the session. Succeeds even if the token was already gone.");
 
+        auth.MapPost("/confirm-email", ConfirmEmailAsync)
+            .WithName("ConfirmEmail")
+            .WithSummary("Confirm an email address with the token from the confirmation email.");
+
+        auth.MapPost("/resend-confirmation", ResendConfirmationAsync)
+            .WithName("ResendConfirmation")
+            .WithSummary("Send a new confirmation link.")
+            .WithDescription("Answers the same way whether the address exists, is already confirmed, or does not exist.");
+
+        auth.MapPost("/forgot-password", ForgotPasswordAsync)
+            .WithName("ForgotPassword")
+            .WithSummary("Request a password reset link.")
+            .WithDescription(
+                "Answers the same way whether or not the address has an account. A different answer "
+                + "would let anyone test an address list against this site.");
+
+        auth.MapPost("/reset-password", ResetPasswordAsync)
+            .WithName("ResetPassword")
+            .WithSummary("Set a new password using the token from the reset email.")
+            .WithDescription("Signs out every device. A reset that leaves an attacker's session alive resets nothing.");
+
         return app;
+    }
+
+    private static async Task<IResult> ConfirmEmailAsync(
+        ConfirmEmailRequest request,
+        ConfirmEmailHandler handler,
+        ITokenHasher hasher,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        var (ipHash, userAgentHash) = RequestFingerprint.Of(context, hasher);
+
+        var result = await handler.HandleAsync(
+            new ConfirmEmailCommand(request.Token, ipHash, userAgentHash),
+            cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok(new { email = result.Value.Email, isEmailConfirmed = true })
+            : result.Error!.ToProblem(context);
+    }
+
+    private static async Task<IResult> ResendConfirmationAsync(
+        ResendConfirmationRequest request,
+        ResendConfirmationHandler handler,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(
+            new ResendConfirmationCommand(request.Email),
+            cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Accepted(value: new { message = result.Value.Message })
+            : result.Error!.ToProblem(context);
+    }
+
+    private static async Task<IResult> ForgotPasswordAsync(
+        ForgotPasswordRequest request,
+        ForgotPasswordHandler handler,
+        ITokenHasher hasher,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        var (ipHash, userAgentHash) = RequestFingerprint.Of(context, hasher);
+
+        var result = await handler.HandleAsync(
+            new ForgotPasswordCommand(request.Email, ipHash, userAgentHash),
+            cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Accepted(value: new { message = result.Value.Message })
+            : result.Error!.ToProblem(context);
+    }
+
+    private static async Task<IResult> ResetPasswordAsync(
+        ResetPasswordRequest request,
+        ResetPasswordHandler handler,
+        ITokenHasher hasher,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        var (ipHash, userAgentHash) = RequestFingerprint.Of(context, hasher);
+
+        var result = await handler.HandleAsync(
+            new ResetPasswordCommand(request.Token, request.NewPassword, ipHash, userAgentHash),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return result.Error!.ToProblem(context);
+        }
+
+        // Every session is gone, including the one this browser is holding. Leaving the cookie behind
+        // would mean the next refresh sends a dead token and fails, forever, with no explanation.
+        RefreshTokenCookie.Clear(context);
+
+        return Results.Ok(new { sessionsEnded = result.Value.SessionsEnded });
     }
 
     private static async Task<IResult> RegisterAsync(
