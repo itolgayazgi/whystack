@@ -206,9 +206,26 @@ jobs:
 
       - name: Boot a simulator
         run: |
-          # Named rather than "whatever is first": the runner image changes, and a flow that ran on a
-          # phone last month and an iPad this month is a flow whose layout assertions mean nothing.
-          xcrun simctl boot "iPhone 16" || xcrun simctl boot "iPhone 15"
+          xcrun simctl list devices available
+
+          # An iPhone — the newest one the image has — and never "whatever is first in the list".
+          #
+          # Hardcoding "iPhone 16" was the obvious thing and it broke on the first run: Xcode 26.5 does
+          # not ship one, and simctl says only "Invalid device or device pair", which tells you nothing
+          # about what it DOES have. Apple renames these every year, so the name cannot be pinned.
+          #
+          # What must stay pinned is the KIND. A flow that ran on a phone last month and an iPad this
+          # month is a flow whose layout assertions have quietly stopped meaning anything — the app
+          # renders a completely different navigation on a tablet.
+          DEVICE=$(xcrun simctl list devices available \
+            | grep -oE 'iPhone [0-9]+' \
+            | sort -V \
+            | tail -1)
+
+          test -n "$DEVICE" || { echo "This runner image has no iPhone simulator at all."; exit 1; }
+
+          echo "Booting $DEVICE"
+          xcrun simctl boot "$DEVICE"
           xcrun simctl bootstatus booted -b
 
       - name: Start the stub API
