@@ -63,6 +63,24 @@ const DEFAULT_PREFERENCES = {
 /** email → preferences */
 const preferences = new Map();
 
+/**
+ * Every request, with its outcome — and NEVER a password, a token or a body.
+ *
+ * On a platform nobody here can run locally, this log is most of the debugging information there is.
+ * The iOS flow failed with a generic "something went wrong" and an empty-looking password field, and
+ * there was no way to tell whether the app had even reached the server, what it sent, or what came
+ * back. Guessing at that from a screenshot is how you fix the wrong thing twice.
+ *
+ * The password's LENGTH is logged; the password is not. That distinction is the whole point: it answers
+ * "did the text actually land in the field?" without writing a credential into a CI log that is public,
+ * retained, and indexed (`12` logging rules — never log a secret, and a test's log is still a log).
+ */
+function log(request, status, note = '') {
+  process.stdout.write(
+    `${request.method} ${(request.url ?? '').split('?')[0]} → ${status}${note ? `  ${note}` : ''}\n`,
+  );
+}
+
 function problem(response, status, code, detail) {
   response.writeHead(status, { 'Content-Type': 'application/problem+json' });
   response.end(JSON.stringify({ status, code, detail, title: code }));
@@ -138,6 +156,12 @@ const server = createServer((request, response) => {
         });
       }
 
+      log(
+        request,
+        202,
+        `email=${body.email} passwordLength=${String(body.password ?? '').length} locale=${body.deviceLocale}`,
+      );
+
       return json(response, 202, {
         message: 'If that address can be registered, we have sent it a confirmation email.',
       });
@@ -145,6 +169,14 @@ const server = createServer((request, response) => {
 
     if (path === '/api/v1/auth/login' && method === 'POST') {
       const user = users.get(body.email);
+
+      // The two facts that matter, and neither of them is the password itself: did the text land in the
+      // field, and did it match what registration stored?
+      log(
+        request,
+        user && user.password === body.password ? 200 : 401,
+        `email=${body.email} passwordLength=${String(body.password ?? '').length} known=${Boolean(user)} platform=${body.platform}`,
+      );
 
       if (!user || user.password !== body.password) {
         return problem(response, 401, 'invalid_credentials', 'Authentication failed.');
@@ -165,6 +197,12 @@ const server = createServer((request, response) => {
 
     if (path === '/api/v1/auth/refresh' && method === 'POST') {
       const session = sessions.get(body.refreshToken);
+
+      log(
+        request,
+        session ? 200 : 401,
+        `hasToken=${Boolean(body.refreshToken)} known=${Boolean(session)} platform=${body.platform}`,
+      );
 
       if (!session) {
         return problem(response, 401, 'invalid_refresh_token', 'Session ended.');
@@ -214,6 +252,8 @@ const server = createServer((request, response) => {
 
     if (path === '/api/v1/users/me/preferences') {
       if (method === 'GET') {
+        log(request, 200, `email=${email}`);
+
         return json(response, 200, preferences.get(email) ?? DEFAULT_PREFERENCES);
       }
 
@@ -235,10 +275,13 @@ const server = createServer((request, response) => {
         };
 
         preferences.set(email, saved);
+        log(request, 200, `email=${email} theme=${saved.themeMode}`);
 
         return json(response, 200, saved);
       }
     }
+
+    log(request, 404);
 
     return problem(response, 404, 'resource_not_found', `No route for ${method} ${path}.`);
   });

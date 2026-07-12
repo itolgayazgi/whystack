@@ -51,7 +51,10 @@ jobs:
   android:
     name: Android — build, boot, drive the auth flow
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 45 was not enough, and the reason was a bug rather than slowness: a broken inline shell script
+    # meant Maestro never started, and the job sat idle until the timeout killed it. 60 gives the real
+    # work headroom without letting a genuinely hung run burn an hour of everyone's afternoon.
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -168,17 +171,12 @@ jobs:
           # run's state would leak into the next one's, and a test that is supposed to start from nothing
           # would start from whatever the last run left behind.
           emulator-options: -no-window -no-snapshot-save -noaudio -no-boot-anim -gpu swiftshader_indirect
-          script: |
-            node tests/e2e/stub-api/server.mjs &
-            for _ in $(seq 1 30); do
-              curl -fsS http://127.0.0.1:5207/health >/dev/null && break
-              sleep 1
-            done
-            curl -fsS http://127.0.0.1:5207/health
-
-            adb install -r apps/client/android/app/build/outputs/apk/release/app-release.apk
-
-            maestro test tests/e2e/flows --format junit --output maestro-android.xml
+          # A file, not an inline script. The action hands `script` to `sh -c "…"`, and a multi-line
+          # script with a `for` loop does not survive that — it died with "Syntax error: end of file
+          # unexpected (expecting done)". The emulator had booted; Maestro never ran; the job sat there
+          # until the timeout killed it and reported "cancelled", which looks like an infrastructure
+          # problem and is not one.
+          script: bash tests/e2e/run-on-emulator.sh
 
       # Maestro records a screenshot and the view hierarchy at the point of failure. Without these, a
       # native failure is a line number in a YAML file and no way to see what was actually on screen —
@@ -190,6 +188,7 @@ jobs:
           name: android-e2e
           path: |
             maestro-android.xml
+            stub-api.log
             ~/.maestro/tests/**
           if-no-files-found: ignore
 
@@ -300,11 +299,13 @@ jobs:
 
       - name: Start the stub API
         run: |
-          node tests/e2e/stub-api/server.mjs &
+          node tests/e2e/stub-api/server.mjs 2>&1 | tee stub-api.log &
           for _ in $(seq 1 30); do
             curl -fsS http://127.0.0.1:5207/health >/dev/null && break
             sleep 1
           done
+          # Not `|| true`. If the stub is down, every request fails, the flow lands in the offline state,
+          # and the failure looks like an app bug. Fail here, where the cause is unmistakable.
           curl -fsS http://127.0.0.1:5207/health
 
       - name: Install the app
@@ -324,5 +325,6 @@ jobs:
           name: ios-e2e
           path: |
             maestro-ios.xml
+            stub-api.log
             ~/.maestro/tests/**
           if-no-files-found: ignore
