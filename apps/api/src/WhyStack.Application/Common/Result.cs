@@ -86,4 +86,9 @@ public static class ErrorCodes
     /// already used" confirms they are holding a real one.
     /// </summary>
     public const string InvalidRefreshToken = "invalid_refresh_token";
+
+    /// <summary>Expired, spent, or never issued. Indistinguishable, for the same reason as everything else here.</summary>
+    public const string InvalidResetToken = "invalid_reset_token";
+
+    public const string InvalidConfirmationToken = "invalid_confirmation_token";
 }

@@ -1,5 +1,6 @@
 using WhyStack.Application.Common;
 using WhyStack.Application.Identity.Register;
+using WhyStack.Application.Identity.Tokens;
 using WhyStack.Domain.Identity;
 
 namespace WhyStack.Application.Tests.Identity;
@@ -15,7 +16,10 @@ public class RegisterUserHandlerTests
 
     public RegisterUserHandlerTests()
     {
-        _handler = new RegisterUserHandler(_repository, _hasher, _email, new FakeClock(Now));
+        var clock = new FakeClock(Now);
+        var tokens = new SingleUseTokenService(_repository, new FakeTokenGenerator(), new FakeTokenHasher(), clock);
+
+        _handler = new RegisterUserHandler(_repository, _hasher, tokens, _email, new FakeAppLinks(), clock);
     }
 
     private Task<Result<RegisterUserResult>> RegisterAsync(string email, string password = "a-good-long-password") =>

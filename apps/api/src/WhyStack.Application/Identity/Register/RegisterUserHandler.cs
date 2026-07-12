@@ -1,5 +1,6 @@
 using WhyStack.Application.Abstractions;
 using WhyStack.Application.Common;
+using WhyStack.Application.Identity.Tokens;
 using WhyStack.Domain.Identity;
 
 namespace WhyStack.Application.Identity.Register;
@@ -43,7 +44,9 @@ public sealed record RegisterUserResult(string Message);
 public sealed class RegisterUserHandler(
     IIdentityRepository repository,
     IPasswordHasher passwordHasher,
+    SingleUseTokenService tokens,
     IEmailSender emailSender,
+    IAppLinks links,
     IClock clock)
 {
     private const string SameAnswerEitherWay =
@@ -94,9 +97,16 @@ public sealed class RegisterUserHandler(
                 new EmailMessage(
                     To: EmailAddress.Format(email),
                     Subject: "Someone tried to register with your email",
-                    Body: "You already have a WhyStack account with this address. "
-                          + "If this was you, sign in instead — or reset your password if you have forgotten it. "
-                          + "If it was not you, no action is needed: nothing has changed."),
+                    Body: """
+                        Someone tried to create a WhyStack account with this address.
+
+                        You already have an account here.
+
+                        If this was you: sign in instead, or reset your password if you have forgotten it.
+
+                        If it was not you: no action is needed. Nothing has changed, and no new account
+                        was created.
+                        """),
                 cancellationToken);
 
             return Result<RegisterUserResult>.Success(new RegisterUserResult(SameAnswerEitherWay));
@@ -139,6 +149,8 @@ public sealed class RegisterUserHandler(
             CreatedAtUtc = now,
         });
 
+        var confirmationToken = await tokens.IssueEmailConfirmationAsync(user, cancellationToken);
+
         // One SaveChanges, one transaction. If the role assignment fails, the user is not created
         // either — a user with no role is an account that exists and can do nothing, and nobody would
         // ever find out why.
@@ -149,12 +161,22 @@ public sealed class RegisterUserHandler(
         // indistinguishable answer — so even the race does not leak.
         await repository.SaveChangesAsync(cancellationToken);
 
+        // Sent AFTER the save, not before. An email promising a link that does not exist because the
+        // transaction rolled back is worse than a slow email — the user clicks, it fails, and they have
+        // no idea whether they have an account at all.
         await emailSender.SendAsync(
             new EmailMessage(
                 To: user.Email,
                 Subject: "Confirm your WhyStack account",
-                Body: "Confirmation links arrive with the email confirmation flow. "
-                      + "This account exists and can sign in; it is simply not confirmed yet."),
+                Body: $"""
+                    Welcome to WhyStack. Confirm this address to finish setting up your account.
+
+                    {links.ConfirmEmail(confirmationToken)}
+
+                    The link works once, and expires in {SingleUseTokenService.EmailConfirmationLifetime.TotalHours:0} hours.
+
+                    You can sign in before confirming — confirmation just unlocks everything.
+                    """),
             cancellationToken);
 
         return Result<RegisterUserResult>.Success(new RegisterUserResult(SameAnswerEitherWay));

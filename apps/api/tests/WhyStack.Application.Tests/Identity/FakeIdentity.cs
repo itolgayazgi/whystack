@@ -150,9 +150,50 @@ public sealed class FakeIdentityRepository : IIdentityRepository
         Task.FromResult<IReadOnlyCollection<UserSession>>(
             Sessions.Where(session => session.UserId == userId && session.RevokedAtUtc is null).ToList());
 
+    public List<EmailConfirmationToken> EmailConfirmationTokens { get; } = [];
+    public List<PasswordResetToken> PasswordResetTokens { get; } = [];
+
+    public void AddEmailConfirmationToken(EmailConfirmationToken token) => EmailConfirmationTokens.Add(token);
+
+    public Task<EmailConfirmationToken?> FindEmailConfirmationTokenAsync(string tokenHash, CancellationToken cancellationToken) =>
+        Task.FromResult(EmailConfirmationTokens.SingleOrDefault(token => token.TokenHash == tokenHash));
+
+    public void AddPasswordResetToken(PasswordResetToken token) => PasswordResetTokens.Add(token);
+
+    public Task<PasswordResetToken?> FindPasswordResetTokenAsync(string tokenHash, CancellationToken cancellationToken) =>
+        Task.FromResult(PasswordResetTokens.SingleOrDefault(token => token.TokenHash == tokenHash));
+
+    public Task InvalidateOutstandingPasswordResetTokensAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        foreach (var token in PasswordResetTokens.Where(t => t.UserId == userId && t.UsedAtUtc is null))
+        {
+            token.UsedAtUtc = DateTime.UtcNow;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task InvalidateOutstandingEmailConfirmationTokensAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        foreach (var token in EmailConfirmationTokens.Where(t => t.UserId == userId && t.UsedAtUtc is null))
+        {
+            token.UsedAtUtc = DateTime.UtcNow;
+        }
+
+        return Task.CompletedTask;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         SaveCount++;
         return Task.CompletedTask;
     }
+}
+
+/// <summary>Links that are obviously fake and obviously links, so a test can assert on either.</summary>
+public sealed class FakeAppLinks : IAppLinks
+{
+    public string ConfirmEmail(string token) => $"https://test.local/auth/confirm-email?token={token}";
+
+    public string ResetPassword(string token) => $"https://test.local/auth/reset-password?token={token}";
 }
