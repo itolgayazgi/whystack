@@ -278,6 +278,21 @@ jobs:
       - name: Point the app at the stub
         run: echo "EXPO_PUBLIC_API_URL=http://localhost:5207" > apps/client/.env
 
+      # AD-HOC SIGNED — and actually signed, which is the part that took two rounds to get right.
+      #
+      # On iOS, Keychain access is an ENTITLEMENT (`application-identifier`), and entitlements are
+      # injected AT SIGNING TIME. An app that is never signed has none. SecureStore then fails with
+      # errSecMissingEntitlement, the app throws, and the screen renders a generic "Something went
+      # wrong" — indistinguishable from any other unexpected error, and pointing at nothing.
+      #
+      # `CODE_SIGNING_ALLOWED=NO` is what produced that. The simulator's own log said so plainly, and
+      # nothing else did:
+      #
+      #     Executable for dev.whystack.app ... had no entitlements
+      #
+      # `CODE_SIGN_IDENTITY="-"` is ad-hoc signing: no Apple account, no certificate, no provisioning
+      # profile. `CODE_SIGNING_REQUIRED=YES` is what makes it actually happen. Together they are what
+      # Xcode's own "Sign to Run Locally" does for a simulator build.
       - name: Build for the simulator
         working-directory: apps/client/ios
         run: |
@@ -292,7 +307,33 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_INJECT_BASE_ENTITLEMENTS=YES \
+            DEVELOPMENT_TEAM=""
+
+      # Assert the entitlements, because their absence is silent and its symptom is a lie.
+      #
+      # Without them, SecureStore fails, the app throws, and the screen says "Something went wrong" —
+      # which is true of a thousand other things. It cost two full CI rounds and a screenshot to work out
+      # that the Keychain was refusing us. Ten seconds here says it at the point it becomes true.
+      - name: Prove the app is entitled to use the Keychain
+        run: |
+          APP=$(find apps/client/ios/build/Build/Products -maxdepth 2 -name '*.app' | head -1)
+          test -n "$APP" || { echo "::error::No .app was produced."; exit 1; }
+
+          echo "Entitlements of $APP:"
+          codesign -d --entitlements :- "$APP" 2>/dev/null || true
+
+          if ! codesign -d --entitlements :- "$APP" 2>/dev/null | grep -q "application-identifier"; then
+            echo "::error::The app has no entitlements, so the iOS Keychain will refuse it."
+            echo "::error::SecureStore then throws, and the app shows a generic error that says nothing"
+            echo "::error::about the Keychain. Check the code-signing flags on the xcodebuild step."
+            exit 1
+          fi
+
+          echo "The app is entitled."
 
       # Not "it happens to work" — asserted, like Android's.
       - name: Prove the API URL reached the bundle
