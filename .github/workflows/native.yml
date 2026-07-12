@@ -138,11 +138,23 @@ jobs:
 
   ios:
     name: iOS — build, boot, drive the auth flow
-    runs-on: macos-15
+    # macos-15 ships Xcode 16.4, which is Swift 6.1 — and React Native 0.86 declares Swift tools 6.2.
+    # The failure is a package-resolution error with no mention of Xcode ("package 'apple' is using
+    # Swift tools version 6.2.0 but the installed version is 6.1.0"), so the runner image is pinned
+    # here rather than left to `macos-latest`, which moves under us without warning.
+    runs-on: macos-26
     timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
+
+      # Printed on every run. When this breaks again — and a native toolchain always does — the first
+      # question is "which Xcode was that?", and the answer should already be in the log.
+      - name: Report the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          ls /Applications | grep -i xcode || true
 
       - uses: pnpm/action-setup@v4
 
