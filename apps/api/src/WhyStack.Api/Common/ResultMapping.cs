@@ -81,6 +81,17 @@ public static class ResultMapping
         ErrorCodes.InvalidResetToken => (StatusCodes.Status400BadRequest, "Reset link is no longer valid"),
         ErrorCodes.InvalidConfirmationToken => (StatusCodes.Status400BadRequest, "Confirmation link is no longer valid"),
 
+        ErrorCodes.ResourceNotFound => (StatusCodes.Status404NotFound, "Not found"),
+
+        // 409, and never a silent overwrite. The caller's write was rejected because somebody else's
+        // landed first, and 409 is the one status code that says "your request was valid, but it
+        // conflicts with the current state" — which is precisely what happened. A 200 here would be a
+        // lie, and the change the other device made would vanish with nobody ever seeing an error.
+        ErrorCodes.ConcurrencyConflict => (StatusCodes.Status409Conflict, "Changed somewhere else"),
+
+        ErrorCodes.ContentLanguageNotSupported =>
+            (StatusCodes.Status422UnprocessableEntity, "Content language not supported"),
+
         ErrorCodes.AuthenticationRequired => (StatusCodes.Status401Unauthorized, "Authentication required"),
         ErrorCodes.AccessDenied => (StatusCodes.Status403Forbidden, "Access denied"),
         ErrorCodes.AccountLocked => (StatusCodes.Status403Forbidden, "Account locked"),

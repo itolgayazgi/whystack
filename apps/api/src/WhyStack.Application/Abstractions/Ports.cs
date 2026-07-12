@@ -1,4 +1,5 @@
 using WhyStack.Domain.Identity;
+using WhyStack.Domain.Users;
 
 namespace WhyStack.Application.Abstractions;
 
@@ -93,6 +94,23 @@ public interface IIdentityRepository
 
     void AddLoginEvent(UserLoginEvent loginEvent);
 
+    /// <summary>
+    /// Preferences are created WITH the account, in registration's one transaction.
+    /// </summary>
+    /// <remarks>
+    /// It sits on this port rather than on <see cref="IUserPreferencesRepository"/> — which is where it
+    /// belongs by name — because the port that owns the transaction must own every insert inside it.
+    /// Splitting the write across two repositories and relying on them happening to share one scoped
+    /// DbContext is the kind of invisible coupling that works until somebody gives one of them its own
+    /// context, and then registration starts producing users with no preferences row.
+    ///
+    /// And a user with no preferences row is not a small bug: <c>GET /users/me/preferences</c> would
+    /// 404 for an account that exists, and `08` forbids a GET from repairing it (a GET must not mutate
+    /// server state). The invariant is "every user has exactly one preferences row", and this is where
+    /// it is made true.
+    /// </remarks>
+    void AddPreferences(UserPreferences preferences);
+
     void AddSession(UserSession session);
 
     Task<UserSession?> FindSessionByRefreshTokenHashAsync(string tokenHash, CancellationToken cancellationToken);
@@ -126,6 +144,33 @@ public interface IIdentityRepository
     Task InvalidateOutstandingEmailConfirmationTokensAsync(Guid userId, CancellationToken cancellationToken);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);
+}
+
+public interface IUserPreferencesRepository
+{
+    Task<UserPreferences?> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Saves, but only if nobody else has written this row since the caller read it.
+    /// </summary>
+    /// <remarks>
+    /// Returns <c>false</c> on a conflict rather than throwing, because a conflict is an EXPECTED
+    /// outcome — two devices, one account — not an exceptional one, and the caller must decide what to
+    /// do about it (see <see cref="Common.Result{T}"/>).
+    ///
+    /// It takes <paramref name="expectedRowVersion"/> instead of trusting the entity's own RowVersion:
+    /// the entity was just loaded from the database, so its RowVersion is by definition CURRENT, and
+    /// checking it against itself would always pass. The value that matters is the one the CLIENT last
+    /// saw — which is the one it sends back — and comparing against that is the whole mechanism.
+    ///
+    /// The comparison itself happens in Infrastructure, where EF Core's concurrency token lives. That
+    /// is deliberate: <c>DbUpdateConcurrencyException</c> is an EF Core type, and catching it here would
+    /// drag the ORM across the boundary CLAUDE.md §3 draws.
+    /// </remarks>
+    Task<bool> TrySaveAsync(
+        UserPreferences preferences,
+        byte[] expectedRowVersion,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>

@@ -140,6 +140,7 @@ app.MapHealthChecks(
     new HealthCheckOptions { Predicate = check => check.Tags.Contains(DependencyInjection.ReadinessTag) });
 
 app.MapAuthEndpoints();
+app.MapUserEndpoints();
 
 app.Run();
 

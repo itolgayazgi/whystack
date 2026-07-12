@@ -10,6 +10,8 @@ using WhyStack.Application.Identity.Logout;
 using WhyStack.Application.Identity.Passwords;
 using WhyStack.Application.Identity.Refresh;
 using WhyStack.Application.Identity.Register;
+using WhyStack.Application.Users.Preferences;
+using WhyStack.Application.Users.Profile;
 using WhyStack.Application.Identity.Sessions;
 using WhyStack.Application.Identity.Tokens;
 using WhyStack.Infrastructure.Identity;
@@ -80,6 +82,7 @@ public static class DependencyInjection
             .AddDbContextCheck<WhyStackDbContext>(name: "sql-server", tags: [ReadinessTag]);
 
         services.AddScoped<IIdentityRepository, IdentityRepository>();
+        services.AddScoped<IUserPreferencesRepository, UserPreferencesRepository>();
 
         AddMaintenance(services, configuration);
     }
@@ -189,5 +192,8 @@ public static class DependencyInjection
         services.AddScoped<ResendConfirmationHandler>();
         services.AddScoped<ForgotPasswordHandler>();
         services.AddScoped<ResetPasswordHandler>();
+        services.AddScoped<GetCurrentUserHandler>();
+        services.AddScoped<GetPreferencesHandler>();
+        services.AddScoped<UpdatePreferencesHandler>();
     }
 }
