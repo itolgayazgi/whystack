@@ -64,14 +64,15 @@ public sealed class SessionService(
         CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
+        var family = await repository.GetFamilyAsync(familyId, cancellationToken);
 
-        foreach (var session in await repository.GetFamilyAsync(familyId, cancellationToken))
+        // Only the ones still alive. Overwriting an existing RevokedAtUtc would rewrite history — a
+        // session revoked by a logout last Tuesday would suddenly claim it was revoked by reuse
+        // detection today, and the audit trail would be quietly wrong about the one thing it exists for.
+        foreach (var session in family.Where(session => session.RevokedAtUtc is null))
         {
-            if (session.RevokedAtUtc is null)
-            {
-                session.RevokedAtUtc = now;
-                session.RevocationReason = reason;
-            }
+            session.RevokedAtUtc = now;
+            session.RevocationReason = reason;
         }
     }
 

@@ -168,7 +168,7 @@ public class RefreshEndpointTests(WhyStackApiFactory factory) : IClassFixture<Wh
 
         var token = ValueOf(RefreshCookieFrom(login)!);
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout")
         {
             Content = JsonContent.Create(new { allDevices = false }),
         };
