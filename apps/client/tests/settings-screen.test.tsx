@@ -252,9 +252,7 @@ describe('when another device got there first', () => {
     // And the screen now shows what is REALLY saved — the other device's Dark — not the Light this user
     // asked for and did not get. A screen that kept showing Light would be showing a setting that
     // exists nowhere.
-    await waitFor(() =>
-      expect(optionIn(group(THEME), 'Dark').getAttribute('aria-checked')).toBe('true'),
-    );
+    await waitFor(() => expect(optionIn(group(THEME), 'Dark').getAttribute('aria-checked')).toBe('true'));
 
     // Never silently retried. A silent retry with a fresh rowVersion turns optimistic concurrency into
     // a slower last-write-wins: all of the cost, none of the protection.
@@ -310,9 +308,7 @@ describe('accessibility', () => {
     await renderSettings();
 
     const groups = screen.getAllByRole('radiogroup');
-    const checked = screen
-      .getAllByRole('radio')
-      .filter((el) => el.getAttribute('aria-checked') === 'true');
+    const checked = screen.getAllByRole('radio').filter((el) => el.getAttribute('aria-checked') === 'true');
 
     // Exactly one per group: interface, content, theme, text size, experience.
     expect(checked).toHaveLength(groups.length);
