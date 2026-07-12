@@ -47,6 +47,92 @@ export interface Messages {
 
   'home.title': string;
   'home.tagline': string;
+
+  // ---------------------------------------------------------------------------------------------
+  // Authentication
+  //
+  // `04` requires error states to be LOCALIZED. The API's Problem Details carry an English `title`
+  // and `detail` written for a developer reading a log — putting those on screen would drop English
+  // into a Turkish interface. So the UI keys every message off the stable `code` (`08` guarantees the
+  // codes are stable and that clients may depend on them) and never renders the server's prose.
+  // ---------------------------------------------------------------------------------------------
+
+  'auth.email': string;
+  'auth.password': string;
+  'auth.newPassword': string;
+  'auth.displayName': string;
+  'auth.displayName.hint': string;
+  'auth.password.hint': string;
+
+  'auth.signIn.title': string;
+  'auth.signIn.submit': string;
+  'auth.signIn.noAccount': string;
+  'auth.signIn.forgot': string;
+
+  'auth.register.title': string;
+  'auth.register.submit': string;
+  'auth.register.haveAccount': string;
+
+  /**
+   * Registration answers the same way whether or not the address was taken — that is the
+   * account-enumeration defence (`04`), and it is built into the API. This screen is what stops the UI
+   * from undoing it: there is exactly one success message, and it says nothing about whether an
+   * account was created.
+   */
+  'auth.register.sent.title': string;
+  'auth.register.sent.body': string;
+
+  'auth.forgot.title': string;
+  'auth.forgot.body': string;
+  'auth.forgot.submit': string;
+  'auth.forgot.sent.title': string;
+  'auth.forgot.sent.body': string;
+
+  'auth.reset.title': string;
+  'auth.reset.body': string;
+  'auth.reset.submit': string;
+  'auth.reset.done.title': string;
+  'auth.reset.done.body': string;
+  'auth.reset.done.action': string;
+
+  'auth.confirm.working': string;
+  'auth.confirm.done.title': string;
+  'auth.confirm.done.body': string;
+  'auth.confirm.done.action': string;
+
+  'auth.signOut': string;
+  'auth.signedInAs': string;
+
+  /** Shown while the session is being restored at launch — before we know whether there is one. */
+  'auth.restoring': string;
+
+  /** The offline state. NOT "signed out": the session may be perfectly valid, we just cannot reach it. */
+  'auth.unreachable.title': string;
+  'auth.unreachable.body': string;
+
+  // Validation the client performs itself, so the common mistakes never cost a round trip and the
+  // message arrives in the user's own language.
+  'validation.email.required': string;
+  'validation.email.invalid': string;
+  'validation.password.required': string;
+  'validation.password.tooShort': string;
+  'validation.password.tooLong': string;
+  'validation.password.containsEmail': string;
+  'validation.token.missing': string;
+
+  // Keyed off the API's stable error codes (`08`).
+  'error.invalid_credentials': string;
+  'error.account_locked': string;
+  'error.invalid_refresh_token': string;
+  'error.invalid_reset_token': string;
+  'error.invalid_confirmation_token': string;
+  'error.rate_limit_exceeded': string;
+  'error.validation_failed': string;
+  'error.concurrency_conflict': string;
+  'error.resource_not_found': string;
+
+  /** A 422 whose field messages the client cannot localize. See error-messages.ts. */
+  'error.field.invalid': string;
 }
 
 export type MessageKey = keyof Messages;
@@ -93,6 +179,78 @@ const en: Messages = {
 
   'home.title': 'WhyStack',
   'home.tagline': 'Learn why technologies exist — not just how to use them.',
+
+  'auth.email': 'Email',
+  'auth.password': 'Password',
+  'auth.newPassword': 'New password',
+  'auth.displayName': 'Display name',
+  'auth.displayName.hint': 'Optional. What other people see. You can change it later.',
+  'auth.password.hint': 'At least {min} characters. Length is what matters — a passphrase beats a symbol.',
+
+  'auth.signIn.title': 'Sign in',
+  'auth.signIn.submit': 'Sign in',
+  'auth.signIn.noAccount': 'Create an account',
+  'auth.signIn.forgot': 'Forgotten your password?',
+
+  'auth.register.title': 'Create an account',
+  'auth.register.submit': 'Create account',
+  'auth.register.haveAccount': 'I already have an account',
+
+  'auth.register.sent.title': 'Check your email',
+  'auth.register.sent.body':
+    'If that address can be registered, we have sent it a confirmation email. Open it to finish setting up your account.',
+
+  'auth.forgot.title': 'Reset your password',
+  'auth.forgot.body': 'Enter your email address and we will send you a link to set a new password.',
+  'auth.forgot.submit': 'Send the link',
+  'auth.forgot.sent.title': 'Check your email',
+  'auth.forgot.sent.body':
+    'If that address has an account, we have sent it a link to reset the password. The link works once and expires shortly.',
+
+  'auth.reset.title': 'Set a new password',
+  'auth.reset.body': 'This signs you out everywhere else. Any other device will have to sign in again.',
+  'auth.reset.submit': 'Set the password',
+  'auth.reset.done.title': 'Password changed',
+  'auth.reset.done.body': 'Your password has been changed and every other session has been ended.',
+  'auth.reset.done.action': 'Sign in',
+
+  'auth.confirm.working': 'Confirming your account',
+  'auth.confirm.done.title': 'Account confirmed',
+  'auth.confirm.done.body': 'Your email address is confirmed. You can sign in now.',
+  'auth.confirm.done.action': 'Sign in',
+
+  'auth.signOut': 'Sign out',
+  'auth.signedInAs': 'Signed in as {email}',
+
+  'auth.restoring': 'Restoring your session',
+
+  'auth.unreachable.title': 'Cannot reach WhyStack',
+  'auth.unreachable.body':
+    'You have not been signed out — we simply cannot tell right now. Check your connection and try again.',
+
+  'validation.email.required': 'An email address is required.',
+  'validation.email.invalid': 'That does not look like an email address.',
+  'validation.password.required': 'A password is required.',
+  'validation.password.tooShort': 'Use at least {min} characters.',
+  'validation.password.tooLong': 'Use at most {max} characters.',
+  'validation.password.containsEmail': 'Your password must not contain your email address.',
+  'validation.token.missing': 'This link is incomplete. Open the link from your email again.',
+
+  'error.invalid_credentials': 'That email address and password do not match an account.',
+  'error.account_locked':
+    'This account is locked after too many failed attempts. Try again in a few minutes, or reset your password.',
+  'error.invalid_refresh_token': 'Your session has ended. Please sign in again.',
+  'error.invalid_reset_token':
+    'This reset link no longer works — it has been used, or it has expired. Request a new one.',
+  'error.invalid_confirmation_token':
+    'This confirmation link no longer works — it has been used, or it has expired. Request a new one.',
+  'error.rate_limit_exceeded': 'Too many attempts. Wait a minute and try again.',
+  'error.validation_failed': 'Check the highlighted fields.',
+  'error.concurrency_conflict':
+    'These settings were changed on another device. Reload them and apply your change again.',
+  'error.resource_not_found': 'That could not be found.',
+
+  'error.field.invalid': 'This value was not accepted.',
 };
 
 const tr: Messages = {
@@ -137,6 +295,80 @@ const tr: Messages = {
 
   'home.title': 'WhyStack',
   'home.tagline': 'Teknolojileri nasıl kullanacağını değil, neden var olduklarını öğren.',
+
+  'auth.email': 'E-posta',
+  'auth.password': 'Parola',
+  'auth.newPassword': 'Yeni parola',
+  'auth.displayName': 'Görünen ad',
+  'auth.displayName.hint': 'İsteğe bağlı. Başkalarının gördüğü ad. Sonradan değiştirebilirsin.',
+  'auth.password.hint':
+    'En az {min} karakter. Önemli olan uzunluk — bir parola cümlesi, bir sembolden iyidir.',
+
+  'auth.signIn.title': 'Giriş yap',
+  'auth.signIn.submit': 'Giriş yap',
+  'auth.signIn.noAccount': 'Hesap oluştur',
+  'auth.signIn.forgot': 'Parolanı mı unuttun?',
+
+  'auth.register.title': 'Hesap oluştur',
+  'auth.register.submit': 'Hesabı oluştur',
+  'auth.register.haveAccount': 'Zaten hesabım var',
+
+  'auth.register.sent.title': 'E-postanı kontrol et',
+  'auth.register.sent.body':
+    'Bu adres kaydedilebiliyorsa, ona bir doğrulama e-postası gönderdik. Hesabını tamamlamak için e-postayı aç.',
+
+  'auth.forgot.title': 'Parolanı sıfırla',
+  'auth.forgot.body': 'E-posta adresini yaz, sana yeni parola belirlemen için bir bağlantı gönderelim.',
+  'auth.forgot.submit': 'Bağlantıyı gönder',
+  'auth.forgot.sent.title': 'E-postanı kontrol et',
+  'auth.forgot.sent.body':
+    'Bu adrese ait bir hesap varsa, parolayı sıfırlamak için bir bağlantı gönderdik. Bağlantı bir kez çalışır ve kısa sürede geçersiz olur.',
+
+  'auth.reset.title': 'Yeni parola belirle',
+  'auth.reset.body':
+    'Bu işlem seni diğer her yerden çıkarır. Başka her cihazın yeniden giriş yapması gerekir.',
+  'auth.reset.submit': 'Parolayı belirle',
+  'auth.reset.done.title': 'Parola değişti',
+  'auth.reset.done.body': 'Parolan değiştirildi ve diğer bütün oturumların sonlandırıldı.',
+  'auth.reset.done.action': 'Giriş yap',
+
+  'auth.confirm.working': 'Hesabın doğrulanıyor',
+  'auth.confirm.done.title': 'Hesap doğrulandı',
+  'auth.confirm.done.body': 'E-posta adresin doğrulandı. Artık giriş yapabilirsin.',
+  'auth.confirm.done.action': 'Giriş yap',
+
+  'auth.signOut': 'Çıkış yap',
+  'auth.signedInAs': '{email} olarak giriş yapıldı',
+
+  'auth.restoring': 'Oturumun geri yükleniyor',
+
+  'auth.unreachable.title': "WhyStack'e ulaşılamıyor",
+  'auth.unreachable.body':
+    'Oturumun kapatılmadı — şu an bunu söyleyemiyoruz, o kadar. Bağlantını kontrol edip tekrar dene.',
+
+  'validation.email.required': 'E-posta adresi gerekli.',
+  'validation.email.invalid': 'Bu bir e-posta adresine benzemiyor.',
+  'validation.password.required': 'Parola gerekli.',
+  'validation.password.tooShort': 'En az {min} karakter kullan.',
+  'validation.password.tooLong': 'En fazla {max} karakter kullan.',
+  'validation.password.containsEmail': 'Parolan e-posta adresini içermemeli.',
+  'validation.token.missing': 'Bu bağlantı eksik. E-postandaki bağlantıyı tekrar aç.',
+
+  'error.invalid_credentials': 'Bu e-posta ve parola bir hesapla eşleşmiyor.',
+  'error.account_locked':
+    'Çok fazla başarısız denemeden sonra bu hesap kilitlendi. Birkaç dakika sonra tekrar dene ya da parolanı sıfırla.',
+  'error.invalid_refresh_token': 'Oturumun sona erdi. Lütfen tekrar giriş yap.',
+  'error.invalid_reset_token':
+    'Bu sıfırlama bağlantısı artık çalışmıyor — kullanılmış ya da süresi dolmuş. Yenisini iste.',
+  'error.invalid_confirmation_token':
+    'Bu doğrulama bağlantısı artık çalışmıyor — kullanılmış ya da süresi dolmuş. Yenisini iste.',
+  'error.rate_limit_exceeded': 'Çok fazla deneme. Bir dakika bekleyip tekrar dene.',
+  'error.validation_failed': 'İşaretli alanları kontrol et.',
+  'error.concurrency_conflict':
+    'Bu ayarlar başka bir cihazda değiştirildi. Yeniden yükleyip değişikliğini tekrar uygula.',
+  'error.resource_not_found': 'Bu bulunamadı.',
+
+  'error.field.invalid': 'Bu değer kabul edilmedi.',
 };
 
 export const catalogs: Record<AppLanguage, Messages> = { en, tr };

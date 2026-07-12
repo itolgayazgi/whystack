@@ -124,7 +124,8 @@ space.48=48 space.64=64 space.80=80 space.96=96
 | `textSecondary` | `#55534E` |
 | `textMuted` | `#716E69` |
 | `border` | `#E6E3DE` |
-| `borderStrong` | `#CFCBC4` |
+| `borderStrong` | `#CFCBC4` (decorative) |
+| `borderInteractive` | `#716E69` — **the boundary of a control**: inputs, checkboxes, outlined buttons |
 | `accent` | `#1D5D8C` |
 | `success` | `#2E7C5A` |
 | `warning` | `#96651A` |
@@ -149,7 +150,8 @@ space.48=48 space.64=64 space.80=80 space.96=96
 | `textSecondary` | `#A8A59E` |
 | `textMuted` | `#8E8B85` |
 | `border` | `#2E2F35` |
-| `borderStrong` | `#43444B` |
+| `borderStrong` | `#43444B` (decorative) |
+| `borderInteractive` | `#8E8B85` — **the boundary of a control** |
 | `accent` | `#6FA8D6` |
 | `success` | `#5FB88C` |
 | `warning` | `#D9A441` |
@@ -187,10 +189,14 @@ WCAG 1.4.11 applies to visual information *required to identify* a component or 
 separator between blocks of already-legible content is exempt. Raising them to 3:1 would produce hard
 grey rules and destroy the paper feel `09` asks for.
 
-> **This creates an open obligation, not a free pass:** the moment a control's boundary is the *only* thing
-> identifying it — a text input, a checkbox, an unfilled button — neither token may be used for that boundary,
-> because both fail 3:1. A dedicated interactive-boundary token must be decided before the first form ships
-> (Sprint 2, authentication UI). See Open items.
+> **This obligation is now discharged (2026-07-12).** The moment a control's boundary is the *only* thing
+> identifying it — a text input, a checkbox, an unfilled button — `border` and `borderStrong` may **not** be used,
+> because both fail 3:1 (they reach 1.45:1 and 1.58:1). Use **`borderInteractive`**, which is audited at
+> ≥ 3:1 against every surface in `contrast.test.ts`.
+>
+> **Text on a filled `accent` button** uses `background` (6.78:1 light, 7.04:1 dark) and is audited too.
+> `textPrimary` on `accent` is 2.49:1 and would be illegible — the two are different questions with
+> different answers, and only one of them was covered by the original audit.
 
 ### Colour rules (from `09`, restated as obligations)
 
@@ -262,7 +268,7 @@ This is a concrete, reviewable limit enforcing `09` Forbidden Pattern 01 (Featur
 ## Open items for implementation
 
 1. ~~Verify all colour pairs against WCAG AA; adjust failures.~~ **Done 2026-07-11** — see Contrast audit above. Three tokens adjusted.
-2. **Decide an interactive-boundary colour before the first form ships (Sprint 2).** `border` and `borderStrong` are decorative and fail 3:1; they must not be used as the sole boundary of an input, checkbox or outlined button.
+2. ~~Decide an interactive-boundary colour before the first form ships (Sprint 2).~~ **Done 2026-07-12** — `borderInteractive` added (light `#716E69`, dark `#8E8B85`; 4.54:1 and 4.50:1 at worst, against a 3:1 requirement). `border` and `borderStrong` remain **decorative only** — separators and card edges — and must never be the sole boundary of a control. `contrast.test.ts` enforces both halves of that.
 3. ~~Verify the Turkish test string renders correctly in all three families at all weights.~~ **Done 2026-07-11** — rendered on the web target in Literata (body), Inter (headings) and JetBrains Mono (code). All Turkish diacritics correct, including the dotless `ı` and dotted `İ`. Native (Android/iOS) rendering is **not yet verified**.
 4. Measure LCP impact of the preloaded body font on the static SEO surface (ADR-0009).
 5. The `accent` hue (`#1D5D8C`) is the one value most open to personal preference — it is the product's signature colour and may be revised without affecting any other token.

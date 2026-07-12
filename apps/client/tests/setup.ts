@@ -12,6 +12,16 @@ vi.mock('expo-router', () => ({
   // assert — which item is marked current, and what renders, is.
   Link: ({ children }: { children: unknown }) => children,
   usePathname: () => routerState.pathname,
+  useSegments: () => routerState.segments,
+  useLocalSearchParams: () => routerState.params,
+
+  // Records rather than navigates. A test can then assert WHERE the gate sent somebody, which is the
+  // only thing about a redirect that is worth asserting — and rendering null keeps the tree quiet, the
+  // way a real redirect does.
+  Redirect: ({ href }: { href: string }) => {
+    routerState.redirects.push(href);
+    return null;
+  },
 }));
 
 // Expo's native modules have no browser implementation. Each mock is the smallest thing that lets the
@@ -44,6 +54,9 @@ vi.mock('react-native-safe-area-context', () => ({
 // jsdom has no matchMedia, and react-native-web asks for it to resolve the colour scheme.
 beforeEach(() => {
   routerState.pathname = '/';
+  routerState.segments = [];
+  routerState.params = {};
+  routerState.redirects = [];
 
   Object.defineProperty(window, 'matchMedia', {
     writable: true,

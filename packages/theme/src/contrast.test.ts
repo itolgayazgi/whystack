@@ -43,6 +43,40 @@ describe.each(Object.entries(palettes))('%s scheme', (schemeName, palette: Palet
     expect(contrastRatio(palette.focusRing, palette[surface])).toBeGreaterThanOrEqual(AA.nonText);
   });
 
+  /**
+   * WCAG 1.4.11: a boundary that IDENTIFIES a control must reach 3:1 against what is next to it.
+   *
+   * This is the token that closes Open item 2 in design-tokens.md — decorative `border` and
+   * `borderStrong` reach only 1.45:1 and 1.58:1, so an input drawn with them is a box a low-vision user
+   * cannot find. That is not a styling nicety: a form field nobody can see the edge of is a form field
+   * nobody can fill in.
+   */
+  it.each(SURFACES)('identifies an interactive boundary against %s', (surface) => {
+    const ratio = contrastRatio(palette.borderInteractive, palette[surface]);
+    expect(
+      ratio,
+      `${schemeName}.borderInteractive on ${surface} is ${ratio.toFixed(2)}:1, needs ${AA.nonText}:1`,
+    ).toBeGreaterThanOrEqual(AA.nonText);
+  });
+
+  /**
+   * The filled accent button — the only place in the product where `accent` is a BACKGROUND rather
+   * than a foreground.
+   *
+   * The audit above tests accent as TEXT on the surfaces. It says nothing about text ON accent, and
+   * those are different questions with different answers: `textPrimary` on accent is 2.49:1 in light
+   * and 2.04:1 in dark, both of which would be illegible. The label uses `background`, which lands at
+   * 6.78:1 and 7.04:1 — and this test is what keeps that true when someone revises the accent hue,
+   * which design-tokens.md Open item 5 explicitly invites.
+   */
+  it('renders a legible label on a filled accent button', () => {
+    const ratio = contrastRatio(palette.background, palette.accent);
+    expect(
+      ratio,
+      `${schemeName}: the accent button's label is ${ratio.toFixed(2)}:1 on its own background, needs ${AA.text}:1`,
+    ).toBeGreaterThanOrEqual(AA.text);
+  });
+
   it('names a worst-case surface that really is the worst case', () => {
     const worst = worstCaseSurface[schemeName as keyof typeof worstCaseSurface];
     const ratios = SURFACES.map((s) => contrastRatio(palette.textPrimary, palette[s]));
@@ -56,6 +90,7 @@ describe.each(Object.entries(palettes))('%s scheme', (schemeName, palette: Palet
 // blocks of already-legible content is exempt. Raising them to 3:1 would produce hard grey rules and
 // destroy the paper feel the design system asks for.
 //
-// The obligation this creates is recorded in design-tokens.md Open item 2: neither token may be the
-// sole boundary of a text input, checkbox or outlined button. That needs its own token, decided
-// before the first form ships.
+// The obligation this created is now DISCHARGED (design-tokens.md Open item 2, closed 2026-07-12):
+// borderInteractive exists, it is audited above, and it is what an input, a checkbox or an outlined
+// button must be drawn with. border and borderStrong remain decorative — separators and card edges —
+// and must never be the sole boundary of a control.

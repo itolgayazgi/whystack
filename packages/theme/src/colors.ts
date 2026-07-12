@@ -19,6 +19,7 @@ export type ColorToken =
   | 'textMuted'
   | 'border'
   | 'borderStrong'
+  | 'borderInteractive'
   | 'accent'
   | 'success'
   | 'warning'

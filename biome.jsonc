@@ -61,7 +61,14 @@
         // The two React rules that catch real bugs rather than style. Everything else Biome does here
         // is a preference; these two are the ones that prevent a stale closure shipping.
         "useExhaustiveDependencies": "error",
-        "useHookAtTopLevel": "error"
+        "useHookAtTopLevel": "error",
+
+        // Not in the recommended preset, and the omission bit: an unused import survived lint, survived
+        // format, survived typecheck, and was finally caught by CodeQL during code review. A security
+        // scanner is an absurd place to learn about a dead import — by then it has already cost a CI
+        // run and a blocked pull request. Lint is the cheap gate, so it does the cheap job.
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error"
       },
       "suspicious": {
         "noExplicitAny": "error",
