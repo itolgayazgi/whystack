@@ -59,6 +59,27 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// The web client runs on a different origin than the API (8081 vs 5207 in development), so the browser
+// will not let it call us at all without this.
+//
+// AllowCredentials is what makes the refresh COOKIE work: a cross-origin request only carries cookies
+// when the caller sends `credentials: 'include'` AND the server answers with
+// Access-Control-Allow-Credentials. And the browser flatly refuses that combination alongside a
+// wildcard origin — "*" plus credentials is a spec violation, not a warning — so the origins are
+// listed explicitly. That refusal is a feature: it means no deployment can accidentally let ANY
+// website on the internet make authenticated calls to this API on a logged-in user's behalf.
+//
+// The list is configuration, because it differs per environment and a wrong entry here is a security
+// bug rather than a typo.
+const string WebClientCorsPolicy = "web-client";
+
+builder.Services.AddCors(options =>
+    options.AddPolicy(WebClientCorsPolicy, policy => policy
+        .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()));
+
 // `08` requires rate limiting on authentication endpoints. Keyed by IP address: keying by email would
 // let an attacker lock out any account they can name, which is a denial of service dressed as a
 // defence — and keying globally would let one attacker stop everybody signing in.
@@ -123,6 +144,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Before the rate limiter, and before authentication.
+//
+// A CORS preflight (OPTIONS) carries no cookie and no Authorization header — by design; that is what
+// it is for. Put UseCors after the rate limiter and the preflights burn the caller's auth budget, so
+// a user who simply loads the sign-in page can be rate-limited before typing anything. Put it after
+// UseAuthentication and the preflight gets a 401, which the browser reports as an opaque CORS failure
+// with no hint that authentication was even involved.
+app.UseCors(WebClientCorsPolicy);
 
 app.UseRateLimiter();
 app.UseAuthentication();
