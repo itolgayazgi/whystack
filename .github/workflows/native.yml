@@ -1,0 +1,229 @@
+name: Native
+
+# Android and iOS have never been run — not once, on any sprint (issue #7). Every test in this
+# repository targets the web, and the one piece of Sprint 2 with no web equivalent at all —
+# expo-secure-store, which puts the refresh token in the iOS Keychain / Android Keystore — has
+# therefore never been executed by anything.
+#
+# This workflow builds the app for both platforms, boots it on a real emulator and a real simulator,
+# and drives the whole authentication journey through it, including killing the app and checking that
+# the session survives.
+#
+# It is SLOW (15–25 minutes), which is why it does not gate every push to every branch. It does run on
+# every pull request: a native regression found at merge time is cheap, and one found in Sprint 14 —
+# under eleven sprints of code built on top of it — is not.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # A native toolchain breaks on its own schedule: Xcode moves, the emulator image changes, a
+  # dependency ships a broken podspec. A weekly run means we hear that from CI rather than from the
+  # first person who needed a release.
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Turns on the cleartext-HTTP exceptions in app.config.js. They exist ONLY for this workflow — both
+  # platforms block plain HTTP by default and are right to — so the E2E build is deliberately a
+  # different build from the shipped one.
+  WHYSTACK_E2E: '1'
+
+jobs:
+  android:
+    name: Android — build, boot, drive the auth flow
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # `expo prebuild` generates android/ from app.config.js on every run rather than committing it.
+      # That is Expo's continuous native generation, and it is also what keeps `06`'s approved folder
+      # structure honest: there is no android/ in this repository to drift out of step with the config
+      # that is supposed to define it.
+      - name: Generate the native project
+        working-directory: apps/client
+        run: npx expo prebuild --platform android --no-install
+
+      # EXPO_PUBLIC_API_URL is baked into the JS bundle at BUILD time, so it has to be right here and
+      # not at launch.
+      #
+      # 10.0.2.2 is how an Android emulator reaches the machine it is running on. `localhost` inside the
+      # emulator is the emulator — pointing the app there would have it call itself, fail to connect,
+      # and land in the offline state, which is a perfectly plausible-looking test failure with nothing
+      # to do with the code.
+      #
+      # assembleRelease, not assembleDebug: a debug build fetches its JavaScript from a Metro server
+      # that would have to stay alive for the whole run, and its failures look like app bugs. A release
+      # build carries the bundle inside it, which is also what a user would install. The React Native
+      # template signs release with the debug keystore unless told otherwise, so this needs no secrets.
+      - name: Build the APK
+        working-directory: apps/client/android
+        env:
+          EXPO_PUBLIC_API_URL: http://10.0.2.2:5207
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      # The emulator needs hardware acceleration. GitHub's ubuntu runners expose KVM, but only to
+      # members of the kvm group — without this it silently falls back to software rendering, and takes
+      # long enough to hit the timeout.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the flow on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          # -no-snapshot forces a cold boot every run. A saved snapshot would carry the previous run's
+          # Keystore into the next one, and "the session survived a restart" would pass because the
+          # token had never been deleted — not because it was correctly stored.
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
+          script: |
+            node tests/e2e/stub-api/server.mjs &
+            for _ in $(seq 1 30); do
+              curl -fsS http://127.0.0.1:5207/health >/dev/null && break
+              sleep 1
+            done
+            curl -fsS http://127.0.0.1:5207/health
+
+            adb install -r apps/client/android/app/build/outputs/apk/release/app-release.apk
+
+            maestro test tests/e2e/flows --format junit --output maestro-android.xml
+
+      # Maestro records a screenshot and the view hierarchy at the point of failure. Without these, a
+      # native failure is a line number in a YAML file and no way to see what was actually on screen —
+      # which, on a platform nobody here can run locally, is most of the debugging information there is.
+      - name: Upload what Maestro saw
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-e2e
+          path: |
+            maestro-android.xml
+            ~/.maestro/tests/**
+          if-no-files-found: ignore
+
+  ios:
+    name: iOS — build, boot, drive the auth flow
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate the native project
+        working-directory: apps/client
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Install pods
+        working-directory: apps/client/ios
+        run: pod install
+
+      # A SIMULATOR build needs no code signing, which is why none of this needs an Apple developer
+      # account, a certificate or a provisioning profile. A device build would — that is a different
+      # problem, for a different day, and it is what issue #7's remaining scope is about.
+      #
+      # The simulator's localhost IS the host machine's, so the default API URL already points at the
+      # stub. It is set explicitly anyway, because relying on a default that happens to be right is how
+      # a test starts passing for the wrong reason.
+      - name: Build for the simulator
+        working-directory: apps/client/ios
+        env:
+          EXPO_PUBLIC_API_URL: http://localhost:5207
+        run: |
+          WORKSPACE=$(ls -d ./*.xcworkspace | head -1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          echo "Building $SCHEME from $WORKSPACE"
+
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Boot a simulator
+        run: |
+          # Named rather than "whatever is first": the runner image changes, and a flow that ran on a
+          # phone last month and an iPad this month is a flow whose layout assertions mean nothing.
+          xcrun simctl boot "iPhone 16" || xcrun simctl boot "iPhone 15"
+          xcrun simctl bootstatus booted -b
+
+      - name: Start the stub API
+        run: |
+          node tests/e2e/stub-api/server.mjs &
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:5207/health >/dev/null && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:5207/health
+
+      - name: Install the app
+        run: |
+          APP=$(find apps/client/ios/build/Build/Products -maxdepth 2 -name '*.app' | head -1)
+          test -n "$APP" || { echo "No .app was produced."; exit 1; }
+          echo "Installing $APP"
+          xcrun simctl install booted "$APP"
+
+      - name: Run the flow
+        run: maestro test tests/e2e/flows --format junit --output maestro-ios.xml
+
+      - name: Upload what Maestro saw
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-e2e
+          path: |
+            maestro-ios.xml
+            ~/.maestro/tests/**
+          if-no-files-found: ignore

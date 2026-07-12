@@ -12,6 +12,14 @@ interface Option<T extends string> {
 }
 
 interface SegmentedChoiceProps<T extends string> {
+  /**
+   * Each option gets `${testIdPrefix}-${value}`.
+   *
+   * Derived from the option's VALUE, not its label: the label is translated, and the first flow this
+   * project needs is "change the application language" — which rewrites every label on screen. A
+   * selector built from a label would break precisely on the change it exists to verify.
+   */
+  testIdPrefix?: string;
   label: string;
   hint?: string;
   options: readonly Option<T>[];
@@ -20,6 +28,7 @@ interface SegmentedChoiceProps<T extends string> {
 }
 
 export function SegmentedChoice<T extends string>({
+  testIdPrefix,
   label,
   hint,
   options,
@@ -48,6 +57,7 @@ export function SegmentedChoice<T extends string>({
           return (
             <Pressable
               key={option.value}
+              testID={testIdPrefix ? `${testIdPrefix}-${option.value}` : undefined}
               accessibilityRole="radio"
               // aria-checked, not accessibilityState: react-native-web drops accessibilityState
               // silently — it renders the role and nothing else. A radio whose state exists only as a

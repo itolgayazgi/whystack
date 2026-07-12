@@ -4,6 +4,20 @@
 
 const { light } = require('@whystack/theme/src/palettes.json');
 
+/**
+ * The end-to-end runs, and ONLY those, talk to a stub API over plain HTTP on the loopback address.
+ *
+ * Both platforms block cleartext HTTP by default — iOS through App Transport Security, Android through
+ * its network security config — and they are right to. So the exceptions below are gated behind an
+ * environment variable that only the native E2E workflow sets. They are not "temporarily" in the
+ * production config, because a temporary security exception is the kind that is still there in three
+ * years.
+ *
+ * The E2E build is therefore a DIFFERENT build from the shipped one, and that is the honest trade: the
+ * alternative is shipping an app that permits cleartext to any host, in order to test it.
+ */
+const isEndToEnd = process.env.WHYSTACK_E2E === '1';
+
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = {
   name: 'WhyStack',
@@ -15,8 +29,24 @@ module.exports = {
   userInterfaceStyle: 'automatic',
   ios: {
     supportsTablet: true,
+
+    // Required to build a native project at all. It is also the identifier Maestro launches, so it is
+    // the same string in tests/e2e/flows/*.yaml — renaming it breaks those, deliberately and loudly.
+    bundleIdentifier: 'dev.whystack.app',
+
+    ...(isEndToEnd
+      ? {
+          infoPlist: {
+            // NSAllowsLocalNetworking, and NOT NSAllowsArbitraryLoads. The narrow one permits HTTP to
+            // the loopback and local names only; the broad one permits it to the entire internet. Both
+            // would make the test pass. Only one of them would be a defensible thing to have written.
+            NSAppTransportSecurity: { NSAllowsLocalNetworking: true },
+          },
+        }
+      : {}),
   },
   android: {
+    package: 'dev.whystack.app',
     adaptiveIcon: {
       backgroundColor: light.background,
       foregroundImage: './src/assets/images/android-icon-foreground.png',
@@ -24,6 +54,10 @@ module.exports = {
       monochromeImage: './src/assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
+
+    // Android has no per-host equivalent in app.json, so this is the blunt instrument — which is
+    // exactly why it is behind the flag and never in a shipped build.
+    ...(isEndToEnd ? { usesCleartextTraffic: true } : {}),
   },
   web: {
     output: 'static',
@@ -32,6 +66,7 @@ module.exports = {
   plugins: [
     'expo-router',
     'expo-localization',
+    'expo-secure-store',
     [
       'expo-splash-screen',
       {

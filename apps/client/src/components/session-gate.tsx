@@ -2,6 +2,7 @@ import { space } from '@whystack/theme';
 import { Redirect, useSegments } from 'expo-router';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { testId } from '../config/test-ids';
 import { useAuth } from '../state/auth';
 import { useLanguage } from '../state/language';
 import { useTheme } from '../state/theme';
@@ -54,6 +55,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
   if (status === 'restoring') {
     return (
       <View
+        testID={testId.session.restoring}
         role="status"
         aria-live="polite"
         style={{
@@ -73,6 +75,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
   if (status === 'unreachable') {
     return (
       <View
+        testID={testId.session.unreachable}
         role="alert"
         style={{
           flex: 1,

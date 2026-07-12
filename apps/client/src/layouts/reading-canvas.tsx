@@ -8,6 +8,7 @@ import { useTheme } from '../state/theme';
 // those rules are enforced once instead of being re-remembered on every screen.
 
 interface ReadingCanvasProps {
+  testID?: string;
   children: ReactNode;
   /**
    * Table of contents, related topics, version selector. Rendered as a column beside the text on
@@ -20,7 +21,7 @@ interface ReadingCanvasProps {
   aside?: ReactNode;
 }
 
-export function ReadingCanvas({ children, aside }: ReadingCanvasProps) {
+export function ReadingCanvas({ testID, children, aside }: ReadingCanvasProps) {
   const { color, gutter, layoutMode, readingMaxWidth } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -28,6 +29,7 @@ export function ReadingCanvas({ children, aside }: ReadingCanvasProps) {
 
   return (
     <ScrollView
+      testID={testID}
       style={{ backgroundColor: color.background }}
       contentContainerStyle={{
         paddingHorizontal: gutter,

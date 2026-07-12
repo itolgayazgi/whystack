@@ -4,6 +4,8 @@ import { Text, TextInput, type TextInputProps, View } from 'react-native';
 import { useTheme } from '../../state/theme';
 
 interface TextFieldProps {
+  /** A stable selector for the end-to-end flows (`13`). Never a translated label — those move. */
+  testID?: string;
   label: string;
   value: string;
   onChangeText: (value: string) => void;
@@ -20,6 +22,7 @@ interface TextFieldProps {
 }
 
 export function TextField({
+  testID,
   label,
   value,
   onChangeText,
@@ -52,6 +55,7 @@ export function TextField({
       </Text>
 
       <TextInput
+        testID={testID}
         value={value}
         onChangeText={onChangeText}
         editable={!disabled}

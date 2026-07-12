@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useTheme } from '../../state/theme';
 
 interface PrimaryButtonProps {
+  testID?: string;
   label: string;
   onPress: () => void;
   /** While true the button is disabled AND says why — a spinner alone leaves a blind user with silence. */
@@ -13,6 +14,7 @@ interface PrimaryButtonProps {
 }
 
 export function PrimaryButton({
+  testID,
   label,
   onPress,
   busy = false,
@@ -28,6 +30,7 @@ export function PrimaryButton({
 
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       onPress={onPress}
       disabled={inert}
