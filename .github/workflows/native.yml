@@ -34,6 +34,19 @@ env:
   # different build from the shipped one.
   WHYSTACK_E2E: '1'
 
+  # Maestro's iOS driver is an XCUITest bundle that has to be compiled, installed and started inside the
+  # simulator before a single tap can happen. On a CI runner that takes about forty seconds — and
+  # Maestro's default patience runs out well before that.
+  #
+  # The failure is deeply misleading: "java.net.ConnectException: Failed to connect to 127.0.0.1:50843",
+  # repeated, which reads like a networking problem in the app. The driver's own log shows it starting
+  # its server twenty-eight seconds AFTER Maestro had already given up.
+  MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
+
+  # Nothing about a CI run is worth reporting to an analytics endpoint, and a network call we do not
+  # need is a network call that can hang.
+  MAESTRO_CLI_NO_ANALYTICS: '1'
+
 jobs:
   android:
     name: Android — build, boot, drive the auth flow
