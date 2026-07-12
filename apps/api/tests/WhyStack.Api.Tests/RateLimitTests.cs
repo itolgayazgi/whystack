@@ -26,10 +26,11 @@ public class RateLimitTests(RateLimitedApiFactory factory) : IClassFixture<RateL
     public async Task Too_many_attempts_from_one_address_are_rejected_with_a_retryable_429()
     {
         var client = factory.CreateClient();
+        var attempts = RateLimitedApiFactory.PermitLimit + 3;
 
-        HttpResponseMessage? limited = null;
+        HttpResponseMessage? rejected = null;
 
-        for (var attempt = 1; attempt <= RateLimitedApiFactory.PermitLimit + 3 && limited is null; attempt++)
+        for (var attempt = 1; attempt <= attempts && rejected is null; attempt++)
         {
             var response = await client.PostAsJsonAsync(
                 "/api/v1/auth/login",
@@ -37,11 +38,21 @@ public class RateLimitTests(RateLimitedApiFactory factory) : IClassFixture<RateL
 
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
-                limited = response;
+                rejected = response;
             }
         }
 
-        Assert.NotNull(limited);
+        // `?? throw`, not `Assert.NotNull` followed by a dereference.
+        //
+        // The C# compiler accepts the latter because it trusts xUnit's [NotNull] annotation. CodeQL's
+        // dataflow does not model that annotation, and flagged the dereference — correctly, in the sense
+        // that the guarantee lived in an attribute rather than in the code. Suppressing the alert would
+        // have silenced the tool without changing anything; this makes the value non-nullable at the
+        // point of use, and fails with a message that says what was actually expected.
+        var limited = rejected
+            ?? throw new Xunit.Sdk.XunitException(
+                $"The limiter never rejected a request: {attempts} attempts against a permit limit of "
+                    + $"{RateLimitedApiFactory.PermitLimit}. Rate limiting is not applied to this endpoint.");
 
         var body = JsonSerializer.Deserialize<JsonElement>(await limited.Content.ReadAsStringAsync());
 
