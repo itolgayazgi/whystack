@@ -77,4 +77,13 @@ public static class ErrorCodes
 
     /// <summary>The account exists but is locked or deactivated. Only ever returned AFTER the password verified.</summary>
     public const string AccountLocked = "account_locked";
+
+    /// <summary>
+    /// Unknown, expired, revoked or REPLAYED — all of them, indistinguishably.
+    ///
+    /// A refresh token is a bearer credential: whoever holds it is the user. Telling the caller which
+    /// kind of failure it was tells an attacker how close they are, and telling them "that token was
+    /// already used" confirms they are holding a real one.
+    /// </summary>
+    public const string InvalidRefreshToken = "invalid_refresh_token";
 }

@@ -62,9 +62,24 @@ public interface ITokenHasher
     string Hash(string value);
 }
 
+/// <summary>
+/// Produces refresh tokens: 256 bits from a cryptographically secure RNG.
+/// </summary>
+/// <remarks>
+/// Not <c>Guid.NewGuid()</c>, and not <c>Random</c>. A GUID is 122 bits with structure, and
+/// <c>Random</c> is a predictable sequence seeded from the clock — an attacker who observes one token
+/// can generate the next. This is a bearer credential: whoever holds it IS the user.
+/// </remarks>
+public interface ITokenGenerator
+{
+    string NewToken();
+}
+
 public interface IIdentityRepository
 {
     Task<User?> FindByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken);
+
+    Task<User?> FindByIdAsync(Guid userId, CancellationToken cancellationToken);
 
     Task<bool> EmailExistsAsync(string normalizedEmail, CancellationToken cancellationToken);
 
@@ -77,6 +92,19 @@ public interface IIdentityRepository
     void AddUserRole(UserRole userRole);
 
     void AddLoginEvent(UserLoginEvent loginEvent);
+
+    void AddSession(UserSession session);
+
+    Task<UserSession?> FindSessionByRefreshTokenHashAsync(string tokenHash, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every session descended from one sign-in. Reuse detection revokes all of them at once — the
+    /// thief may already hold a newer token in the same chain, and killing only the replayed one leaves
+    /// them signed in while the victim is not.
+    /// </summary>
+    Task<IReadOnlyCollection<UserSession>> GetFamilyAsync(Guid familyId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyCollection<UserSession>> GetActiveSessionsAsync(Guid userId, CancellationToken cancellationToken);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

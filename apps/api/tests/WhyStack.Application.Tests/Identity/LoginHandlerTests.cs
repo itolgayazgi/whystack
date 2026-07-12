@@ -1,5 +1,6 @@
 using WhyStack.Application.Common;
 using WhyStack.Application.Identity.Login;
+using WhyStack.Application.Identity.Sessions;
 using WhyStack.Domain.Identity;
 
 namespace WhyStack.Application.Tests.Identity;
@@ -15,10 +16,15 @@ public class LoginHandlerTests
     private readonly FakeClock _clock = new(Now);
     private readonly LoginHandler _handler;
 
+    private readonly SessionService _sessions;
+
     public LoginHandlerTests()
     {
-        _handler = new LoginHandler(_repository, _hasher, new FakeAccessTokenIssuer(), _clock);
+        _sessions = new SessionService(_repository, new FakeTokenGenerator(), new FakeTokenHasher(), _clock);
+        _handler = new LoginHandler(_repository, _hasher, new FakeAccessTokenIssuer(), _sessions, _clock);
     }
+
+    private static readonly SessionContext Context = new("Web", null, null, null);
 
     private User GivenAnAccount(string email = "ada@example.com")
     {
@@ -37,7 +43,7 @@ public class LoginHandlerTests
     }
 
     private Task<Result<LoginResult>> LoginAsync(string email, string password) =>
-        _handler.HandleAsync(new LoginCommand(email, password, null, null), CancellationToken.None);
+        _handler.HandleAsync(new LoginCommand(email, password, Context), CancellationToken.None);
 
     [Fact]
     public async Task Signs_in_with_the_right_password()

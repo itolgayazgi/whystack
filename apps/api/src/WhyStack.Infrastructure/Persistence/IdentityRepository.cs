@@ -54,11 +54,45 @@ public sealed class IdentityRepository(WhyStackDbContext context) : IIdentityRep
             : id;
     }
 
+    public Task<User?> FindByIdAsync(Guid userId, CancellationToken cancellationToken) =>
+        context.Users.SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
+
     public void AddUser(User user) => context.Users.Add(user);
 
     public void AddUserRole(UserRole userRole) => context.UserRoles.Add(userRole);
 
     public void AddLoginEvent(UserLoginEvent loginEvent) => context.UserLoginEvents.Add(loginEvent);
+
+    public void AddSession(UserSession session) => context.UserSessions.Add(session);
+
+    /// <summary>
+    /// Tracked, not AsNoTracking: the caller mutates it (rotation sets ReplacedBySessionId) and saves.
+    ///
+    /// It also finds REVOKED and ROTATED sessions on purpose. Filtering to usable ones here would be
+    /// the natural-looking optimisation and would silently delete reuse detection: a replayed token
+    /// would simply not be found, the handler would report "unknown token", the family would survive,
+    /// and the thief would keep refreshing.
+    /// </summary>
+    public Task<UserSession?> FindSessionByRefreshTokenHashAsync(
+        string tokenHash,
+        CancellationToken cancellationToken) =>
+        context.UserSessions.SingleOrDefaultAsync(
+            session => session.RefreshTokenHash == tokenHash,
+            cancellationToken);
+
+    public async Task<IReadOnlyCollection<UserSession>> GetFamilyAsync(
+        Guid familyId,
+        CancellationToken cancellationToken) =>
+        await context.UserSessions
+            .Where(session => session.FamilyId == familyId)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyCollection<UserSession>> GetActiveSessionsAsync(
+        Guid userId,
+        CancellationToken cancellationToken) =>
+        await context.UserSessions
+            .Where(session => session.UserId == userId && session.RevokedAtUtc == null)
+            .ToListAsync(cancellationToken);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) =>
         context.SaveChangesAsync(cancellationToken);

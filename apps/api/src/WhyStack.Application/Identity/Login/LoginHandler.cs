@@ -1,5 +1,6 @@
 using WhyStack.Application.Abstractions;
 using WhyStack.Application.Common;
+using WhyStack.Application.Identity.Sessions;
 using WhyStack.Domain.Identity;
 
 namespace WhyStack.Application.Identity.Login;
@@ -8,12 +9,13 @@ namespace WhyStack.Application.Identity.Login;
 public sealed record LoginCommand(
     string? Email,
     string? Password,
-    string? IpAddressHash,
-    string? UserAgentHash);
+    SessionContext Context);
 
 public sealed record LoginResult(
     string AccessToken,
     DateTime AccessTokenExpiresAtUtc,
+    string RefreshToken,
+    DateTime RefreshTokenExpiresAtUtc,
     Guid UserId,
     string Email,
     string? DisplayName,
@@ -27,6 +29,7 @@ public sealed class LoginHandler(
     IIdentityRepository repository,
     IPasswordHasher passwordHasher,
     IAccessTokenIssuer accessTokenIssuer,
+    SessionService sessions,
     IClock clock)
 {
     /// <summary>
@@ -150,6 +153,10 @@ public sealed class LoginHandler(
 
         var roles = await repository.GetRolesAsync(user.Id, cancellationToken);
 
+        // A new family. Every sign-in starts its own chain of rotations, so revoking one device's
+        // family never touches another's.
+        var issued = sessions.StartSession(user.Id, command.Context);
+
         repository.AddLoginEvent(new UserLoginEvent
         {
             Id = Guid.CreateVersion7(),
@@ -157,8 +164,8 @@ public sealed class LoginHandler(
             Email = user.Email,
             EventType = LoginEventType.LoginSucceeded,
             IsSuccessful = true,
-            IpAddressHash = command.IpAddressHash,
-            UserAgentHash = command.UserAgentHash,
+            IpAddressHash = command.Context.IpAddressHash,
+            UserAgentHash = command.Context.UserAgentHash,
             CreatedAtUtc = now,
         });
 
@@ -172,6 +179,8 @@ public sealed class LoginHandler(
         return Result<LoginResult>.Success(new LoginResult(
             accessToken.Token,
             accessToken.ExpiresAtUtc,
+            issued.RawRefreshToken,
+            issued.Session.ExpiresAtUtc,
             user.Id,
             user.Email,
             user.DisplayName,
@@ -198,8 +207,8 @@ public sealed class LoginHandler(
             EventType = LoginEventType.LoginFailed,
             IsSuccessful = false,
             FailureReason = reason,
-            IpAddressHash = command.IpAddressHash,
-            UserAgentHash = command.UserAgentHash,
+            IpAddressHash = command.Context.IpAddressHash,
+            UserAgentHash = command.Context.UserAgentHash,
             CreatedAtUtc = now,
         });
 
@@ -213,8 +222,8 @@ public sealed class LoginHandler(
                 EventType = extraEvent.Value,
                 IsSuccessful = false,
                 FailureReason = reason,
-                IpAddressHash = command.IpAddressHash,
-                UserAgentHash = command.UserAgentHash,
+                IpAddressHash = command.Context.IpAddressHash,
+                UserAgentHash = command.Context.UserAgentHash,
                 CreatedAtUtc = now,
             });
         }

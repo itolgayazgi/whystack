@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
 using WhyStack.Application.Abstractions;
@@ -27,4 +28,26 @@ public sealed class Sha256TokenHasher : ITokenHasher
 {
     public string Hash(string value) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+}
+
+/// <summary>
+/// 256 bits from the OS cryptographic RNG, URL-safe base64.
+/// </summary>
+/// <remarks>
+/// <b>Not <c>Guid.NewGuid()</c>.</b> A v4 GUID has 122 bits of randomness, six of which are fixed
+/// version and variant bits — and, more to the point, "it looks random" is not a security property.
+/// <b>Not <c>Random</c>.</b> That is a deterministic sequence seeded from the clock: observe one value
+/// and you can compute the next.
+///
+/// This is a bearer credential. Whoever holds it IS the user, for thirty days. It gets the same RNG a
+/// key would.
+/// </remarks>
+public sealed class CryptoRandomTokenGenerator : ITokenGenerator
+{
+    private const int TokenBytes = 32;
+
+    public string NewToken() =>
+        // Base64Url, not Base64: the token travels in a cookie and a JSON body, and '+' and '/' need
+        // escaping in neither if they are never produced.
+        Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(TokenBytes));
 }

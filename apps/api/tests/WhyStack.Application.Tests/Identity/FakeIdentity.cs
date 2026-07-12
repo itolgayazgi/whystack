@@ -65,11 +65,38 @@ public sealed class FakeEmailSender : IEmailSender
     }
 }
 
+/// <summary>
+/// A token generator that is predictable ON PURPOSE, so a test can name the token it expects.
+/// The real one is 256 bits of CSPRNG output — see CryptoRandomTokenGenerator, and the remarks there
+/// on why Guid.NewGuid() and Random are both wrong.
+/// </summary>
+public sealed class FakeTokenGenerator : ITokenGenerator
+{
+    private int _next;
+
+    public string NewToken() => $"refresh-token-{++_next}";
+}
+
+/// <summary>
+/// Deterministic, and it does NOT contain its input.
+///
+/// The first version returned $"sha256:{value}". That is the same mistake FakePasswordHasher made, and
+/// it would have made The_raw_token_is_never_stored pass while proving nothing — a fake that embeds the
+/// secret cannot catch code that stores the secret.
+/// </summary>
+public sealed class FakeTokenHasher : ITokenHasher
+{
+    public string Hash(string value) =>
+        "sha256:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(value)));
+}
+
 public sealed class FakeIdentityRepository : IIdentityRepository
 {
     public List<User> Users { get; } = [];
     public List<UserRole> UserRoles { get; } = [];
     public List<UserLoginEvent> LoginEvents { get; } = [];
+    public List<UserSession> Sessions { get; } = [];
     public int SaveCount { get; private set; }
 
     private static readonly Dictionary<RoleName, Guid> RoleIds =
@@ -96,11 +123,32 @@ public sealed class FakeIdentityRepository : IIdentityRepository
     public Task<Guid> GetRoleIdAsync(RoleName role, CancellationToken cancellationToken) =>
         Task.FromResult(RoleIds[role]);
 
+    public Task<User?> FindByIdAsync(Guid userId, CancellationToken cancellationToken) =>
+        Task.FromResult(Users.SingleOrDefault(user => user.Id == userId));
+
     public void AddUser(User user) => Users.Add(user);
 
     public void AddUserRole(UserRole userRole) => UserRoles.Add(userRole);
 
     public void AddLoginEvent(UserLoginEvent loginEvent) => LoginEvents.Add(loginEvent);
+
+    public void AddSession(UserSession session) => Sessions.Add(session);
+
+    /// <summary>
+    /// Finds revoked and rotated sessions too — exactly like the real one, and for the same reason: a
+    /// lookup that filtered to usable sessions would make a replayed token simply "not found", and
+    /// reuse detection would vanish without a single test noticing.
+    /// </summary>
+    public Task<UserSession?> FindSessionByRefreshTokenHashAsync(string tokenHash, CancellationToken cancellationToken) =>
+        Task.FromResult(Sessions.SingleOrDefault(session => session.RefreshTokenHash == tokenHash));
+
+    public Task<IReadOnlyCollection<UserSession>> GetFamilyAsync(Guid familyId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyCollection<UserSession>>(
+            Sessions.Where(session => session.FamilyId == familyId).ToList());
+
+    public Task<IReadOnlyCollection<UserSession>> GetActiveSessionsAsync(Guid userId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyCollection<UserSession>>(
+            Sessions.Where(session => session.UserId == userId && session.RevokedAtUtc is null).ToList());
 
     public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
