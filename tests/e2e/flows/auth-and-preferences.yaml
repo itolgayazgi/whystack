@@ -47,7 +47,19 @@ tags:
     id: 'register-display-name'
 - inputText: 'Ada'
 
-- hideKeyboard
+# No `hideKeyboard`.
+#
+# It hung for 76 seconds on iOS 26 and then took Maestro's XCUITest driver down with it
+# ("Failed to connect to 127.0.0.1:51706"). That is a driver problem, not an app problem — everything
+# up to this point had worked: the app booted, rendered, and every selector resolved.
+#
+# Scrolling to the button is what a person does anyway when the keyboard is in the way, and it needs
+# nothing from the driver beyond a swipe. The form's ScrollView has keyboardShouldPersistTaps="handled",
+# so the tap lands on the button rather than being eaten by the keyboard dismissal.
+- scrollUntilVisible:
+    element:
+      id: 'register-submit'
+    direction: DOWN
 
 - tapOn:
     id: 'register-submit'
@@ -72,7 +84,10 @@ tags:
     id: 'sign-in-password'
 - inputText: 'a-good-long-password'
 
-- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: 'sign-in-submit'
+    direction: DOWN
 
 - tapOn:
     id: 'sign-in-submit'

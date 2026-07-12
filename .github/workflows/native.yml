@@ -58,6 +58,21 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # The first run took 41 minutes, and most of that was downloading the same things twice: Gradle
+      # fetches every React Native artefact from scratch, and the emulator pulls a 1.5 GB system image.
+      # Neither changes between runs.
+      #
+      # Keyed on the lockfile, because that is what actually determines the native dependency graph —
+      # a React Native version bump changes it, and nothing else does.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: gradle-${{ runner.os }}-
+
       # `expo prebuild` generates android/ from app.config.js on every run rather than committing it.
       # That is Expo's continuous native generation, and it is also what keeps `06`'s approved folder
       # structure honest: there is no android/ in this repository to drift out of step with the config
@@ -99,6 +114,34 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # The emulator's system image and a booted snapshot of it. Worth ~8 minutes a run.
+      #
+      # Safe, and the reasoning matters: the snapshot is taken BEFORE the app is installed, so it cannot
+      # carry app data — and the flow's first command is `launchApp: clearState: true`, which wipes the
+      # app's storage (and with it the Keystore-backed blobs) regardless. "The session survived a
+      # restart" therefore still proves the token was stored, not merely never deleted.
+      - name: Cache the emulator
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-pixel6
+
+      - name: Create the AVD, once
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: false
+          script: echo "AVD created and snapshotted for the cache."
+
       - name: Run the flow on an emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -106,11 +149,12 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          force-avd-creation: false
           disable-animations: true
-          # -no-snapshot forces a cold boot every run. A saved snapshot would carry the previous run's
-          # Keystore into the next one, and "the session survived a restart" would pass because the
-          # token had never been deleted — not because it was correctly stored.
-          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
+          # -no-snapshot-save: boot FROM the cached snapshot, but never write back to it. Otherwise this
+          # run's state would leak into the next one's, and a test that is supposed to start from nothing
+          # would start from whatever the last run left behind.
+          emulator-options: -no-window -no-snapshot-save -noaudio -no-boot-anim -gpu swiftshader_indirect
           script: |
             node tests/e2e/stub-api/server.mjs &
             for _ in $(seq 1 30); do
@@ -169,6 +213,19 @@ jobs:
       - name: Generate the native project
         working-directory: apps/client
         run: npx expo prebuild --platform ios --no-install
+
+      # The pod DOWNLOADS, not the installed Pods directory. Pods/ is regenerated from a Podfile that
+      # prebuild itself rewrites, so caching it would risk installing yesterday's tree against today's
+      # config — a class of failure that looks like a compiler bug. The download cache is the slow part
+      # and it is safe to keep.
+      - name: Cache CocoaPods downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods/repos
+          key: pods-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pods-${{ runner.os }}-
 
       - name: Install pods
         working-directory: apps/client/ios
