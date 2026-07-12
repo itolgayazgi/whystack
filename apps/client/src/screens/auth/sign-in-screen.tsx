@@ -1,4 +1,3 @@
-import { space } from '@whystack/theme';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text } from 'react-native';
