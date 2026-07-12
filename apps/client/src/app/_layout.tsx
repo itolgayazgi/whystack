@@ -1,5 +1,5 @@
 import { useFonts } from 'expo-font';
-import { Slot } from 'expo-router';
+import { Slot, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -7,7 +7,9 @@ import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PrimaryNavigation, useNavigationPlacement } from '../components/navigation/primary-navigation';
+import { SessionGate } from '../components/session-gate';
 import { fontAssets } from '../config/fonts';
+import { AuthProvider } from '../state/auth';
 import { LanguageProvider } from '../state/language';
 import { ThemeProvider, useTheme } from '../state/theme';
 
@@ -22,6 +24,11 @@ function Shell() {
   const { colorScheme, color } = useTheme();
   const placement = useNavigationPlacement();
 
+  // No product navigation on an authentication screen. A sign-in page that shows the tab bar is a
+  // sign-in page offering to take you somewhere you are not allowed to go — and every one of those
+  // destinations would immediately bounce you back here.
+  const onAuthScreen = useSegments()[0] === '(auth)';
+
   return (
     <>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
@@ -32,13 +39,13 @@ function Shell() {
           backgroundColor: color.background,
         }}
       >
-        {placement === 'side' ? <PrimaryNavigation /> : null}
+        {placement === 'side' && !onAuthScreen ? <PrimaryNavigation /> : null}
 
         <View style={{ flex: 1 }}>
           <Slot />
         </View>
 
-        {placement === 'bottom' ? <PrimaryNavigation /> : null}
+        {placement === 'bottom' && !onAuthScreen ? <PrimaryNavigation /> : null}
       </View>
     </>
   );
@@ -63,7 +70,14 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <LanguageProvider>
-            <Shell />
+            {/* AuthProvider inside LanguageProvider: the gate renders localized text ("restoring your
+                session", the offline notice), so it needs `t`. Reversing them would leave the very
+                screens a user sees when something is wrong as the only untranslated ones. */}
+            <AuthProvider>
+              <SessionGate>
+                <Shell />
+              </SessionGate>
+            </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
       </SafeAreaProvider>
