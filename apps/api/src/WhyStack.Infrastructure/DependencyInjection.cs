@@ -1,6 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using WhyStack.Application.Abstractions;
+using WhyStack.Application.Identity.Login;
+using WhyStack.Application.Identity.Register;
+using WhyStack.Infrastructure.Identity;
 using WhyStack.Infrastructure.Persistence;
 
 namespace WhyStack.Infrastructure;
@@ -18,7 +23,17 @@ public static class DependencyInjection
 
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        AddPersistence(services, configuration);
+        AddIdentity(services, configuration, environment);
+        AddUseCases(services);
+
+        return services;
+    }
+
+    private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString(ConnectionStringName);
 
@@ -56,6 +71,50 @@ public static class DependencyInjection
             .AddHealthChecks()
             .AddDbContextCheck<WhyStackDbContext>(name: "sql-server", tags: [ReadinessTag]);
 
-        return services;
+        services.AddScoped<IIdentityRepository, IdentityRepository>();
+    }
+
+    private static void AddIdentity(
+        IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        services
+            .AddOptions<JwtOptions>()
+            .Bind(configuration.GetSection(JwtOptions.SectionName))
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.SigningKey) && options.SigningKey.Length >= 32,
+                "Jwt:SigningKey is missing or shorter than 32 characters. HMAC-SHA256's security is bounded "
+                    + "by the key, and a short key is a forgeable token for any user, including an Administrator. "
+                    + "Set it in user secrets — never in appsettings.")
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.Issuer) && !string.IsNullOrWhiteSpace(options.Audience),
+                "Jwt:Issuer and Jwt:Audience are required.")
+            // Validate at startup, not on the first login. A misconfigured signing key must stop the
+            // process, not surface as a 500 to whoever happened to try signing in first.
+            .ValidateOnStart();
+
+        services.AddSingleton<IClock, SystemClock>();
+        services.AddSingleton<IPasswordHasher, PasswordHasherAdapter>();
+        services.AddSingleton<ITokenHasher, Sha256TokenHasher>();
+        services.AddScoped<IAccessTokenIssuer, JwtAccessTokenIssuer>();
+
+        if (environment.IsDevelopment())
+        {
+            services.AddSingleton<IEmailSender, LoggingEmailSender>();
+        }
+        else
+        {
+            // Deliberately not registered. Resolving IEmailSender outside Development will throw at
+            // startup, which is the correct failure: an environment that cannot send a confirmation
+            // email must not accept registrations and silently deliver nothing.
+            // A real sender lands with the confirmation flow (stage 4).
+        }
+    }
+
+    private static void AddUseCases(IServiceCollection services)
+    {
+        services.AddScoped<RegisterUserHandler>();
+        services.AddScoped<LoginHandler>();
     }
 }

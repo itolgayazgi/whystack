@@ -1,0 +1,80 @@
+namespace WhyStack.Application.Common;
+
+/// <summary>
+/// The outcome of a use case. An expected failure — a taken email, a wrong password — is a RESULT,
+/// not an exception.
+/// </summary>
+/// <remarks>
+/// Exceptions are for the unexpected. "The user typed the wrong password" is the most expected thing
+/// that will ever happen to this system, and throwing for it costs a stack capture on the hot path,
+/// hides the failure inside a catch somewhere, and makes the compiler stop reminding you it can fail.
+///
+/// A Result cannot be ignored: to read <see cref="Value"/> you must first have decided what to do
+/// about <see cref="Error"/>.
+/// </remarks>
+public readonly record struct Result<T>
+{
+    private readonly T? _value;
+
+    private Result(T value)
+    {
+        _value = value;
+        Error = null;
+    }
+
+    private Result(Error error)
+    {
+        _value = default;
+        Error = error;
+    }
+
+    public Error? Error { get; }
+
+    public bool IsSuccess => Error is null;
+
+    public T Value =>
+        IsSuccess
+            ? _value!
+            : throw new InvalidOperationException($"Result failed with '{Error!.Code}'; there is no value to read.");
+
+    public static Result<T> Success(T value) => new(value);
+
+    public static Result<T> Failure(Error error) => new(error);
+
+    public static implicit operator Result<T>(Error error) => Failure(error);
+}
+
+/// <summary>
+/// A failure the API can render. <see cref="Code"/> is the stable, machine-readable identifier `08`
+/// requires ("Error codes must be stable. Clients may depend on them.") — it is part of the contract,
+/// and renaming one is a breaking change.
+/// </summary>
+public sealed record Error(string Code, string Message, IReadOnlyDictionary<string, string[]>? FieldErrors = null)
+{
+    public static Error Validation(IReadOnlyDictionary<string, string[]> fieldErrors) =>
+        new(ErrorCodes.ValidationFailed, "One or more validation errors occurred.", fieldErrors);
+
+    public static Error Validation(string field, string message) =>
+        Validation(new Dictionary<string, string[]> { [field] = [message] });
+}
+
+/// <summary>The approved codes from `08`. Stable by contract.</summary>
+public static class ErrorCodes
+{
+    public const string ValidationFailed = "validation_failed";
+    public const string AuthenticationRequired = "authentication_required";
+    public const string AccessDenied = "access_denied";
+    public const string RateLimitExceeded = "rate_limit_exceeded";
+
+    /// <summary>
+    /// Wrong password, unknown account, deleted account — all of them. Deliberately indistinguishable.
+    ///
+    /// An error that says "no account with that email" is an oracle: it lets anyone test an address
+    /// list against the site and learn who has an account here. `04` requires account-enumeration
+    /// protection, and this single code is most of it.
+    /// </summary>
+    public const string InvalidCredentials = "invalid_credentials";
+
+    /// <summary>The account exists but is locked or deactivated. Only ever returned AFTER the password verified.</summary>
+    public const string AccountLocked = "account_locked";
+}
