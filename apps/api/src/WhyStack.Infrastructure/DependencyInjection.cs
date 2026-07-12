@@ -4,7 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using WhyStack.Application.Abstractions;
 using WhyStack.Application.Identity.Login;
+using WhyStack.Application.Identity.Logout;
+using WhyStack.Application.Identity.Refresh;
 using WhyStack.Application.Identity.Register;
+using WhyStack.Application.Identity.Sessions;
 using WhyStack.Infrastructure.Identity;
 using WhyStack.Infrastructure.Persistence;
 
@@ -97,6 +100,7 @@ public static class DependencyInjection
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IPasswordHasher, PasswordHasherAdapter>();
         services.AddSingleton<ITokenHasher, Sha256TokenHasher>();
+        services.AddSingleton<ITokenGenerator, CryptoRandomTokenGenerator>();
         services.AddScoped<IAccessTokenIssuer, JwtAccessTokenIssuer>();
 
         if (environment.IsDevelopment())
@@ -114,7 +118,10 @@ public static class DependencyInjection
 
     private static void AddUseCases(IServiceCollection services)
     {
+        services.AddScoped<SessionService>();
         services.AddScoped<RegisterUserHandler>();
         services.AddScoped<LoginHandler>();
+        services.AddScoped<RefreshHandler>();
+        services.AddScoped<LogoutHandler>();
     }
 }

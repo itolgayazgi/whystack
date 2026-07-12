@@ -70,6 +70,11 @@ public static class ResultMapping
         // carefully worded to avoid.
         ErrorCodes.InvalidCredentials => (StatusCodes.Status401Unauthorized, "Authentication failed"),
 
+        // 401, like a failed sign-in. The session is over and the caller must authenticate again —
+        // which is exactly what 401 means. Anything else (a 400, a 403) would tell a client that has
+        // just been signed out to retry, and it would retry forever.
+        ErrorCodes.InvalidRefreshToken => (StatusCodes.Status401Unauthorized, "Session ended"),
+
         ErrorCodes.AuthenticationRequired => (StatusCodes.Status401Unauthorized, "Authentication required"),
         ErrorCodes.AccessDenied => (StatusCodes.Status403Forbidden, "Access denied"),
         ErrorCodes.AccountLocked => (StatusCodes.Status403Forbidden, "Account locked"),

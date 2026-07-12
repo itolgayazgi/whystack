@@ -3,21 +3,48 @@ using WhyStack.Api.Common;
 using WhyStack.Application.Abstractions;
 using WhyStack.Application.Common;
 using WhyStack.Application.Identity.Login;
+using WhyStack.Application.Identity.Logout;
+using WhyStack.Application.Identity.Refresh;
 using WhyStack.Application.Identity.Register;
+using WhyStack.Application.Identity.Sessions;
 
 namespace WhyStack.Api.Endpoints;
 
 // bind -> validate -> call use case -> map response. No business logic, no DbContext (CLAUDE.md §3).
 // Everything that decides anything lives in the Application layer; this file only speaks HTTP.
 
+/// <summary>
+/// Which half of ADR-0008's token strategy applies to this caller.
+/// </summary>
+/// <remarks>
+/// The API cannot guess. A browser must get the refresh token in an HttpOnly cookie and NOT in the
+/// body — otherwise JavaScript can read it and the cookie is decoration. A native client cannot use a
+/// cookie at all and must get it in the body, to put in the Keychain or Keystore.
+///
+/// Handing out both would give the worst of each: the web client would have a JS-readable copy of the
+/// very token the cookie exists to hide.
+/// </remarks>
+public enum ClientPlatform
+{
+    Web = 0,
+    Native = 1,
+}
+
 public sealed record RegisterRequest(string? Email, string? Password, string? DisplayName);
 
-public sealed record LoginRequest(string? Email, string? Password);
+public sealed record LoginRequest(string? Email, string? Password, ClientPlatform Platform = ClientPlatform.Web);
 
-public sealed record LoginResponse(
+public sealed record RefreshRequest(string? RefreshToken, ClientPlatform Platform = ClientPlatform.Web);
+
+public sealed record LogoutRequest(string? RefreshToken, bool AllDevices = false);
+
+public sealed record AuthResponse(
     string AccessToken,
     DateTime AccessTokenExpiresAtUtc,
-    UserResponse User);
+    /// <summary>Populated for native clients only. On web it is null — the token is in an HttpOnly cookie.</summary>
+    string? RefreshToken,
+    DateTime? RefreshTokenExpiresAtUtc,
+    UserResponse? User);
 
 public sealed record UserResponse(
     Guid Id,
@@ -48,7 +75,18 @@ public static class AuthEndpoints
 
         auth.MapPost("/login", LoginAsync)
             .WithName("Login")
-            .WithSummary("Sign in and receive a short-lived access token.");
+            .WithSummary("Sign in. Returns a short-lived access token and starts a refresh session.");
+
+        auth.MapPost("/refresh", RefreshAsync)
+            .WithName("Refresh")
+            .WithSummary("Exchange a refresh token for a new access token, and rotate the refresh token.")
+            .WithDescription(
+                "The refresh token is single-use. Presenting one that has already been rotated revokes "
+                + "the entire session family — it means the token leaked.");
+
+        auth.MapPost("/logout", LogoutAsync)
+            .WithName("Logout")
+            .WithSummary("End the session. Succeeds even if the token was already gone.");
 
         return app;
     }
@@ -94,10 +132,8 @@ public static class AuthEndpoints
         HttpContext context,
         CancellationToken cancellationToken)
     {
-        var (ipHash, userAgentHash) = RequestFingerprint.Of(context, hasher);
-
         var result = await handler.HandleAsync(
-            new LoginCommand(request.Email, request.Password, ipHash, userAgentHash),
+            new LoginCommand(request.Email, request.Password, SessionContextFor(context, hasher, request.Platform)),
             cancellationToken);
 
         if (!result.IsSuccess)
@@ -107,19 +143,111 @@ public static class AuthEndpoints
 
         var login = result.Value;
 
-        // The refresh token is not here yet — it arrives in stage 3, in an HttpOnly cookie on web and
-        // secure device storage on mobile (ADR-0008). Until then a session simply ends after fifteen
-        // minutes, which is honest: it is better than shipping a long-lived token to make the demo
-        // feel finished.
-        return Results.Ok(new LoginResponse(
+        return Results.Ok(Respond(
+            context,
+            request.Platform,
             login.AccessToken,
             login.AccessTokenExpiresAtUtc,
+            login.RefreshToken,
+            login.RefreshTokenExpiresAtUtc,
             new UserResponse(
                 login.UserId,
                 login.Email,
                 login.DisplayName,
                 login.IsEmailConfirmed,
                 login.Roles)));
+    }
+
+    private static async Task<IResult> RefreshAsync(
+        RefreshRequest request,
+        RefreshHandler handler,
+        ITokenHasher hasher,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        // Web sends nothing in the body — the browser attaches the cookie, and it cannot read it. Native
+        // sends the token it kept in secure storage. Reading the cookie first means a web client cannot
+        // accidentally (or maliciously) supply a different token in the body.
+        var token = RefreshTokenCookie.Read(context) ?? request.RefreshToken;
+
+        var result = await handler.HandleAsync(
+            new RefreshCommand(token, SessionContextFor(context, hasher, request.Platform)),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            // The session is over, whatever the reason. Leaving a dead cookie in the browser means the
+            // next refresh sends it again and fails again, forever, and the user never gets a clean
+            // sign-in screen.
+            RefreshTokenCookie.Clear(context);
+            return result.Error!.ToProblem(context);
+        }
+
+        var refreshed = result.Value;
+
+        return Results.Ok(Respond(
+            context,
+            request.Platform,
+            refreshed.AccessToken,
+            refreshed.AccessTokenExpiresAtUtc,
+            refreshed.RefreshToken,
+            refreshed.RefreshTokenExpiresAtUtc,
+            user: null));
+    }
+
+    private static async Task<IResult> LogoutAsync(
+        LogoutRequest request,
+        LogoutHandler handler,
+        ITokenHasher hasher,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        var token = RefreshTokenCookie.Read(context) ?? request.RefreshToken;
+
+        var result = await handler.HandleAsync(
+            new LogoutCommand(token, request.AllDevices, SessionContextFor(context, hasher, ClientPlatform.Web)),
+            cancellationToken);
+
+        // Cleared unconditionally, and before we even look at the result. Logout is the one operation
+        // that must never leave the caller worse off than it found them.
+        RefreshTokenCookie.Clear(context);
+
+        return Results.Ok(new { sessionsEnded = result.Value.SessionsEnded });
+    }
+
+    /// <summary>
+    /// Gives the caller exactly one copy of the refresh token: the cookie, or the body. Never both.
+    /// </summary>
+    private static AuthResponse Respond(
+        HttpContext context,
+        ClientPlatform platform,
+        string accessToken,
+        DateTime accessTokenExpiresAtUtc,
+        string refreshToken,
+        DateTime refreshTokenExpiresAtUtc,
+        UserResponse? user)
+    {
+        if (platform == ClientPlatform.Web)
+        {
+            RefreshTokenCookie.Set(context, refreshToken, refreshTokenExpiresAtUtc);
+
+            // Null in the body. Putting it here as well would hand JavaScript the token the HttpOnly
+            // cookie exists to keep away from it, and every XSS would become a permanent session theft.
+            return new AuthResponse(accessToken, accessTokenExpiresAtUtc, null, null, user);
+        }
+
+        return new AuthResponse(
+            accessToken,
+            accessTokenExpiresAtUtc,
+            refreshToken,
+            refreshTokenExpiresAtUtc,
+            user);
+    }
+
+    private static SessionContext SessionContextFor(HttpContext context, ITokenHasher hasher, ClientPlatform platform)
+    {
+        var (ipHash, userAgentHash) = RequestFingerprint.Of(context, hasher);
+        return new SessionContext(platform.ToString(), DeviceType: null, ipHash, userAgentHash);
     }
 
     /// <summary>SQL Server: 2601 duplicate key row, 2627 unique constraint violation.</summary>

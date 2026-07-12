@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -19,6 +20,14 @@ builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 // Every unhandled failure leaves as Problem Details, like every handled one. `08` forbids custom error
 // shapes, and an exception that escapes as raw HTML is a custom error shape nobody chose.
 builder.Services.AddProblemDetails();
+
+// Enums cross the wire as STRINGS. `08` and CLAUDE.md §4 both forbid numeric enum values, and the
+// reason is that the number is a lie that only stays true by accident: insert a member into the enum,
+// every existing client silently starts meaning something else, and nothing anywhere fails.
+//
+// System.Text.Json defaults to numbers, so without this the API would quietly demand `platform: 0`.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName);
 
