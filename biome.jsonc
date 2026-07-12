@@ -1,0 +1,94 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+
+  // This file is .jsonc, not .json, because Biome's own config parser is strict JSON and rejects
+  // comments — and a config whose reasoning cannot live beside it is a config nobody dares change.
+  // (It fails silently, too: an unparseable biome.json falls back to defaults, so every exclusion
+  // below quietly stops applying and the tool reports 212 files instead of 59.)
+  //
+  // The exclusions past the build outputs are files ANOTHER TOOLCHAIN OWNS. Two formatters on one
+  // file means each undoes the other and the diff churns on every commit.
+  //
+  //   apps/api           .NET. `dotnet format` owns it. Biome also parses appsettings.json as strict
+  //                      JSON and rejects the comments in it — but .NET's JSON configuration provider
+  //                      allows them, so the file is valid and the parser is the one that is wrong.
+  //   *.astro            Biome reads only the frontmatter, so an import used in the template reads as
+  //                      unused. `astro check` type-checks those files properly.
+  //   dotnet-tools.json  Rewritten by `dotnet tool install` in its own style.
+  "files": {
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.expo",
+      "!**/bin",
+      "!**/obj",
+      "!**/pnpm-lock.yaml",
+      "!**/*.md",
+      "!apps/api",
+      "!**/dotnet-tools.json",
+      "!**/.astro",
+      "!**/*.astro"
+    ]
+  },
+
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 110,
+    "lineEnding": "lf"
+  },
+
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
+  },
+
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        // The two React rules that catch real bugs rather than style. Everything else Biome does here
+        // is a preference; these two are the ones that prevent a stale closure shipping.
+        "useExhaustiveDependencies": "error",
+        "useHookAtTopLevel": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noConsole": { "level": "error", "options": { "allow": ["warn", "error"] } }
+      }
+    }
+  },
+
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+
+  "overrides": [
+    {
+      // A CLI script's output IS console.log. The rule is about stray debugging in application code.
+      "includes": ["**/scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ]
+}

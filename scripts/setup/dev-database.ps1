@@ -21,6 +21,14 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# A PowerShell script that throws leaves $LASTEXITCODE holding the exit code of the last NATIVE command
+# it ran — which is usually 0. So a script that died halfway reports success to whatever called it, and
+# CI goes green on a setup that never finished. This makes the process exit code tell the truth.
+trap {
+    Write-Host "`nSetup failed: $_" -ForegroundColor Red
+    exit 1
+}
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $composeDir = Join-Path $repoRoot 'infrastructure\docker'
 $composeFile = Join-Path $composeDir 'docker-compose.yml'
@@ -115,6 +123,36 @@ Invoke-Native {
     dotnet user-secrets set 'ConnectionStrings:WhyStackDatabase' $connectionString --project $apiProject | Out-Null
 } 'Failed to write the connection string to user secrets.'
 Write-Ok 'Stored (outside the repository — nothing to commit)'
+
+# --- JWT signing key ---------------------------------------------------------------------------
+# Anyone holding this key can mint a valid token for any user, including an Administrator. It is
+# generated here, per machine, and written to user secrets — never to appsettings, which is tracked.
+Write-Step 'Generating a JWT signing key'
+
+$existingKey = (dotnet user-secrets list --project $apiProject 2>$null) `
+    | Where-Object { $_ -match '^Jwt:SigningKey = ' }
+
+if ($existingKey) {
+    Write-Ok 'Reusing the key already in user secrets (rotating it would sign everyone out)'
+}
+else {
+    # 64 bytes from a CSPRNG. HMAC-SHA256's security is bounded by the key, and a key someone typed is
+    # a key someone can guess.
+    #
+    # ::Create().GetBytes(), not ::Fill(). Windows PowerShell 5.1 runs on .NET Framework, where Fill()
+    # does not exist — it is a .NET Core API. The script is the one thing here that has to work on a
+    # machine we have not seen.
+    $bytes = [byte[]]::new(64)
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
+    $signingKey = [Convert]::ToBase64String($bytes)
+
+    Invoke-Native {
+        dotnet user-secrets set 'Jwt:SigningKey' $signingKey --project $apiProject | Out-Null
+    } 'Failed to write the JWT signing key to user secrets.'
+
+    Write-Ok 'Generated and stored (outside the repository)'
+}
 
 # --- Migrations ------------------------------------------------------------------------------
 Write-Step 'Applying migrations'

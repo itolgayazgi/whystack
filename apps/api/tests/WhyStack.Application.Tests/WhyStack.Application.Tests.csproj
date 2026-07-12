@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\WhyStack.Application\WhyStack.Application.csproj" />
+    <ProjectReference Include="..\..\src\WhyStack.Domain\WhyStack.Domain.csproj" />
   </ItemGroup>
 
 </Project>

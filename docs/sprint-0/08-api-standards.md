@@ -2131,14 +2131,28 @@ Store token hashes where persistence is required.
 
 Authorization defines what authenticated users may do.
 
-Initial roles:
+Canonical roles (owned by **ADR-0005 — Authorization and Identity Model**):
 
 ```text
-Learner
-ContentReviewer
+Guest
+RegisteredUser
+PremiumUser
 Editor
+Reviewer
+Translator
 Administrator
 ```
+
+Active in the MVP: `Guest`, `RegisteredUser`, `Administrator`.
+Seeded but dormant: `PremiumUser`, `Editor`, `Reviewer`, `Translator`.
+
+> **Correction (2026-07-12).** This section listed `Learner / ContentReviewer / Editor / Administrator`
+> — the model ADR-0005 **replaced**. ADR-0005 recorded that `05`, `08` and `14` would be patched, and
+> `08` never was. The migration is: `Anonymous → Guest`, `Learner → RegisteredUser`,
+> `ContentReviewer → Reviewer`.
+>
+> The names below are left as written where they describe *behaviour* rather than the role set;
+> read `Learner` as `RegisteredUser`.
 
 ---
 

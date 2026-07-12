@@ -82,6 +82,14 @@ jobs:
       MSSQL_SA_PASSWORD: 'CiEphemeral_NotASecret_1!'
       ConnectionStrings__WhyStackDatabase: 'Server=127.0.0.1,1433;Database=WhyStack;User Id=sa;Password=CiEphemeral_NotASecret_1!;Encrypt=True;TrustServerCertificate=True'
 
+      # Same reasoning, and it needs saying because a JWT signing key normally IS a secret: anyone
+      # holding one can mint a token for any user. This one signs tokens for a host nobody can reach,
+      # in a process that ends with the job. The tests supply their own key anyway — this exists so
+      # `dotnet ef` can build the host without the startup validation stopping it.
+      Jwt__SigningKey: 'ci-only-signing-key-not-a-secret-0123456789abcdef0123456789abcdef'
+      Jwt__Issuer: 'https://api.whystack.ci'
+      Jwt__Audience: 'https://whystack.ci'
+
     services:
       # A real SQL Server, not an in-memory provider. An in-memory provider would happily accept a
       # migration SQL Server rejects, and a health check against it would prove nothing.
