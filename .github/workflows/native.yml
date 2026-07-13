@@ -131,7 +131,15 @@ jobs:
       # platform broke and the other passed for the wrong reason — which is the worst possible outcome,
       # and the reason for the assertion below.
       - name: Point the app at the stub
-        run: echo "EXPO_PUBLIC_API_URL=http://10.0.2.2:5207" > apps/client/.env
+        run: |
+          {
+            echo "EXPO_PUBLIC_API_URL=http://10.0.2.2:5207"
+
+            # Read by TextField. It unmasks password fields ON iOS ONLY, because XCUITest cannot type
+            # into a secureTextEntry box. Android keeps the mask and still covers the real behaviour;
+            # the flag is set on both jobs so there is one .env and one code path to reason about.
+            echo "EXPO_PUBLIC_E2E=1"
+          } > apps/client/.env
 
       # READ THE GENERATED MANIFEST, because a config key that does nothing is invisible.
       #
@@ -322,7 +330,14 @@ jobs:
       # reach the bundler, iOS fell back to the default and **worked anyway**. It passed for the wrong
       # reason while Android failed for the right one.
       - name: Point the app at the stub
-        run: echo "EXPO_PUBLIC_API_URL=http://localhost:5207" > apps/client/.env
+        run: |
+          {
+            echo "EXPO_PUBLIC_API_URL=http://localhost:5207"
+
+            # THIS is what unblocks the iOS flow. XCUITest cannot type into a secureTextEntry field —
+            # the tap lands, inputText runs, and the text never arrives. See TextField.
+            echo "EXPO_PUBLIC_E2E=1"
+          } > apps/client/.env
 
       # AD-HOC SIGNED, which is what Xcode's own "Sign to Run Locally" does for a simulator build.
       #

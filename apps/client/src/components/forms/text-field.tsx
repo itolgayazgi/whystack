@@ -1,7 +1,32 @@
 import { radius, space } from '@whystack/theme';
 import { useId } from 'react';
-import { Text, TextInput, type TextInputProps, View } from 'react-native';
+import { Platform, Text, TextInput, type TextInputProps, View } from 'react-native';
 import { useTheme } from '../../state/theme';
+
+/**
+ * On iOS, and ONLY in the end-to-end build, a password field is not masked.
+ *
+ * <b>This is a compromise, and it is a real one — so it is written down rather than buried.</b>
+ *
+ * Maestro drives iOS through XCUITest, and XCUITest cannot type into a `secureTextEntry` field: the
+ * taps land, `inputText` runs, and the text simply never arrives. It was mistaken for a product bug
+ * (issue #30) until the evidence settled it — the SAME React component, with the SAME `secure` prop,
+ * fills correctly on Android. The app is fine. The driver is not.
+ *
+ * Without this, the entire iOS flow is blocked at the first password box: no registration, no sign-in,
+ * and therefore no test of the one thing the iOS run exists for — that a session written to the
+ * Keychain survives the app being killed.
+ *
+ * WHAT THIS COSTS, stated plainly: the iOS run no longer proves that the password field MASKS its
+ * input. That is the only thing lost. Everything downstream — validation, submission, the API contract,
+ * the Keychain, session restore — is exercised exactly as it ships.
+ *
+ * ANDROID KEEPS THE MASK. Its driver types into a secure field perfectly well, so the full, unmodified
+ * behaviour is still covered there, on every run.
+ *
+ * The flag is set only by the native E2E workflow. A shipped build has it nowhere.
+ */
+const UNMASK_PASSWORDS_FOR_THE_IOS_DRIVER = process.env.EXPO_PUBLIC_E2E === '1' && Platform.OS === 'ios';
 
 interface TextFieldProps {
   /** A stable selector for the end-to-end flows (`13`). Never a translated label — those move. */
@@ -59,7 +84,7 @@ export function TextField({
         value={value}
         onChangeText={onChangeText}
         editable={!disabled}
-        secureTextEntry={secure}
+        secureTextEntry={secure && !UNMASK_PASSWORDS_FOR_THE_IOS_DRIVER}
         autoComplete={autoComplete}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
