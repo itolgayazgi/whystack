@@ -220,6 +220,39 @@ jobs:
             ~/.android/adb*
           key: avd-34-pixel6
 
+      # The system image, fetched BEFORE the emulator action needs it — and retried, because it arrives
+      # corrupt.
+      #
+      # A run died here with `Error on ZipFile unknown archive` while unpacking the 1.5 GB image. The
+      # disk had 101 GB free, so it was not space: the archive itself came down broken. The emulator
+      # action then reported the only thing it could see — "could not connect to TCP port 5554" — which
+      # points at the emulator, twenty minutes and one wrong investigation away from the actual cause.
+      #
+      # sdkmanager does not verify or retry. So: fetch it here, check the unpacked image is really there,
+      # and on a bad archive delete it and try again. Three attempts, then fail LOUDLY rather than
+      # limping into a boot that cannot work.
+      - name: Fetch the emulator system image
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        run: |
+          IMAGE='system-images;android-34;google_apis;x86_64'
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+
+          for attempt in 1 2 3; do
+            yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install "$IMAGE" --channel=0 >/dev/null 2>&1 || true
+
+            if [ -f "$SDK/system-images/android-34/google_apis/x86_64/system.img" ]; then
+              echo "System image present (attempt $attempt)."
+              exit 0
+            fi
+
+            echo "::warning::The system image did not unpack (attempt $attempt). The archive came down corrupt; discarding it and retrying."
+            rm -rf "$SDK/system-images/android-34"
+          done
+
+          echo "::error::The emulator system image could not be fetched in three attempts. This is not a"
+          echo "::error::code failure — the archive arrives corrupt from the SDK CDN. Re-run the job."
+          exit 1
+
       - name: Create the AVD, once
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
@@ -477,6 +510,37 @@ jobs:
 
           tail -60 device.log || true
 
+      # WHY THE APP DIED, rather than that it died.
+      #
+      # A run reached the last third of the flow — registered, signed in, saved a setting — and then the
+      # app vanished two seconds into the relaunch. Maestro could only report the symptom it can see:
+      # "App crashed or stopped". The device log is SpringBoard's, not ours, and it says nothing about a
+      # stack.
+      #
+      # macOS wrote a full crash report at the moment it happened, with the thread, the frame and the
+      # reason, and we threw it away. Every iOS crash from here on is diagnosed from evidence instead of
+      # from a guess — which is the entire difference between fixing this and theorising about it.
+      - name: Collect the crash reports
+        if: failure()
+        run: |
+          mkdir -p crash-reports
+
+          # Simulator crashes land in the HOST's DiagnosticReports, not the guest's.
+          find ~/Library/Logs/DiagnosticReports -iname '*WhyStack*' -newermt '-30 minutes' \
+            -exec cp {} crash-reports/ \; 2>/dev/null || true
+
+          if [ -z "$(ls -A crash-reports 2>/dev/null)" ]; then
+            echo "No crash report. The app did not crash — it was stopped, or the driver lost it."
+            exit 0
+          fi
+
+          for report in crash-reports/*; do
+            echo "───────────────────────────────────────────── $report"
+            # The first hundred lines carry the exception type, the termination reason and the crashed
+            # thread's top frames. That is the answer; the rest is every other thread's stack.
+            head -100 "$report"
+          done
+
       - name: Upload what Maestro saw
         if: always()
         uses: actions/upload-artifact@v4
@@ -486,5 +550,6 @@ jobs:
             maestro-ios.xml
             stub-api.log
             device.log
+            crash-reports/**
             ~/.maestro/tests/**
           if-no-files-found: ignore
