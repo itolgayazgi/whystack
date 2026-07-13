@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using WhyStack.Domain.Content;
 using WhyStack.Domain.Identity;
 using WhyStack.Domain.Users;
 
@@ -16,6 +17,14 @@ public class WhyStackDbContext(DbContextOptions<WhyStackDbContext> options) : Db
     public DbSet<EmailConfirmationToken> EmailConfirmationTokens => Set<EmailConfirmationToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
+
+    public DbSet<Topic> Topics => Set<Topic>();
+    public DbSet<TopicVersion> TopicVersions => Set<TopicVersion>();
+    public DbSet<TopicTranslation> TopicTranslations => Set<TopicTranslation>();
+    public DbSet<TopicSection> TopicSections => Set<TopicSection>();
+    public DbSet<TopicSupportedVersion> TopicSupportedVersions => Set<TopicSupportedVersion>();
+    public DbSet<TopicRelationship> TopicRelationships => Set<TopicRelationship>();
+    public DbSet<SectionType> SectionTypes => Set<SectionType>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
