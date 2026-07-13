@@ -20,10 +20,37 @@ APK="apps/client/android/app/build/outputs/apk/release/app-release.apk"
 
 echo "── Starting the stub API ──────────────────────────────────────────"
 
-# Output goes to a file AND to the console. The file is uploaded as an artifact: on a platform nobody
-# here can run locally, the server's own account of what the app asked it is most of the debugging
-# information there is.
-node tests/e2e/stub-api/server.mjs 2>&1 | tee stub-api.log &
+# TO A FILE, NOT THROUGH A PIPE — and killed on the way out. Both halves matter, and the second one is
+# what cost an hour.
+#
+# It used to be `node … | tee stub-api.log &`. The flow passed in a hundred seconds; the job then sat
+# there for fifty-eight minutes and was killed by the timeout, reported as "cancelled". It looked exactly
+# like a hang in the test, and it was not: `tee` and `node` were still holding the script's stdout, the
+# stub API never exits by design, so the pipe never closed — and the emulator action, which waits for the
+# script's process tree, never saw it finish.
+#
+# The iOS job does the same thing and does NOT hang, which is why this was invisible for so long: there
+# the stub runs in its own workflow step, and GitHub reaps orphaned processes at the end of the JOB
+# ("Terminate orphan process: pid (37828) (node)" is in that log). Nothing reaps them here.
+#
+# So: no `tee`, and a trap that kills the stub and WAITS for it. Everything the console lost is printed
+# from the file on the way out — including on failure, which is when it matters.
+node tests/e2e/stub-api/server.mjs > stub-api.log 2>&1 &
+STUB_PID=$!
+
+cleanup() {
+  status=$?
+
+  echo "── The stub API's account of it ───────────────────────────────────"
+  cat stub-api.log 2>/dev/null || true
+
+  kill "${STUB_PID}" 2>/dev/null || true
+  wait "${STUB_PID}" 2>/dev/null || true
+
+  exit "${status}"
+}
+
+trap cleanup EXIT
 
 for _ in $(seq 1 30); do
   if curl -fsS "${API_URL}/health" >/dev/null 2>&1; then
