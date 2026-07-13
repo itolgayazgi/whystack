@@ -5,6 +5,7 @@ import { useTheme } from '../state/theme';
 type NoticeTone = 'info' | 'success' | 'error';
 
 interface NoticeProps {
+  testID?: string;
   tone: NoticeTone;
   /**
    * Required, and that is the accessibility contract — not an oversight to be relaxed later.
@@ -28,13 +29,14 @@ interface NoticeProps {
  * actually announced. Without it the message is painted, focus has not moved, and to a blind user the
  * button simply did nothing.
  */
-export function Notice({ tone, title, body }: NoticeProps) {
+export function Notice({ testID, tone, title, body }: NoticeProps) {
   const { color, textStyle } = useTheme();
 
   const toneColor = tone === 'error' ? color.error : tone === 'success' ? color.success : color.info;
 
   return (
     <View
+      testID={testID}
       role={tone === 'error' ? 'alert' : 'status'}
       // aria-live on the non-error tones too: "we have sent you an email" is the entire outcome of the
       // forgot-password screen, and a user who cannot see it has no idea whether anything happened.

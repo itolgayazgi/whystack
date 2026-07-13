@@ -1,9 +1,50 @@
 import { radius, space } from '@whystack/theme';
 import { useId } from 'react';
-import { Text, TextInput, type TextInputProps, View } from 'react-native';
+import { Platform, Text, TextInput, type TextInputProps, View } from 'react-native';
 import { useTheme } from '../../state/theme';
 
+/**
+ * On iOS, and ONLY in the end-to-end build, a password field is not masked.
+ *
+ * <b>This is a compromise, and it is a real one — so it is written down rather than buried.</b>
+ *
+ * Maestro drives iOS through XCUITest, and XCUITest cannot type into a `secureTextEntry` field: the
+ * taps land, `inputText` runs, and the text simply never arrives. It was mistaken for a product bug
+ * (issue #30) until the evidence settled it — the SAME React component, with the SAME `secure` prop,
+ * fills correctly on Android. The app is fine. The driver is not.
+ *
+ * Without this, the entire iOS flow is blocked at the first password box: no registration, no sign-in,
+ * and therefore no test of the one thing the iOS run exists for — that a session written to the
+ * Keychain survives the app being killed.
+ *
+ * WHAT THIS COSTS, stated plainly: the iOS run no longer proves that the password field MASKS its
+ * input. That is the only thing lost. Everything downstream — validation, submission, the API contract,
+ * the Keychain, session restore — is exercised exactly as it ships.
+ *
+ * ANDROID KEEPS THE MASK. Its driver types into a secure field perfectly well, so the full, unmodified
+ * behaviour is still covered there, on every run.
+ *
+ * It also detaches the password field from iOS AutoFill, for a second reason found the same way.
+ *
+ * The instant a sign-in succeeds, iOS offers to save the password in the iCloud Keychain — "Save
+ * Password?", a SpringBoard alert that belongs to the operating system and sits ON TOP of the app.
+ * The screenshot from the failing run showed the app perfectly signed in, the tab bar rendered and
+ * correct, and completely unreachable: nothing beneath a system alert can be tapped or asserted.
+ *
+ * That prompt is CORRECT BEHAVIOUR and a shipped build keeps it — being offered the Keychain is a good
+ * thing for a real person. It is dismissed at the source rather than tapped away in the flow, because
+ * "Not Now" is a translated string in a dialog we do not own, and a test that depends on Apple's
+ * wording breaks on an OS update for no reason of ours.
+ *
+ * WHAT THIS COSTS: the iOS run does not exercise AutoFill's password hints. Android still sends them.
+ *
+ * The flag is set only by the native E2E workflow. A shipped build has it nowhere.
+ */
+const UNMASK_PASSWORDS_FOR_THE_IOS_DRIVER = process.env.EXPO_PUBLIC_E2E === '1' && Platform.OS === 'ios';
+
 interface TextFieldProps {
+  /** A stable selector for the end-to-end flows (`13`). Never a translated label — those move. */
+  testID?: string;
   label: string;
   value: string;
   onChangeText: (value: string) => void;
@@ -20,6 +61,7 @@ interface TextFieldProps {
 }
 
 export function TextField({
+  testID,
   label,
   value,
   onChangeText,
@@ -34,6 +76,11 @@ export function TextField({
   returnKeyType,
 }: TextFieldProps) {
   const { color, textStyle } = useTheme();
+
+  // Both halves of the E2E escape hatch, in one place: unmask, and tell iOS this is not a password it
+  // should offer to remember. `textContentType` is what actually drives the AutoFill prompt — React
+  // Native derives it from `autoComplete` on iOS, so clearing one without the other leaves it standing.
+  const detachFromIosAutoFill = secure && UNMASK_PASSWORDS_FOR_THE_IOS_DRIVER;
 
   // A stable id per instance, so the error and hint can be ASSOCIATED with the input rather than merely
   // sitting near it. Visual proximity is not association: a screen reader announcing "Password, edit
@@ -52,11 +99,13 @@ export function TextField({
       </Text>
 
       <TextInput
+        testID={testID}
         value={value}
         onChangeText={onChangeText}
         editable={!disabled}
-        secureTextEntry={secure}
-        autoComplete={autoComplete}
+        secureTextEntry={secure && !UNMASK_PASSWORDS_FOR_THE_IOS_DRIVER}
+        autoComplete={detachFromIosAutoFill ? 'off' : autoComplete}
+        textContentType={detachFromIosAutoFill ? 'none' : undefined}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         autoCorrect={false}

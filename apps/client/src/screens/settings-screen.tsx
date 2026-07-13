@@ -12,6 +12,7 @@ import type { SkillLevel, ThemeMode, UserPreferences } from '../api/preferences'
 import { LanguageFallbackNotice } from '../components/language-fallback-notice';
 import { Notice } from '../components/notice';
 import { SegmentedChoice } from '../components/segmented-choice';
+import { testId } from '../config/test-ids';
 import { ReadingCanvas } from '../layouts/reading-canvas';
 import { useAuth } from '../state/auth';
 import { useLanguage } from '../state/language';
@@ -110,14 +111,19 @@ export function SettingsScreen() {
   const scaleIndex = Math.max(0, readingFontScale.steps.indexOf(preferences.readingFontScale));
 
   return (
-    <ReadingCanvas>
+    <ReadingCanvas testID={testId.settings.screen}>
       <Text style={textStyle('pageTitle')}>{t('settings.title')}</Text>
 
       <View style={{ marginTop: reading.sectionSpacing, gap: reading.sectionSpacing }}>
         {/* Silence is not confirmation. A user who changes a setting and sees nothing happen assumes
             nothing happened — and changes it again. Every outcome says which one it was. */}
         {outcome === 'saved' ? (
-          <Notice tone="success" title={t('settings.saved')} body={t('settings.saved.body')} />
+          <Notice
+            testID={testId.settings.saved}
+            tone="success"
+            title={t('settings.saved')}
+            body={t('settings.saved.body')}
+          />
         ) : null}
 
         {outcome === 'conflict' ? (
@@ -168,6 +174,7 @@ export function SettingsScreen() {
             System is the default and what most people want — but a preference that cannot be set is a
             column nobody writes, which is the very thing issue #18 complains about. */}
         <SegmentedChoice
+          testIdPrefix="settings-theme"
           label={t('settings.theme')}
           hint={t('settings.theme.hint')}
           options={THEME_MODES.map((mode) => ({ value: mode.value, label: t(mode.key) }))}
@@ -252,6 +259,7 @@ export function SettingsScreen() {
           ) : null}
 
           <Pressable
+            testID={testId.settings.signOut}
             accessibilityRole="button"
             onPress={() => void signOut()}
             style={{ minHeight: 44, justifyContent: 'center' }}
