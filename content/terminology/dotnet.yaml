@@ -1,0 +1,132 @@
+# The Terminology Dictionary — the ground truth for what may not be translated.
+#
+# The rule, from `10` § Technical Terminology and CLAUDE.md §4:
+#
+#     The TERM is preserved. The EXPLANATION is localized.
+#
+# It is not pedantry. `Garbage Collector` is what the reader will type into a search box, read in a
+# stack trace and see in a job advert. A topic that teaches them "Çöp Toplayıcı" has taught them a word
+# nobody else in the industry uses — and has made them worse at finding the answer next time.
+#
+# `forbiddenTranslations` is the half that catches the realistic failure. A translator (human or model)
+# rarely drops a term entirely; it keeps it in the heading and then paraphrases it for five paragraphs.
+# Naming the paraphrase makes every occurrence checkable, not just the first one.
+
+- term: Garbage Collector
+  aliases: [GC]
+  forbiddenTranslations:
+    - Çöp Toplayıcı
+    - Çöp toplayıcısı
+    - Atık Toplayıcı
+  explanations:
+    en: >-
+      The part of the runtime that reclaims memory no longer reachable by the program, so the developer
+      does not free it by hand.
+    tr: >-
+      Programın artık erişemediği belleği geri kazanan runtime bileşeni. Belleği elle serbest bırakma
+      işini geliştiricinin üzerinden alır.
+
+- term: Common Language Runtime
+  aliases: [CLR]
+  forbiddenTranslations:
+    - Ortak Dil Çalışma Zamanı
+  explanations:
+    en: >-
+      The execution engine .NET code runs on. It loads assemblies, compiles IL to machine code, and
+      manages memory and type safety.
+    tr: >-
+      .NET kodunun üzerinde çalıştığı yürütme motoru. Assembly'leri yükler, IL'i makine koduna çevirir,
+      belleği ve tip güvenliğini yönetir.
+
+- term: Just-In-Time
+  aliases: [JIT]
+  forbiddenTranslations:
+    - Tam Zamanında Derleme
+  explanations:
+    en: >-
+      Compilation that happens as the program runs, translating IL into machine code for the CPU it
+      actually found — rather than the one the developer happened to build on.
+    tr: >-
+      Program çalışırken yapılan derleme. IL'i, geliştiricinin makinesindeki değil, kodun gerçekten
+      üzerinde çalıştığı CPU için makine koduna çevirir.
+
+- term: Managed Code
+  aliases: []
+  forbiddenTranslations:
+    - Yönetilen Kod
+  explanations:
+    en: >-
+      Code that runs under the supervision of the Common Language Runtime, which provides memory
+      management, type safety and exception handling.
+    tr: >-
+      Common Language Runtime'ın gözetiminde çalışan kod. Bellek yönetimi, tip güvenliği ve exception
+      yönetimi runtime tarafından sağlanır.
+
+- term: Intermediate Language
+  aliases: [IL, CIL]
+  forbiddenTranslations:
+    - Ara Dil
+  explanations:
+    en: >-
+      The CPU-independent instruction set a .NET compiler produces. It is what a `.dll` actually
+      contains; machine code comes later, from the Just-In-Time compiler.
+    tr: >-
+      Bir .NET derleyicisinin ürettiği, CPU'dan bağımsız komut kümesi. Bir `.dll` dosyasının içinde
+      gerçekte bulunan şey budur; makine kodu daha sonra Just-In-Time derleyicisinden gelir.
+
+- term: Type Safety
+  aliases: []
+  forbiddenTranslations:
+    - Tip Güvenliği
+  explanations:
+    en: >-
+      The guarantee that a value is only ever used as the kind of thing it actually is — enforced by the
+      compiler, and again by the runtime.
+    tr: >-
+      Bir değerin yalnızca gerçekte ne ise o şekilde kullanılabileceği garantisi. Önce derleyici, sonra
+      runtime tarafından zorlanır.
+
+- term: Value Type
+  aliases: []
+  forbiddenTranslations:
+    - Değer Tipi
+    - Değer Türü
+  explanations:
+    en: >-
+      A type whose variable holds the data itself. Assigning it copies the data.
+    tr: >-
+      Değişkeni verinin kendisini tutan tip. Atama yapıldığında veri kopyalanır.
+
+- term: Reference Type
+  aliases: []
+  forbiddenTranslations:
+    - Referans Tipi
+    - Referans Türü
+  explanations:
+    en: >-
+      A type whose variable holds a reference to data elsewhere. Assigning it copies the reference, not
+      the data — so two variables can see the same object.
+    tr: >-
+      Değişkeni, başka bir yerdeki veriye ait referansı tutan tip. Atama referansı kopyalar, veriyi
+      değil — bu yüzden iki değişken aynı nesneyi görebilir.
+
+- term: Stack
+  aliases: []
+  forbiddenTranslations:
+    - Yığın
+  explanations:
+    en: >-
+      The region of memory that holds a method's local state for exactly as long as the method runs.
+    tr: >-
+      Bir metodun yerel durumunu, yalnızca metot çalıştığı sürece tutan bellek bölgesi.
+
+- term: Heap
+  aliases: []
+  forbiddenTranslations:
+    - Öbek
+    - Küme
+  explanations:
+    en: >-
+      The region of memory objects are allocated in, and which the Garbage Collector reclaims.
+    tr: >-
+      Nesnelerin ayrıldığı ve Garbage Collector'ın geri kazandığı bellek bölgesi.
