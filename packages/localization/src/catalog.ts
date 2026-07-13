@@ -361,10 +361,20 @@ const tr: Messages = {
   'settings.skill': 'Deneyim',
   'settings.skill.hint': 'Başlangıç derinliğini seçmek için kullanılır. Her şeyi her zaman okuyabilirsin.',
   'settings.skill.notStated': 'Belirtilmedi',
+  // NOT translated, and the inconsistency here was the tell: Junior and Senior were left alone while
+  // MidLevel became "Orta seviye" and Expert became "Uzman". Half a vocabulary, translated by feel.
+  //
+  // `08` — Technical Terminology: "The term itself should remain unchanged unless the terminology
+  // dictionary explicitly defines an approved alias." These four are the industry's own words for
+  // seniority, and Turkish developers use them in English — a job advert in Istanbul says "Senior
+  // Backend Developer", not "Kıdemli Arka Uç Geliştirici". Translating them would make the product
+  // sound like a machine translation of a job board, and would leave "Junior" sitting next to
+  // "Orta seviye" as though they came from different languages. They do not; they come from the same
+  // one, and it is not Turkish.
   'settings.skill.junior': 'Junior',
-  'settings.skill.midLevel': 'Orta seviye',
+  'settings.skill.midLevel': 'Mid-level',
   'settings.skill.senior': 'Senior',
-  'settings.skill.expert': 'Uzman',
+  'settings.skill.expert': 'Expert',
 
   'settings.account': 'Hesap',
 
