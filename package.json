@@ -22,6 +22,13 @@
     "api:test": "dotnet test apps/api/WhyStack.sln",
     "api:format": "dotnet format apps/api/WhyStack.sln --verify-no-changes",
 
+    "mobile:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup/dev-mobile.ps1",
+    "//mobile": "--dev-client, not Expo Go: Expo Go ships a fixed set of native modules compiled against SDK 54, and this project is SDK 57. It refuses to open the project at all.",
+    "mobile": "pnpm --filter @whystack/client exec expo start --dev-client",
+
+    "//api:lan": "0.0.0.0, not localhost: a phone cannot reach the loopback interface. --urls is an ASP.NET Core argument, so this needs no cross-env and no extra dependency.",
+    "api:lan": "dotnet run --project apps/api/src/WhyStack.Api --urls http://0.0.0.0:5207",
+
     "verify": "pnpm lint && pnpm lint:design && pnpm typecheck && pnpm test",
     "verify:all": "pnpm verify && pnpm api:format && pnpm api:test"
   },
