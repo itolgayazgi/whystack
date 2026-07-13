@@ -102,6 +102,42 @@ EXPO_PUBLIC_API_URL=$apiUrl
 Write-Host ''
 Write-Host "  Wrote apps/client/.env" -ForegroundColor Green
 
+# ── Now tell the API about the phone ───────────────────────────────────────────────────────────────
+#
+# User secrets, not appsettings: these are one developer's private network address, and they have no
+# business in a tracked file.
+$apiProject = Join-Path $repoRoot 'apps\api\src\WhyStack.Api'
+$clientBaseUrl = "http://${lanIp}:8081"
+
+# 1. WHERE THE EMAIL LINKS POINT.
+#
+# The confirmation and reset emails contain a URL, and a human clicks it — on the phone that received
+# the email. The default is http://localhost:8081, which that phone cannot reach: it resolves localhost
+# to ITSELF, finds nothing, and the link is dead.
+#
+# Metro serves the web build at this address, so the link opens the web app in the phone's browser,
+# which confirms the account against the API. Opening the NATIVE app directly needs Universal Links —
+# a verification file on a real domain, plus an Apple team — which we do not have yet.
+dotnet user-secrets set 'App:ClientBaseUrl' $clientBaseUrl --project $apiProject | Out-Null
+
+# 2. CORS — AND THIS ONE COST AN EVENING.
+#
+# That browser page is a DIFFERENT ORIGIN. http://192.168.1.101:8081 is not http://localhost:8081, and
+# the API's CORS policy names origins exactly — it has to, because a browser refuses a wildcard origin
+# alongside credentials. (That refusal is a feature: without it, any site on the internet could make
+# authenticated calls to this API on a logged-in user's behalf.)
+#
+# Without this, the browser blocks the request BEFORE IT LEAVES THE PHONE. The app cannot tell that
+# apart from a dead network, so it says "Cannot reach WhyStack" — an honest message about a cause it
+# has no way of seeing. Which is precisely what happened, and what this script now prevents.
+#
+# localhost stays in the list: the web app on THIS machine still needs it.
+dotnet user-secrets set 'Cors:AllowedOrigins:0' 'http://localhost:8081' --project $apiProject | Out-Null
+dotnet user-secrets set 'Cors:AllowedOrigins:1' $clientBaseUrl --project $apiProject | Out-Null
+
+Write-Host "  Email links point at   $clientBaseUrl" -ForegroundColor Green
+Write-Host "  CORS allows            $clientBaseUrl  (the phone's browser)" -ForegroundColor Green
+
 # ── The firewall ───────────────────────────────────────────────────────────────────────────────────
 #
 # Windows blocks inbound connections to a port nothing has asked it to open. The phone's request is
