@@ -48,6 +48,20 @@ export function SegmentedChoice<T extends string>({
         accessibilityLabel={label}
         style={{
           flexDirection: 'row',
+
+          // WRAPS. Without this the options are crushed into one line, and past four of them the last
+          // one runs off the edge of a phone — reachable by nothing, because a row is not scrollable.
+          //
+          // Found on a real device: the five experience levels fitted on a laptop and "Expert" was
+          // simply gone on a phone. An option nobody can touch is an option that does not exist, and no
+          // test in this repository could see it — jsdom performs no layout, so it measures nothing.
+          //
+          // Wrapping rather than horizontal scrolling, deliberately: a scroller HIDES options behind a
+          // gesture nobody is told about, and a person who never swipes never learns the other choices
+          // are there. Wrapped, every option is on screen at once, which is the entire point of a radio
+          // group.
+          flexWrap: 'wrap',
+
           gap: space[8],
           marginTop: space[4],
         }}

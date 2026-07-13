@@ -30,8 +30,12 @@ module.exports = {
   ios: {
     supportsTablet: true,
 
-    // Required to build a native project at all. It is also the identifier Maestro launches, so it is
-    // the same string in tests/e2e/flows/*.yaml — renaming it breaks those, deliberately and loudly.
+    // Required to generate a native project at all — `expo prebuild` refuses without it. It is also the
+    // identifier the operating system uses to scope the Keychain, so it is not a label: change it and
+    // every session on every phone is gone, because the app can no longer read its own stored token.
+    //
+    // And it is the identifier Maestro launches, so it is the same string in tests/e2e/flows/*.yaml.
+    // Renaming it breaks those, deliberately and loudly.
     bundleIdentifier: 'dev.whystack.app',
 
     ...(isEndToEnd
