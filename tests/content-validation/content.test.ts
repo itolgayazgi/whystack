@@ -1,3 +1,5 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import {
   type Problem,
   validateGraph,
@@ -5,8 +7,10 @@ import {
   validateTopic,
   validateUniqueKeys,
 } from '@whystack/knowledge-engine';
-import { describe, expect, it } from 'vitest';
-import { loadTerminology, loadTopics } from './src/load';
+import { afterAll, describe, expect, it } from 'vitest';
+import { CONTENT_ROOT, loadTerminology, loadTopics } from './src/load';
+import { buildManifest } from './src/manifest';
+import { MANIFEST_PATH } from './src/manifest-path';
 
 /**
  * The gate `content/` must pass.
@@ -57,6 +61,31 @@ describe.each(topics)('$metadataFile', ({ topic, metadataFile, fileOf }) => {
 
     expect(topic.metadata.status).not.toBe('Idea');
   });
+});
+
+/**
+ * The manifest is written HERE, and only here, and only if everything above passed.
+ *
+ * That is not a convenience — it is the mechanism. The C# importer reads the manifest and nothing else:
+ * it never opens `content/`, and it re-implements not one rule. So an invalid corpus cannot reach the
+ * database, and not because the importer is careful about it. Because the file it needs was never
+ * written.
+ *
+ * The alternative was a second validator in C#. One fact in two languages, agreeing for a year and then
+ * disagreeing once — quietly, in the direction that lets bad content through.
+ */
+afterAll((suite) => {
+  const failed = suite.tasks.some((task) => task.result?.state === 'fail');
+
+  if (failed) {
+    process.stderr.write('\nContent is invalid. No manifest written — nothing can be imported.\n\n');
+    return;
+  }
+
+  mkdirSync(dirname(MANIFEST_PATH), { recursive: true });
+  writeFileSync(MANIFEST_PATH, `${JSON.stringify(buildManifest(topics, CONTENT_ROOT), null, 2)}\n`);
+
+  process.stdout.write(`\n${topics.length} topics validated. Manifest → ${MANIFEST_PATH}\n\n`);
 });
 
 /** Turns problems into something an author can act on: the file, the rule, the sentence. */

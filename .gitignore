@@ -72,3 +72,8 @@ content/packs/**/*.wspack
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# The content manifest is the validator OUTPUT. A committed manifest is a claim that the content
+# was valid at some point in the past, made by whoever last remembered to regenerate it. The only
+# manifest worth trusting is the one this run produced.
+tests/content-validation/dist/

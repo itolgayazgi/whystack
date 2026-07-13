@@ -126,6 +126,17 @@ jobs:
         with:
           global-json-file: global.json
 
+      # Node lives in the .NET job because the content import needs BOTH: the validator is TypeScript and
+      # the importer is C#, and ADR-0018 puts the gate between them. Splitting them across two jobs would
+      # mean passing the manifest as an artefact — a file that could be stale, or from another commit, and
+      # no longer a guarantee that what reached the database is what was validated.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
       - name: Restore
         run: dotnet restore apps/api/WhyStack.sln
 
@@ -152,3 +163,21 @@ jobs:
       # Includes the readiness check hitting the SQL Server service container above.
       - name: Test
         run: dotnet test apps/api/WhyStack.sln --configuration Release --no-build --verbosity normal
+
+      # The import, end to end, against the real SQL Server — and the ONE place the two halves of
+      # ADR-0018 are wired together.
+      #
+      # `pnpm content:validate` writes the manifest, and only if the corpus passes. The importer reads
+      # that manifest and never opens `content/`. So this step cannot import invalid content: if the
+      # validation failed, the file it needs was never written, and the job has already gone red anyway.
+      #
+      # It runs on every pull request rather than only on deploy, because the failures worth catching
+      # here are the ones a unit test cannot see: a section type nobody seeded, a slug that collides, a
+      # lifecycle transition the editorial rules forbid. Those are SQL's answers, and SQL has to be asked.
+      - name: Import the content
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm content:validate
+
+          dotnet run --project apps/api/tools/WhyStack.ContentImport --configuration Release --no-build -- \
+            --manifest tests/content-validation/dist/content-manifest.json
