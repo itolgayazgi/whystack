@@ -1,0 +1,109 @@
+name: Development build
+
+# An installable Android APK of THIS app, for looking at it on a real phone.
+#
+# ─────────────────────────────────────────────────────────────────────────────────────────────────
+#  WHY NOT EXPO GO
+# ─────────────────────────────────────────────────────────────────────────────────────────────────
+#
+#  Expo Go ships a FIXED set of native modules, compiled against one Expo SDK. The published version
+#  supports SDK 54. This project is on SDK 57, so Expo Go simply refuses to open it — and there is
+#  nothing to be done about that from here.
+#
+#  Which is fine, because Expo Go was always the weaker tool. It is EXPO'S app: its bundle identifier,
+#  its signature and its entitlements belong to Expo. It could never have told us anything about the
+#  binary we ship — the iCloud-sync bug we found in the refresh token would not have appeared there,
+#  because SecureStore writes under Expo Go's keychain entitlements rather than ours.
+#
+#  A development build is OUR app. Our bundle id (dev.whystack.app), our signature, our entitlements —
+#  and it still loads its JavaScript from Metro at runtime, so a code change appears on the phone
+#  immediately, exactly as it would in Expo Go.
+#
+#  Install it once. Re-install it only when a NATIVE dependency changes; everything else is live.
+# ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+  # Also on a change to the native surface, because that is precisely when the installed APK goes
+  # stale — a new native module is in the JavaScript but not in the app on the phone, and the failure
+  # is a cryptic "native module not found" that looks like a code bug.
+  push:
+    paths:
+      - 'apps/client/package.json'
+      - 'apps/client/app.config.js'
+      - '.github/workflows/dev-build.yml'
+
+concurrency:
+  group: dev-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Generate the native project
+        working-directory: apps/client
+        run: npx expo prebuild --platform android --no-install
+
+      # assembleDebug, and the difference from the E2E build matters.
+      #
+      # A RELEASE build carries its JavaScript inside it, frozen at build time — which is what you want
+      # for a test of the shipped artefact, and useless for development: every code change would need a
+      # new APK and a twelve-minute CI round trip.
+      #
+      # A DEBUG build fetches its JavaScript from Metro on the developer's machine, at launch. Install
+      # it once; after that, every change appears on the phone in a second. That is the entire point.
+      #
+      # It is signed with the React Native template's debug keystore, which is why this needs no secrets
+      # and no Google Play account. It is also why it can only ever be a development build — that
+      # keystore is public and identical for every React Native project on earth.
+      - name: Build the APK
+        working-directory: apps/client/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Name it something a human can find
+        run: |
+          mkdir -p dist
+          cp apps/client/android/app/build/outputs/apk/debug/app-debug.apk \
+             dist/whystack-dev-${{ github.sha }}.apk
+
+          ls -lh dist/
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: whystack-android-dev-build
+          path: dist/*.apk
+          # A development build is only useful while the code it was cut from is current. Keeping these
+          # for ninety days would mean somebody, one day, installs a three-month-old APK, hits a native
+          # module that no longer exists, and spends an afternoon on it.
+          retention-days: 7
