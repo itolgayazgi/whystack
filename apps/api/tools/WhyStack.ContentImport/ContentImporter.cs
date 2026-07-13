@@ -259,10 +259,20 @@ public sealed class ContentImporter(WhyStackDbContext context, TimeProvider cloc
         var idOf = await context.Topics
             .ToDictionaryAsync(topic => topic.StableKey, topic => topic.Id, cancellationToken);
 
-        // The graph is replaced wholesale. An edge deleted from topic.yaml must disappear from the
-        // database — a merge would leave the reader a prerequisite that the author removed, and nothing
-        // would ever notice. There are tens of these rows, not millions; correctness costs nothing here.
-        await context.TopicRelationships.ExecuteDeleteAsync(cancellationToken);
+        // The edges OF THE TOPICS IN THIS MANIFEST are replaced. An edge deleted from a topic.yaml must
+        // disappear — a merge would leave the reader a prerequisite the author removed, and nothing would
+        // ever notice.
+        //
+        // Scoped to the manifest's own topics, not the whole table. The first version deleted every
+        // relationship in the database and rebuilt only what the manifest declared, which is identical for
+        // a full-corpus import and catastrophic for anything else: a partial manifest would silently erase
+        // the entire Knowledge Graph. The importer tests found it by wiping the real graph out of the
+        // development database while checking something unrelated.
+        var owners = manifest.Topics.Select(topic => idOf[topic.StableKey]).ToHashSet();
+
+        await context.TopicRelationships
+            .Where(edge => owners.Contains(edge.FromTopicId))
+            .ExecuteDeleteAsync(cancellationToken);
 
         foreach (var topic in manifest.Topics)
         {

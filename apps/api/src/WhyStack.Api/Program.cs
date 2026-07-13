@@ -171,6 +171,7 @@ app.MapHealthChecks(
 
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
+app.MapTopicEndpoints();
 
 app.Run();
 
