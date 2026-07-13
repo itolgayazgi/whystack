@@ -37,6 +37,21 @@ done
 curl -fsS "${API_URL}/health"
 echo
 
+echo "── Silencing Android's own crash dialogs ──────────────────────────"
+
+# `hide_error_dialogs` suppresses the system's "X isn't responding" modals.
+#
+# This is not sweeping our failures under a rug — it is the opposite. A CI emulator runs on a software
+# GPU on a shared machine, and ANDROID'S OWN processes miss their deadlines. The run before this one
+# died on "Pixel Launcher isn't responding" — a modal from the HOME SCREEN, drawn on top of a WhyStack
+# sign-in screen that had rendered perfectly. Maestro could not see past it, the first assertion failed,
+# and the screenshot made it look as though our app had hung.
+#
+# It hides the DIALOG, not the failure. A real crash in our app still kills it, and every assertion
+# after that still fails — loudly, and for the right reason.
+adb shell settings put global hide_error_dialogs 1
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null
+
 echo "── Installing the app ─────────────────────────────────────────────"
 test -f "${APK}" || { echo "No APK at ${APK}"; exit 1; }
 adb install -r "${APK}"
