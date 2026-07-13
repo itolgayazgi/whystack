@@ -57,6 +57,29 @@ jobs:
     timeout-minutes: 60
 
     steps:
+      # The emulator's system image is 1.5 GB, and the runner ran out of disk before it finished
+      # unpacking it. The failure said "No space left on device" — buried in a log, on a step called
+      # "Create the AVD", after ten minutes of building an APK that was already fine.
+      #
+      # A GitHub Ubuntu runner ships with a lot we do not use: a full .NET SDK, the CodeQL bundle, Swift,
+      # a Docker image cache. Together they are more than the emulator needs, and none of them is touched
+      # by this job.
+      #
+      # This runs FIRST, before setup-java puts anything in the tool cache — deleting that afterwards
+      # would remove the JDK we are about to build with.
+      - name: Free some disk space
+        run: |
+          echo "── Before ──"
+          df -h /
+
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/node_modules \
+                      /opt/ghc /usr/local/share/boost \
+                      /opt/hostedtoolcache/CodeQL /usr/share/swift
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+
+          echo "── After ──"
+          df -h /
+
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
