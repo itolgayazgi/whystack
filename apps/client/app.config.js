@@ -54,10 +54,6 @@ module.exports = {
       monochromeImage: './src/assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
-
-    // Android has no per-host equivalent in app.json, so this is the blunt instrument — which is
-    // exactly why it is behind the flag and never in a shipped build.
-    ...(isEndToEnd ? { usesCleartextTraffic: true } : {}),
   },
   web: {
     output: 'static',
@@ -75,6 +71,23 @@ module.exports = {
         imageWidth: 76,
       },
     ],
+
+    // Cleartext HTTP, for the end-to-end runs ONLY — through the plugin that actually does something.
+    //
+    // `android.usesCleartextTraffic` was what I wrote first, and it is NOT A KEY EXPO KNOWS. It sat in
+    // the config, typechecked (the config is plain JS), generated no warning, and did nothing at all.
+    // The AndroidManifest went out without it, Android 9+ blocked the plain-HTTP request, the app threw
+    // a NetworkError, and the screen said "You appear to be offline" — an honest message about a cause
+    // that did not exist. It cost a full CI round to find, and it was invisible in the config file.
+    //
+    // A configuration key that silently does nothing is worse than one that fails: at least a failure
+    // tells you where to look. That is why the workflow now READS THE GENERATED MANIFEST and fails the
+    // build if the flag is not in it.
+    //
+    // Both platforms block cleartext by default and are right to. This is behind WHYSTACK_E2E, which
+    // only the native E2E workflow sets, so the shipped build never has it. A temporary security
+    // exception is the kind that is still there in three years.
+    ...(isEndToEnd ? [['expo-build-properties', { android: { usesCleartextTraffic: true } }]] : []),
   ],
   experiments: {
     typedRoutes: true,

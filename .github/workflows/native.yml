@@ -110,6 +110,29 @@ jobs:
       - name: Point the app at the stub
         run: echo "EXPO_PUBLIC_API_URL=http://10.0.2.2:5207" > apps/client/.env
 
+      # READ THE GENERATED MANIFEST, because a config key that does nothing is invisible.
+      #
+      # `android.usesCleartextTraffic` is what I wrote first. It is not a key Expo knows. It sat in
+      # app.config.js, generated no warning, and did nothing — the manifest went out without the flag,
+      # Android 9+ blocked the plain-HTTP request, and the app showed "You appear to be offline". An
+      # honest message about a cause that did not exist, and a full CI round to find it.
+      #
+      # `expo-build-properties` is the plugin that actually writes it. This step is what proves it did.
+      - name: Prove cleartext HTTP is permitted
+        run: |
+          MANIFEST=apps/client/android/app/src/main/AndroidManifest.xml
+
+          if ! grep -q 'android:usesCleartextTraffic="true"' "$MANIFEST"; then
+            echo "::error::The manifest does not permit cleartext HTTP, so every request to the stub"
+            echo "::error::will be blocked by Android before it leaves the app — and the failure will"
+            echo "::error::look like the app being offline. Check the expo-build-properties plugin."
+            echo "--- manifest ---"
+            cat "$MANIFEST"
+            exit 1
+          fi
+
+          echo "The manifest permits cleartext HTTP (E2E only)."
+
       # assembleRelease, not assembleDebug: a debug build fetches its JavaScript from a Metro server that
       # would have to stay alive for the whole run, and its failures look like app bugs. A release build
       # carries the bundle inside it, which is also what a user would install. The React Native template
