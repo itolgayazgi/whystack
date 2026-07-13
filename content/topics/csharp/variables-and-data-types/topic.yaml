@@ -1,0 +1,19 @@
+stableKey: csharp.variables-and-data-types
+slug: variables-and-data-types
+
+technology: csharp
+category: LanguageFeature
+level: Junior
+
+supportedVersions: ['12', '13', '14']
+
+status: AiDraft
+lastReviewed: '2026-07-13'
+estimatedReadingMinutes: 7
+
+relationships:
+  # A `Requires` edge, which is what the reader will see rendered as "Prerequisites". The stable key
+  # must resolve — an edge pointing at a topic nobody wrote is a dead link in a learning path, and the
+  # validator refuses it before anyone can click it.
+  - type: Requires
+    topic: csharp.what-is-csharp

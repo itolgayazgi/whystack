@@ -1,0 +1,35 @@
+# Metadata lives here ONCE — not in the front matter of every translation.
+#
+# A topic is one educational object with one identity, one level and one set of graph edges, which
+# happens to have been written in more than one language. Repeating this block per language would let
+# tr.md quietly claim a different level from en.md, and nothing would ever notice.
+
+stableKey: csharp.what-is-csharp
+
+# The URL segment. It may be corrected; stableKey may not. Everything that points at this topic —
+# graph edges, quizzes, roadmaps — points at the stableKey, so renaming THAT is not a rename: it is a
+# deletion and a different topic.
+slug: what-is-csharp
+
+technology: csharp
+category: Concept
+level: Junior
+
+# An answer with no version is an answer a reader cannot trust.
+supportedVersions: ['12', '13', '14']
+
+# AiDraft, not Published — and this is not a formality.
+#
+# CLAUDE.md §1.5: AI-generated content never publishes without human review. This draft was written by
+# a model. Until a human has read it, `Published` would be a lie, and `mayTransition` in the engine
+# makes AiDraft → Published impossible to reach by accident.
+status: AiDraft
+
+lastReviewed: '2026-07-13'
+estimatedReadingMinutes: 6
+
+# Knowledge Graph edges (ADR-0004). These BECOME the Prerequisites / Related / Next sections a reader
+# sees — they are not duplicated as prose, because prose drifts and nothing checks it.
+relationships:
+  - type: Next
+    topic: csharp.variables-and-data-types
