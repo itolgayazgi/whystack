@@ -38,15 +38,42 @@ schema migration.
    (English) text must survive verbatim into every translation; named mis-translations are rejected by
    name. This is a rule, not a judgement, and it is answered by a rule.
 
+6. **The Markdown stays in files. The database stores metadata, relationships and publishing state.**
+   `07` § Content Domain says this outright, and its tables carry `MarkdownPath` + `ContentHash` with no
+   column for a body. The database is the *index* — identity, the Knowledge Graph, the editorial state,
+   the things a query filters and sorts on. The words live in `content/`, where they can be reviewed in
+   a pull request like everything else.
+
+7. **The importer does not validate. It cannot see unvalidated content at all.** `pnpm content:validate`
+   writes a **manifest** — and writes it only when the corpus passes. The C# importer reads that manifest
+   and never opens `content/`. So there is one rule set, in one language, and an invalid corpus cannot
+   reach the database because the file the importer needs does not exist.
+
+## Amendments
+
+**2026-07-14 — Decisions 6 and 7 replace two mistakes in the original text.**
+
+The first version of this ADR rejected "the API reads `content/` from disk" on the grounds that it
+*"contradicts `07`"*. **That justification was false.** `07` § Content Domain says the opposite —
+*"Markdown may exist in files. The database stores metadata, relationships and publishing state"* — and
+its tables are built for exactly that. The ADR was written without reading that section. `07` wins;
+Decision 6 records it.
+
+It also said the importer *"validates before it writes"*, which would have meant a second implementation
+of every rule, in C#, alongside the TypeScript one. One fact in two languages: they agree for a year and
+then disagree once, quietly, in the direction that lets bad content through. Decision 7 removes the
+second implementation instead of promising to keep it in step.
+
 ## Alternatives Considered
 
 - **EF migration seeds.** Rejected: a typo fix would become a migration, and content history would be
   tangled into schema history in the same files. It also makes content a deployment artefact rather
   than a reviewable one.
 
-- **The API reads `content/` from disk at runtime.** Rejected: it contradicts `07`, which defines topic
-  tables, and it puts file parsing on the request path — where search, relationship traversal and
-  pagination all need indexed columns rather than a directory walk.
+- **The Markdown body in the database.** Rejected: it contradicts `07`, and it puts the same text in two
+  places. Whichever one is edited, the other is now wrong — and nothing would say which.
+
+- **A second validator in C#, inside the importer.** Rejected: see the amendment above.
 
 - **An AI agent as the terminology reviewer.** Rejected as a *gate*. "Does the Turkish text still say
   `Connection Pooling`?" is a fact with a correct answer, and a model answers facts *probably*. The
