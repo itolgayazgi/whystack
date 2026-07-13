@@ -129,9 +129,9 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
 
         while (directory is not null)
         {
-            var candidate = Path.Combine(directory.FullName, "content");
+            var candidate = Path.Join(directory.FullName, "content");
 
-            if (Directory.Exists(Path.Combine(candidate, "topics")))
+            if (Directory.Exists(Path.Join(candidate, "topics")))
             {
                 return candidate;
             }

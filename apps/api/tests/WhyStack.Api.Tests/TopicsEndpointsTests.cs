@@ -221,7 +221,9 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
 
         // Real section keys, in blueprint order, so the content reader has something to find in the file.
         var order = 0;
-        foreach (var section in (string[])["Summary", "Definition", "CoreMentalModel", "TradeOffs"])
+        string[] blueprint = ["Summary", "Definition", "CoreMentalModel", "TradeOffs"];
+
+        foreach (var section in blueprint)
         {
             version.Sections.Add(new TopicSection
             {

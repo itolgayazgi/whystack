@@ -61,7 +61,7 @@ public sealed class FileSystemTopicContentReader(
 
     private string Read(string markdownPath)
     {
-        var full = Path.Combine(options.Value.Root, RelativeToContentRoot(markdownPath));
+        var full = Confine(markdownPath);
 
         if (!File.Exists(full))
         {
@@ -74,6 +74,64 @@ public sealed class FileSystemTopicContentReader(
         }
 
         return File.ReadAllText(full);
+    }
+
+    /// <summary>
+    /// Resolves a stored path INSIDE the content root, and refuses anything that escapes it.
+    /// </summary>
+    /// <remarks>
+    /// <b>A security boundary, not tidiness.</b>
+    ///
+    /// This method reads a file off the host's disk using a string that came out of a database row. Two
+    /// things make that dangerous:
+    ///
+    /// <list type="bullet">
+    /// <item><c>Path.Combine(root, absolute)</c> SILENTLY DISCARDS the root and returns the absolute path.
+    /// A row containing <c>/etc/passwd</c> would be served as a topic, and nothing would look wrong.</item>
+    /// <item><c>..</c> walks out of the root just as effectively, one segment at a time.</item>
+    /// </list>
+    ///
+    /// The row is not user input today. But "today" is not a security control. The day a bad row appears —
+    /// a hand-edited database, a bug in a future importer, a manifest from somewhere it should not have
+    /// come from — this fails loudly instead of turning "serve a topic" into "read any file on this host".
+    ///
+    /// CodeQL found it. It was right.
+    /// </remarks>
+    private string Confine(string markdownPath)
+    {
+        var root = Path.GetFullPath(options.Value.Root);
+        var relative = RelativeToContentRoot(markdownPath);
+
+        // A rooted path, refused BY NAME.
+        //
+        // Path.Join already neutralises it — it concatenates where Path.Combine would discard the root and
+        // hand back the absolute path — so `C:\windows\win.ini` becomes a harmless nonexistent file under
+        // the content root. But then the error says "not on this host", which is a lie about the cause: the
+        // row is malformed, not the deployment. A test caught exactly that, and a wrong diagnosis sends the
+        // next person to look at the wrong half of the system.
+        if (Path.IsPathRooted(relative))
+        {
+            throw new InvalidOperationException(
+                $"The stored content path \"{markdownPath}\" is absolute. A topic's Markdown is addressed "
+                + "relative to content/; an absolute path is a defect in whatever wrote that row.");
+        }
+
+        // Path.Join, not Path.Combine: Join concatenates, Combine discards. The check below would catch it
+        // either way — but a primitive that cannot do the wrong thing beats one that is checked afterwards.
+        var full = Path.GetFullPath(Path.Join(root, relative));
+
+        var fence = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+
+        if (!full.StartsWith(fence, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"The stored content path \"{markdownPath}\" resolves outside the content root. Refusing to "
+                + "read it. A topic's Markdown lives under content/; a path that escapes it is a defect in "
+                + "whatever wrote that row, not a file to serve.");
+        }
+
+        return full;
     }
 
     /// <summary>
