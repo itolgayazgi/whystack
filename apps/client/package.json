@@ -20,6 +20,7 @@
     "@whystack/localization": "workspace:*",
     "@whystack/theme": "workspace:*",
     "expo": "~57.0.4",
+    "expo-build-properties": "^57.0.3",
     "expo-constants": "~57.0.3",
     "expo-dev-client": "^57.0.5",
     "expo-font": "~57.0.0",

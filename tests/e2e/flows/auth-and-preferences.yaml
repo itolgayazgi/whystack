@@ -1,0 +1,186 @@
+appId: dev.whystack.app
+name: Register, sign in, change a setting, survive a restart
+tags:
+  - auth
+  - sprint-2
+---
+# `13` § Critical End-to-End Journeys begins:
+#
+#   Register → Confirm Account → Login → Select Roadmap → Open Topic → …
+#
+# Everything from "Select Roadmap" onwards needs Sprints 3–5. This flow is the prefix that exists —
+# plus the one of `13`'s other critical journeys that matters most on a phone: "Continue On Another
+# Device". A second device is only this device with a different Keychain, and the same mechanism is
+# what carries a session across the operating system killing the app.
+#
+# Selectors are ids, never labels (`13`: "Use stable selectors"). Labels are translated, and the app's
+# interface language is itself a setting — a text-matching test would break on exactly the kind of
+# change it exists to verify.
+#
+# The email is fixed rather than generated. The stub API holds its state in memory and dies with the
+# process, so every run starts from nothing; a random address would buy nothing and cost determinism.
+
+# ── A first launch, with nothing in the Keychain / Keystore ────────────────────────────────────────
+- launchApp:
+    clearState: true
+
+# We are on the sign-in screen, which means the gate resolved to `signed-out`. If the app had crashed
+# on boot — a native module not linked, a platform file unresolved, a font that failed to load — we
+# would never reach this line. That alone is more than anything in this repository has ever asserted
+# about Android or iOS.
+- assertVisible:
+    id: 'sign-in-submit'
+
+# ── Register ───────────────────────────────────────────────────────────────────────────────────────
+- tapOn:
+    id: 'sign-in-register-link'
+
+- tapOn:
+    id: 'register-email'
+- inputText: 'ada@example.com'
+
+# Visual order, the way a person fills a form.
+#
+# It was briefly out of order — display name before password — as an experiment: the password never
+# reached the server on iOS, and the suspicion was that BLURRING a secureTextEntry field cleared it,
+# which would have been a real bug affecting every iPhone user. Typing it LAST, with no blur at all,
+# left the box just as empty. So the blur was innocent (issue #30).
+#
+# The cause is XCUITest: it cannot type into a masked field. Android, with the same component and the
+# same `secure` prop, fills it perfectly. The E2E build therefore unmasks the field ON iOS ONLY — see
+# TextField, where the trade-off is written out.
+- tapOn:
+    id: 'register-password'
+- inputText: 'a-good-long-password'
+
+- tapOn:
+    id: 'register-display-name'
+- inputText: 'Ada'
+
+# No `hideKeyboard`.
+#
+# It hung for 76 seconds on iOS 26 and then took Maestro's XCUITest driver down with it
+# ("Failed to connect to 127.0.0.1:51706"). That is a driver problem, not an app problem — everything
+# up to this point had worked: the app booted, rendered, and every selector resolved.
+#
+# Scrolling to the button is what a person does anyway when the keyboard is in the way, and it needs
+# nothing from the driver beyond a swipe. The form's ScrollView has keyboardShouldPersistTaps="handled",
+# so the tap lands on the button rather than being eaten by the keyboard dismissal.
+- scrollUntilVisible:
+    element:
+      id: 'register-submit'
+    direction: DOWN
+
+- tapOn:
+    id: 'register-submit'
+
+# One message, and it says nothing about whether an account was created. The API answers identically
+# for a free address and a taken one (`04` — account enumeration), and the screen must not undo that.
+- assertVisible:
+    id: 'register-sent'
+
+# ── Sign in ────────────────────────────────────────────────────────────────────────────────────────
+#
+# Through the link, not through `back`. `back` is an Android gesture; iOS has no hardware back button,
+# and a flow that only works on one platform is not a cross-platform test.
+- tapOn:
+    id: 'register-sign-in-link'
+
+- tapOn:
+    id: 'sign-in-email'
+- inputText: 'ada@example.com'
+
+- tapOn:
+    id: 'sign-in-password'
+- inputText: 'a-good-long-password'
+
+- scrollUntilVisible:
+    element:
+      id: 'sign-in-submit'
+    direction: DOWN
+
+- tapOn:
+    id: 'sign-in-submit'
+
+# The gate saw `signed-in` and moved. Nothing in the sign-in screen navigates — one authority decides
+# where a signed-in user belongs, and this is that authority doing it, on a real device.
+- assertVisible:
+    id: 'nav-settings'
+
+# ── Change a setting, and see it saved ─────────────────────────────────────────────────────────────
+- tapOn:
+    id: 'nav-settings'
+
+- assertVisible:
+    id: 'settings-screen'
+
+- scrollUntilVisible:
+    element:
+      id: 'settings-theme-Dark'
+    direction: DOWN
+
+- tapOn:
+    id: 'settings-theme-Dark'
+
+# Silence is not confirmation. And this only appears after the SERVER accepted the write, because the
+# state applies the response rather than the object it sent.
+- assertVisible:
+    id: 'settings-saved'
+
+# ── THE TEST ───────────────────────────────────────────────────────────────────────────────────────
+#
+# Kill the app the way the operating system does, and start it again — WITHOUT clearing state.
+#
+# The access token was only ever in memory, so it is gone. The refresh token was written to the iOS
+# Keychain / Android Keystore by expo-secure-store, and it is the only reason the next assertion can
+# pass.
+#
+# There is no web equivalent of this. On web the refresh token lives in an HttpOnly cookie the browser
+# manages, and `refresh-token-store.native.ts` is never even loaded by the web bundle. All 60 client
+# tests run against the web target — so until this line ran, the Keychain code had never been executed
+# anywhere, by anything.
+- stopApp
+
+- launchApp:
+    clearState: false
+
+# Not the sign-in screen. The session was restored from secure storage, spent for a fresh access token,
+# and the gate let us through.
+- assertVisible:
+    id: 'nav-settings'
+
+# And the theme came back from the SERVER, not from a local cache — which is what "preferences
+# synchronize across devices" (`04`) actually means.
+- tapOn:
+    id: 'nav-settings'
+
+- scrollUntilVisible:
+    element:
+      id: 'settings-theme-Dark'
+    direction: DOWN
+
+- assertVisible:
+    id: 'settings-theme-Dark'
+
+# ── Sign out ───────────────────────────────────────────────────────────────────────────────────────
+- scrollUntilVisible:
+    element:
+      id: 'settings-sign-out'
+    direction: DOWN
+
+- tapOn:
+    id: 'settings-sign-out'
+
+- assertVisible:
+    id: 'sign-in-submit'
+
+# The token is gone from secure storage, so a relaunch cannot resurrect the session. If sign-out only
+# cleared memory, this would sail straight back into the app — and somebody who signed out on a shared
+# phone would still be signed in on it.
+- stopApp
+
+- launchApp:
+    clearState: false
+
+- assertVisible:
+    id: 'sign-in-submit'

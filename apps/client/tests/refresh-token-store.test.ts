@@ -11,7 +11,7 @@ const secureStore = {
   getItemAsync: vi.fn(),
   setItemAsync: vi.fn(),
   deleteItemAsync: vi.fn(),
-  WHEN_UNLOCKED: 'WHEN_UNLOCKED',
+  WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
 };
 
 vi.mock('expo-secure-store', () => secureStore);
@@ -57,22 +57,56 @@ describe('the native refresh token store', () => {
     expect(nativeStore.platform).toBe('Native');
   });
 
-  it('reads and writes through the Keychain / Keystore, and only while the device is unlocked', async () => {
+  /**
+   * Both halves of `WHEN_UNLOCKED_THIS_DEVICE_ONLY` are asserted, because they are two separate
+   * decisions and only one of them is about hardening.
+   *
+   * `WHEN_UNLOCKED` keeps the token unreadable while the phone is locked — the `AFTER_FIRST_UNLOCK`
+   * default would let a background task read it on a locked device, and nothing here needs that.
+   *
+   * `THIS_DEVICE_ONLY` is the CORRECTNESS half. Without it the item is eligible for iCloud Keychain
+   * sync and for device backups — so the refresh token can be restored onto a second phone. Both phones
+   * then hold the same token; one uses it; the server rotates it; the other's copy is now spent. The
+   * moment that phone refreshes it presents a rotated token, and the server — doing exactly what PR #14
+   * built it to do — concludes it was stolen and revokes every session the user has.
+   *
+   * Restore a backup, get signed out of everything, with a security alert attached. This assertion is
+   * what stops somebody "simplifying" the constant back.
+   */
+  it('keeps the token off iCloud and off a locked device', async () => {
     secureStore.getItemAsync.mockResolvedValue('stored-token');
 
     expect(await nativeStore.read()).toBe('stored-token');
 
     await nativeStore.write('new-token');
 
-    // WHEN_UNLOCKED, not the AFTER_FIRST_UNLOCK default: the token must not be readable by a background
-    // task on a locked phone. Nothing here needs that capability, and a credential that can be read
-    // while the device is locked is one a stolen phone can give up.
     expect(secureStore.setItemAsync).toHaveBeenCalledWith('whystack.refresh_token', 'new-token', {
-      keychainAccessible: 'WHEN_UNLOCKED',
+      keychainAccessible: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
     });
     expect(secureStore.getItemAsync).toHaveBeenCalledWith('whystack.refresh_token', {
-      keychainAccessible: 'WHEN_UNLOCKED',
+      keychainAccessible: 'WHEN_UNLOCKED_THIS_DEVICE_ONLY',
     });
+  });
+
+  /**
+   * A Keychain that refuses must not fail silently.
+   *
+   * It throws — which escapes signIn and renders "Something went wrong", true and useless — but it also
+   * says so in the device log first. On a phone nobody can attach a debugger to, that log is the only
+   * channel there is, and it is the difference between "the app is broken" and "the OS refused to store
+   * the token, here is the reason".
+   */
+  it('says so, loudly, when secure storage refuses', async () => {
+    const refusal = new Error('errSecMissingEntitlement');
+    secureStore.setItemAsync.mockRejectedValueOnce(refusal);
+
+    const reported = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(nativeStore.write('a-token')).rejects.toThrow(refusal);
+
+    expect(reported).toHaveBeenCalledWith(expect.stringContaining('Secure storage refused'), refusal);
+
+    reported.mockRestore();
   });
 
   it('deletes the token on clear', async () => {

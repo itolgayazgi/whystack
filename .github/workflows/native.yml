@@ -1,0 +1,556 @@
+name: Native
+
+# Android and iOS have never been run — not once, on any sprint (issue #7). Every test in this
+# repository targets the web, and the one piece of Sprint 2 with no web equivalent at all —
+# expo-secure-store, which puts the refresh token in the iOS Keychain / Android Keystore — has
+# therefore never been executed by anything.
+#
+# This workflow builds the app for both platforms, boots it on a real emulator and a real simulator,
+# and drives the whole authentication journey through it, including killing the app and checking that
+# the session survives.
+#
+# It is SLOW (15–25 minutes), which is why it does not gate every push to every branch. It does run on
+# every pull request: a native regression found at merge time is cheap, and one found in Sprint 14 —
+# under eleven sprints of code built on top of it — is not.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # A native toolchain breaks on its own schedule: Xcode moves, the emulator image changes, a
+  # dependency ships a broken podspec. A weekly run means we hear that from CI rather than from the
+  # first person who needed a release.
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Turns on the cleartext-HTTP exceptions in app.config.js. They exist ONLY for this workflow — both
+  # platforms block plain HTTP by default and are right to — so the E2E build is deliberately a
+  # different build from the shipped one.
+  WHYSTACK_E2E: '1'
+
+  # Maestro's iOS driver is an XCUITest bundle that has to be compiled, installed and started inside the
+  # simulator before a single tap can happen. On a CI runner that takes about forty seconds — and
+  # Maestro's default patience runs out well before that.
+  #
+  # The failure is deeply misleading: "java.net.ConnectException: Failed to connect to 127.0.0.1:50843",
+  # repeated, which reads like a networking problem in the app. The driver's own log shows it starting
+  # its server twenty-eight seconds AFTER Maestro had already given up.
+  MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
+
+  # Nothing about a CI run is worth reporting to an analytics endpoint, and a network call we do not
+  # need is a network call that can hang.
+  MAESTRO_CLI_NO_ANALYTICS: '1'
+
+jobs:
+  android:
+    name: Android — build, boot, drive the auth flow
+    runs-on: ubuntu-latest
+    # 45 was not enough, and the reason was a bug rather than slowness: a broken inline shell script
+    # meant Maestro never started, and the job sat idle until the timeout killed it. 60 gives the real
+    # work headroom without letting a genuinely hung run burn an hour of everyone's afternoon.
+    timeout-minutes: 60
+
+    steps:
+      # The emulator's system image is 1.5 GB, and the runner ran out of disk before it finished
+      # unpacking it. The failure said "No space left on device" — buried in a log, on a step called
+      # "Create the AVD", after ten minutes of building an APK that was already fine.
+      #
+      # A GitHub Ubuntu runner ships with a lot we do not use: a full .NET SDK, the CodeQL bundle, Swift,
+      # a Docker image cache. Together they are more than the emulator needs, and none of them is touched
+      # by this job.
+      #
+      # This runs FIRST, before setup-java puts anything in the tool cache — deleting that afterwards
+      # would remove the JDK we are about to build with.
+      - name: Free some disk space
+        run: |
+          echo "── Before ──"
+          df -h /
+
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/node_modules \
+                      /opt/ghc /usr/local/share/boost \
+                      /opt/hostedtoolcache/CodeQL /usr/share/swift
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+
+          echo "── After ──"
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The first run took 41 minutes, and most of that was downloading the same things twice: Gradle
+      # fetches every React Native artefact from scratch, and the emulator pulls a 1.5 GB system image.
+      # Neither changes between runs.
+      #
+      # Keyed on the lockfile, because that is what actually determines the native dependency graph —
+      # a React Native version bump changes it, and nothing else does.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      # `expo prebuild` generates android/ from app.config.js on every run rather than committing it.
+      # That is Expo's continuous native generation, and it is also what keeps `06`'s approved folder
+      # structure honest: there is no android/ in this repository to drift out of step with the config
+      # that is supposed to define it.
+      - name: Generate the native project
+        working-directory: apps/client
+        run: npx expo prebuild --platform android --no-install
+
+      # Through a .env file, not a step-level environment variable.
+      #
+      # The env-var version silently did not reach the bundler, and the app fell back to
+      # `http://localhost:5207` — which inside an emulator is the EMULATOR. Every request failed, the
+      # app landed in its offline state, and the screenshot said "You appear to be offline". A perfectly
+      # plausible-looking app bug, caused entirely by a missing environment variable.
+      #
+      # iOS hid the same fault, because on a simulator `localhost` happens to be the right answer. One
+      # platform broke and the other passed for the wrong reason — which is the worst possible outcome,
+      # and the reason for the assertion below.
+      - name: Point the app at the stub
+        run: |
+          {
+            echo "EXPO_PUBLIC_API_URL=http://10.0.2.2:5207"
+
+            # Read by TextField. It unmasks password fields ON iOS ONLY, because XCUITest cannot type
+            # into a secureTextEntry box. Android keeps the mask and still covers the real behaviour;
+            # the flag is set on both jobs so there is one .env and one code path to reason about.
+            echo "EXPO_PUBLIC_E2E=1"
+          } > apps/client/.env
+
+      # READ THE GENERATED MANIFEST, because a config key that does nothing is invisible.
+      #
+      # `android.usesCleartextTraffic` is what I wrote first. It is not a key Expo knows. It sat in
+      # app.config.js, generated no warning, and did nothing — the manifest went out without the flag,
+      # Android 9+ blocked the plain-HTTP request, and the app showed "You appear to be offline". An
+      # honest message about a cause that did not exist, and a full CI round to find it.
+      #
+      # `expo-build-properties` is the plugin that actually writes it. This step is what proves it did.
+      - name: Prove cleartext HTTP is permitted
+        run: |
+          MANIFEST=apps/client/android/app/src/main/AndroidManifest.xml
+
+          if ! grep -q 'android:usesCleartextTraffic="true"' "$MANIFEST"; then
+            echo "::error::The manifest does not permit cleartext HTTP, so every request to the stub"
+            echo "::error::will be blocked by Android before it leaves the app — and the failure will"
+            echo "::error::look like the app being offline. Check the expo-build-properties plugin."
+            echo "--- manifest ---"
+            cat "$MANIFEST"
+            exit 1
+          fi
+
+          echo "The manifest permits cleartext HTTP (E2E only)."
+
+      # assembleRelease, not assembleDebug: a debug build fetches its JavaScript from a Metro server that
+      # would have to stay alive for the whole run, and its failures look like app bugs. A release build
+      # carries the bundle inside it, which is also what a user would install. The React Native template
+      # signs release with the debug keystore unless told otherwise, so this needs no secrets.
+      - name: Build the APK
+        working-directory: apps/client/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      # Assert the thing we depend on, rather than hoping.
+      #
+      # The URL is inlined into the JavaScript bundle at build time. If it is not there, the app talks
+      # to the wrong host, and the failure arrives forty minutes later disguised as an app bug. Ten
+      # seconds here turns that into a build error that names its own cause.
+      - name: Prove the API URL reached the bundle
+        run: |
+          APK=apps/client/android/app/build/outputs/apk/release/app-release.apk
+
+          if ! unzip -p "$APK" assets/index.android.bundle | grep -q "10.0.2.2:5207"; then
+            echo "::error::EXPO_PUBLIC_API_URL is not in the bundle. The app would fall back to"
+            echo "::error::localhost, which inside an emulator is the emulator itself, and every"
+            echo "::error::request would fail as if the app were offline."
+            exit 1
+          fi
+
+          echo "The bundle points at 10.0.2.2:5207."
+
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      # The emulator needs hardware acceleration. GitHub's ubuntu runners expose KVM, but only to
+      # members of the kvm group — without this it silently falls back to software rendering, and takes
+      # long enough to hit the timeout.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # The emulator's system image and a booted snapshot of it. Worth ~8 minutes a run.
+      #
+      # Safe, and the reasoning matters: the snapshot is taken BEFORE the app is installed, so it cannot
+      # carry app data — and the flow's first command is `launchApp: clearState: true`, which wipes the
+      # app's storage (and with it the Keystore-backed blobs) regardless. "The session survived a
+      # restart" therefore still proves the token was stored, not merely never deleted.
+      - name: Cache the emulator
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-pixel6
+
+      # The system image, fetched BEFORE the emulator action needs it — and retried, because it arrives
+      # corrupt.
+      #
+      # A run died here with `Error on ZipFile unknown archive` while unpacking the 1.5 GB image. The
+      # disk had 101 GB free, so it was not space: the archive itself came down broken. The emulator
+      # action then reported the only thing it could see — "could not connect to TCP port 5554" — which
+      # points at the emulator, twenty minutes and one wrong investigation away from the actual cause.
+      #
+      # sdkmanager does not verify or retry. So: fetch it here, check the unpacked image is really there,
+      # and on a bad archive delete it and try again. Three attempts, then fail LOUDLY rather than
+      # limping into a boot that cannot work.
+      - name: Fetch the emulator system image
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        run: |
+          IMAGE='system-images;android-34;google_apis;x86_64'
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+
+          for attempt in 1 2 3; do
+            yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install "$IMAGE" --channel=0 >/dev/null 2>&1 || true
+
+            if [ -f "$SDK/system-images/android-34/google_apis/x86_64/system.img" ]; then
+              echo "System image present (attempt $attempt)."
+              exit 0
+            fi
+
+            echo "::warning::The system image did not unpack (attempt $attempt). The archive came down corrupt; discarding it and retrying."
+            rm -rf "$SDK/system-images/android-34"
+          done
+
+          echo "::error::The emulator system image could not be fetched in three attempts. This is not a"
+          echo "::error::code failure — the archive arrives corrupt from the SDK CDN. Re-run the job."
+          exit 1
+
+      - name: Create the AVD, once
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: false
+          script: echo "AVD created and snapshotted for the cache."
+
+      - name: Run the flow on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          disable-animations: true
+          # -no-snapshot-save: boot FROM the cached snapshot, but never write back to it. Otherwise this
+          # run's state would leak into the next one's, and a test that is supposed to start from nothing
+          # would start from whatever the last run left behind.
+          emulator-options: -no-window -no-snapshot-save -noaudio -no-boot-anim -gpu swiftshader_indirect
+          # A file, not an inline script. The action hands `script` to `sh -c "…"`, and a multi-line
+          # script with a `for` loop does not survive that — it died with "Syntax error: end of file
+          # unexpected (expecting done)". The emulator had booted; Maestro never ran; the job sat there
+          # until the timeout killed it and reported "cancelled", which looks like an infrastructure
+          # problem and is not one.
+          script: bash tests/e2e/run-on-emulator.sh
+
+      # Maestro records a screenshot and the view hierarchy at the point of failure. Without these, a
+      # native failure is a line number in a YAML file and no way to see what was actually on screen —
+      # which, on a platform nobody here can run locally, is most of the debugging information there is.
+      - name: Upload what Maestro saw
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-e2e
+          path: |
+            maestro-android.xml
+            stub-api.log
+            logcat.log
+            ~/.maestro/tests/**
+          if-no-files-found: ignore
+
+  ios:
+    name: iOS — build, boot, drive the auth flow
+    # macos-15 ships Xcode 16.4, which is Swift 6.1 — and React Native 0.86 declares Swift tools 6.2.
+    # The failure is a package-resolution error with no mention of Xcode ("package 'apple' is using
+    # Swift tools version 6.2.0 but the installed version is 6.1.0"), so the runner image is pinned
+    # here rather than left to `macos-latest`, which moves under us without warning.
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Printed on every run. When this breaks again — and a native toolchain always does — the first
+      # question is "which Xcode was that?", and the answer should already be in the log.
+      - name: Report the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          ls /Applications | grep -i xcode || true
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate the native project
+        working-directory: apps/client
+        run: npx expo prebuild --platform ios --no-install
+
+      # The pod DOWNLOADS, not the installed Pods directory. Pods/ is regenerated from a Podfile that
+      # prebuild itself rewrites, so caching it would risk installing yesterday's tree against today's
+      # config — a class of failure that looks like a compiler bug. The download cache is the slow part
+      # and it is safe to keep.
+      - name: Cache CocoaPods downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods/repos
+          key: pods-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pods-${{ runner.os }}-
+
+      - name: Install pods
+        working-directory: apps/client/ios
+        run: pod install
+
+      # A SIMULATOR build needs no code signing, which is why none of this needs an Apple developer
+      # account, a certificate or a provisioning profile. A device build would — that is a different
+      # problem, for a different day, and it is what issue #7's remaining scope is about.
+      #
+      # The simulator's localhost IS the host machine's, so the default API URL already points at the
+      # stub. It is set explicitly anyway, because relying on a default that happens to be right is how
+      # a test starts passing for the wrong reason.
+      # The same .env as Android, for the same reason — and this platform is why the bug was so hard to
+      # see. A simulator's `localhost` IS the host machine's, so when the environment variable failed to
+      # reach the bundler, iOS fell back to the default and **worked anyway**. It passed for the wrong
+      # reason while Android failed for the right one.
+      - name: Point the app at the stub
+        run: |
+          {
+            echo "EXPO_PUBLIC_API_URL=http://localhost:5207"
+
+            # THIS is what unblocks the iOS flow. XCUITest cannot type into a secureTextEntry field —
+            # the tap lands, inputText runs, and the text never arrives. See TextField.
+            echo "EXPO_PUBLIC_E2E=1"
+          } > apps/client/.env
+
+      # AD-HOC SIGNED, which is what Xcode's own "Sign to Run Locally" does for a simulator build.
+      #
+      # `CODE_SIGN_IDENTITY="-"` is the ad-hoc identity: no Apple account, no certificate, no
+      # provisioning profile. `CODE_SIGNING_REQUIRED=YES` is what makes it actually happen — the first
+      # attempt paired the identity with `REQUIRED=NO`, which told Xcode how to sign and then told it not
+      # to bother, and the simulator's log said so plainly while nothing else did:
+      #
+      #     Executable for dev.whystack.app ... had no entitlements
+      #
+      # WHAT I GOT WRONG, kept here because the next person will reach for the same theory: I concluded
+      # that SecureStore was failing for want of an `application-identifier` entitlement. It is not that.
+      # That key comes from a PROVISIONING PROFILE, which an ad-hoc build has none of — and the
+      # simulator's Keychain does not require it anyway. Signing properly is right; blaming the Keychain
+      # for the sign-in failure was a guess dressed up as a diagnosis.
+      #
+      # The evidence now comes from the device log, which the app writes to when secure storage refuses
+      # (refresh-token-store.native.ts). Evidence, not a theory.
+      - name: Build for the simulator
+        working-directory: apps/client/ios
+        run: |
+          WORKSPACE=$(ls -d ./*.xcworkspace | head -1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          echo "Building $SCHEME from $WORKSPACE"
+
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_INJECT_BASE_ENTITLEMENTS=YES \
+            DEVELOPMENT_TEAM=""
+
+      # Reports the signature and its entitlements. It does NOT fail the build on them, and the reason
+      # is a mistake worth writing down.
+      #
+      # I asserted `application-identifier`, and that assertion was wrong: that entitlement comes from a
+      # PROVISIONING PROFILE, and an ad-hoc signature without an Apple team has no profile and therefore
+      # no such key. Meanwhile the simulator's Keychain does not demand it — a simulator keychain is
+      # shared and permissive, which is exactly why apps use SecureStore there every day without an
+      # Apple account.
+      #
+      # So the assertion blocked the run before the flow could produce the ONE thing that would have
+      # told me what was actually failing: the device log. An assertion about a mechanism you have not
+      # verified is not a safety net, it is a second theory competing with the first — and this one was
+      # louder and wrong.
+      #
+      # It stays as a REPORT. When SecureStore fails, the app's own console.error reaches the device log
+      # (see refresh-token-store.native.ts), and that log is collected on failure. Evidence, not a guess.
+      - name: Report the signature
+        run: |
+          APP=$(find apps/client/ios/build/Build/Products -maxdepth 2 -name '*.app' | head -1)
+          test -n "$APP" || { echo "::error::No .app was produced."; exit 1; }
+
+          echo "── Signature ──"
+          codesign -dv "$APP" 2>&1 || true
+
+          echo "── Entitlements ──"
+          codesign -d --entitlements :- "$APP" 2>/dev/null || echo "(none)"
+
+      # Not "it happens to work" — asserted, like Android's.
+      - name: Prove the API URL reached the bundle
+        run: |
+          BUNDLE=$(find apps/client/ios/build/Build/Products -name 'main.jsbundle' | head -1)
+          test -n "$BUNDLE" || { echo "::error::No JS bundle in the built app."; exit 1; }
+
+          if ! grep -q "localhost:5207" "$BUNDLE"; then
+            echo "::error::EXPO_PUBLIC_API_URL is not in the bundle."
+            exit 1
+          fi
+
+          echo "The bundle points at localhost:5207."
+
+      - name: Install Maestro
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Boot a simulator
+        run: |
+          xcrun simctl list devices available
+
+          # An iPhone — the newest one the image has — and never "whatever is first in the list".
+          #
+          # Hardcoding "iPhone 16" was the obvious thing and it broke on the first run: Xcode 26.5 does
+          # not ship one, and simctl says only "Invalid device or device pair", which tells you nothing
+          # about what it DOES have. Apple renames these every year, so the name cannot be pinned.
+          #
+          # What must stay pinned is the KIND. A flow that ran on a phone last month and an iPad this
+          # month is a flow whose layout assertions have quietly stopped meaning anything — the app
+          # renders a completely different navigation on a tablet.
+          DEVICE=$(xcrun simctl list devices available \
+            | grep -oE 'iPhone [0-9]+' \
+            | sort -V \
+            | tail -1)
+
+          test -n "$DEVICE" || { echo "This runner image has no iPhone simulator at all."; exit 1; }
+
+          echo "Booting $DEVICE"
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus booted -b
+
+      - name: Start the stub API
+        run: |
+          node tests/e2e/stub-api/server.mjs 2>&1 | tee stub-api.log &
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:5207/health >/dev/null && break
+            sleep 1
+          done
+          # Not `|| true`. If the stub is down, every request fails, the flow lands in the offline state,
+          # and the failure looks like an app bug. Fail here, where the cause is unmistakable.
+          curl -fsS http://127.0.0.1:5207/health
+
+      - name: Install the app
+        run: |
+          APP=$(find apps/client/ios/build/Build/Products -maxdepth 2 -name '*.app' | head -1)
+          test -n "$APP" || { echo "No .app was produced."; exit 1; }
+          echo "Installing $APP"
+          xcrun simctl install booted "$APP"
+
+      - name: Run the flow
+        run: maestro test tests/e2e/flows --format junit --output maestro-ios.xml
+
+      # What the APP said, as opposed to what Maestro saw. console.error from the JS reaches the device
+      # log, and on a machine nobody can attach a debugger to that is the only channel there is — the
+      # difference between "the app is broken" and "the Keychain refused to store the token, here is the
+      # OSStatus".
+      - name: Collect the device log
+        if: failure()
+        run: |
+          xcrun simctl spawn booted log show --last 10m --style compact             --predicate 'eventMessage CONTAINS "whystack" OR processImagePath CONTAINS "WhyStack"'             > device.log 2>&1 || true
+
+          tail -60 device.log || true
+
+      # WHY THE APP DIED, rather than that it died.
+      #
+      # A run reached the last third of the flow — registered, signed in, saved a setting — and then the
+      # app vanished two seconds into the relaunch. Maestro could only report the symptom it can see:
+      # "App crashed or stopped". The device log is SpringBoard's, not ours, and it says nothing about a
+      # stack.
+      #
+      # macOS wrote a full crash report at the moment it happened, with the thread, the frame and the
+      # reason, and we threw it away. Every iOS crash from here on is diagnosed from evidence instead of
+      # from a guess — which is the entire difference between fixing this and theorising about it.
+      - name: Collect the crash reports
+        if: failure()
+        run: |
+          mkdir -p crash-reports
+
+          # Simulator crashes land in the HOST's DiagnosticReports, not the guest's.
+          find ~/Library/Logs/DiagnosticReports -iname '*WhyStack*' -newermt '-30 minutes' \
+            -exec cp {} crash-reports/ \; 2>/dev/null || true
+
+          if [ -z "$(ls -A crash-reports 2>/dev/null)" ]; then
+            echo "No crash report. The app did not crash — it was stopped, or the driver lost it."
+            exit 0
+          fi
+
+          for report in crash-reports/*; do
+            echo "───────────────────────────────────────────── $report"
+            # The first hundred lines carry the exception type, the termination reason and the crashed
+            # thread's top frames. That is the answer; the rest is every other thread's stack.
+            head -100 "$report"
+          done
+
+      - name: Upload what Maestro saw
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-e2e
+          path: |
+            maestro-ios.xml
+            stub-api.log
+            device.log
+            crash-reports/**
+            ~/.maestro/tests/**
+          if-no-files-found: ignore

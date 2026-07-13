@@ -9,6 +9,7 @@ import { AuthFormLayout } from '../../components/forms/auth-form-layout';
 import { PrimaryButton } from '../../components/forms/primary-button';
 import { TextField } from '../../components/forms/text-field';
 import { Notice } from '../../components/notice';
+import { testId } from '../../config/test-ids';
 import { useAuth } from '../../state/auth';
 import { useLanguage } from '../../state/language';
 import { useTheme } from '../../state/theme';
@@ -80,7 +81,11 @@ export function RegisterScreen() {
         title={t('auth.register.sent.title')}
         footer={
           <Link href="/sign-in" asChild>
-            <Pressable accessibilityRole="link" style={{ minHeight: 44, justifyContent: 'center' }}>
+            <Pressable
+              testID={testId.register.signInLink}
+              accessibilityRole="link"
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
               <Text style={[textStyle('bodySmall'), { color: color.accent }]}>
                 {t('auth.register.haveAccount')}
               </Text>
@@ -88,7 +93,12 @@ export function RegisterScreen() {
           </Link>
         }
       >
-        <Notice tone="success" title={t('auth.register.sent.title')} body={t('auth.register.sent.body')} />
+        <Notice
+          testID={testId.register.sent}
+          tone="success"
+          title={t('auth.register.sent.title')}
+          body={t('auth.register.sent.body')}
+        />
       </AuthFormLayout>
     );
   }
@@ -109,6 +119,7 @@ export function RegisterScreen() {
       {failure ? <Notice tone="error" title={t('error.generic.title')} body={failure} /> : null}
 
       <TextField
+        testID={testId.register.email}
         label={t('auth.email')}
         value={email}
         onChangeText={setEmail}
@@ -119,6 +130,7 @@ export function RegisterScreen() {
       />
 
       <TextField
+        testID={testId.register.password}
         label={t('auth.password')}
         value={password}
         onChangeText={setPassword}
@@ -134,6 +146,7 @@ export function RegisterScreen() {
       />
 
       <TextField
+        testID={testId.register.displayName}
         label={t('auth.displayName')}
         value={displayName}
         onChangeText={setDisplayName}
@@ -144,6 +157,7 @@ export function RegisterScreen() {
       />
 
       <PrimaryButton
+        testID={testId.register.submit}
         label={t('auth.register.submit')}
         busyLabel={t('common.loading')}
         busy={busy}

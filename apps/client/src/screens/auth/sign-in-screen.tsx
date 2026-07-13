@@ -7,6 +7,7 @@ import { AuthFormLayout } from '../../components/forms/auth-form-layout';
 import { PrimaryButton } from '../../components/forms/primary-button';
 import { TextField } from '../../components/forms/text-field';
 import { Notice } from '../../components/notice';
+import { testId } from '../../config/test-ids';
 import { useAuth } from '../../state/auth';
 import { useLanguage } from '../../state/language';
 import { useTheme } from '../../state/theme';
@@ -72,7 +73,11 @@ export function SignInScreen() {
           </Link>
 
           <Link href="/register" asChild>
-            <Pressable accessibilityRole="link" style={{ minHeight: 44, justifyContent: 'center' }}>
+            <Pressable
+              testID={testId.signIn.register}
+              accessibilityRole="link"
+              style={{ minHeight: 44, justifyContent: 'center' }}
+            >
               <Text style={[textStyle('bodySmall'), { color: color.accent }]}>
                 {t('auth.signIn.noAccount')}
               </Text>
@@ -81,9 +86,12 @@ export function SignInScreen() {
         </>
       }
     >
-      {failure ? <Notice tone="error" title={t('error.generic.title')} body={failure} /> : null}
+      {failure ? (
+        <Notice testID={testId.signIn.error} tone="error" title={t('error.generic.title')} body={failure} />
+      ) : null}
 
       <TextField
+        testID={testId.signIn.email}
         label={t('auth.email')}
         value={email}
         onChangeText={setEmail}
@@ -95,6 +103,7 @@ export function SignInScreen() {
       />
 
       <TextField
+        testID={testId.signIn.password}
         label={t('auth.password')}
         value={password}
         onChangeText={setPassword}
@@ -109,6 +118,7 @@ export function SignInScreen() {
       />
 
       <PrimaryButton
+        testID={testId.signIn.submit}
         label={t('auth.signIn.submit')}
         busyLabel={t('common.loading')}
         busy={busy}

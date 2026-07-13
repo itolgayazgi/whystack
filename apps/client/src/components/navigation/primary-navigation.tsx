@@ -34,6 +34,9 @@ function NavItem({ area, orientation }: { area: ProductArea; orientation: 'row' 
   return (
     <Link href={area.href} asChild>
       <Pressable
+        // From the area's KEY, not its label: the label is translated, and the first end-to-end flow
+        // this project runs changes the interface language.
+        testID={`nav-${area.key}`}
         accessibilityRole="tab"
         aria-selected={active}
         style={({ pressed }) => [
