@@ -39,13 +39,30 @@ tags:
     id: 'register-email'
 - inputText: 'ada@example.com'
 
-- tapOn:
-    id: 'register-password'
-- inputText: 'a-good-long-password'
-
+# The display name is filled BEFORE the password, out of visual order. That is an experiment, and it is
+# a deliberate one.
+#
+# In visual order — email, password, display name — the password field is FOCUSED and then BLURRED when
+# the next field is tapped. On iOS 26 the password then arrived at the server empty: the screenshot
+# showed an empty password box with our own "Use at least 10 characters" underneath it, while the email
+# and the display name were both filled correctly. The taps landed (Maestro logs the coordinates); the
+# text did not.
+#
+# iOS's UITextField clears a `secureTextEntry` field under circumstances that plain fields do not share.
+# If blurring one is enough to lose its contents, then a person on an iPhone loses their password the
+# moment they tap the next box — which is a REAL BUG, not a test artefact, and it needs its own
+# investigation on a real device rather than a workaround here.
+#
+# So this reordering is not a fix. It ISOLATES the variable: if the password now lands, the blur is the
+# cause, and issue #30 has its answer. If it still does not, the cause is something else and this told
+# us that too.
 - tapOn:
     id: 'register-display-name'
 - inputText: 'Ada'
+
+- tapOn:
+    id: 'register-password'
+- inputText: 'a-good-long-password'
 
 # No `hideKeyboard`.
 #
