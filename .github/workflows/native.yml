@@ -297,6 +297,7 @@ jobs:
           path: |
             maestro-android.xml
             stub-api.log
+            logcat.log
             ~/.maestro/tests/**
           if-no-files-found: ignore
 

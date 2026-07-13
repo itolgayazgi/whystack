@@ -44,6 +44,19 @@ cleanup() {
   echo "── The stub API's account of it ───────────────────────────────────"
   cat stub-api.log 2>/dev/null || true
 
+  # WHAT ANDROID SAW, which until now nobody collected.
+  #
+  # iOS has had a device log since the first run; Android has had nothing. A flow failed with the app not
+  # on screen at all — the screenshot showed the LAUNCHER — and there was no way to tell whether the app
+  # had crashed on relaunch, been killed, or simply not come to the foreground in time. Three very
+  # different bugs, and no evidence to choose between them.
+  #
+  # `-d` dumps the buffer and exits, so it needs no background process to leak (which is the mistake that
+  # cost an hour on this very script). Crashes, ANRs and the app's own console.error all land here.
+  echo "── What Android saw ───────────────────────────────────────────────"
+  adb logcat -d > logcat.log 2>&1 || true
+  grep -iE "whystack|FATAL|ANR |AndroidRuntime|ReactNative" logcat.log | tail -40 || true
+
   kill "${STUB_PID}" 2>/dev/null || true
   wait "${STUB_PID}" 2>/dev/null || true
 
