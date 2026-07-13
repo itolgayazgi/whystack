@@ -24,10 +24,22 @@ name: Development build
 
 on:
   workflow_dispatch:
-  # Also on a change to the native surface, because that is precisely when the installed APK goes
-  # stale — a new native module is in the JavaScript but not in the app on the phone, and the failure
-  # is a cryptic "native module not found" that looks like a code bug.
+
+  # ON MAIN ONLY, and on a change to the NATIVE surface.
+  #
+  # Those two qualifiers each cost a wasted build to learn.
+  #
+  # The native surface — a new native module, an app.config change, an SDK bump — is precisely when the
+  # APK on somebody's phone goes stale: the JavaScript now calls into something the installed shell does
+  # not contain, and the failure is a cryptic "native module not found" that reads like a code bug.
+  # Nothing else needs a rebuild, because a development build loads its JavaScript from Metro at runtime.
+  # Change a screen, change a translation — the phone has it in a second. That is the entire point.
+  #
+  # `branches: [main]` is the qualifier I forgot. Without it, a feature branch that merely MERGES main
+  # counts as having "changed" these files, and builds a twelve-minute APK nobody asked for. It fired on
+  # a pull request that touched one component and one string.
   push:
+    branches: [main]
     paths:
       - 'apps/client/package.json'
       - 'apps/client/app.config.js'

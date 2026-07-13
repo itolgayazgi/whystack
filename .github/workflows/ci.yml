@@ -60,6 +60,15 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # `04`, Sprint 3 acceptance: "Invalid content fails validation" and "Internal topic links
+      # resolve". This step is where those two sentences stop being intentions.
+      #
+      # It is a SEPARATE step from `pnpm test` — which already runs it — purely so the failure has a
+      # name. A translated technical term should not be reported to an author as "one of 190 tests
+      # failed"; it should be reported as "the content did not validate", with the file and the term.
+      - name: Validate content
+        run: pnpm content:validate
+
       # Builds the client's web bundle AND the static site. The site's build ends by verifying its own
       # output ships zero JavaScript — ADR-0009 promises a reader who came to read will not download an
       # application, and a promise about bytes has to be measured.
