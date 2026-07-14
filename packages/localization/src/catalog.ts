@@ -61,6 +61,50 @@ export interface Messages {
   'settings.conflict.body': string;
   'settings.unreachable': string;
 
+  'topic.readingTime': string;
+  'topic.lastReviewed': string;
+  'topic.draft': string;
+  'topic.draft.body': string;
+  'topic.deprecated': string;
+  'topic.prerequisites': string;
+  'topic.related': string;
+  'topic.next': string;
+  'topic.contents': string;
+  'topic.notFound.title': string;
+  'topic.notFound.body': string;
+  'topic.versions': string;
+
+  'topic.section.Summary': string;
+  'topic.section.LearningObjectives': string;
+  'topic.section.WhyThisTopicMatters': string;
+  'topic.section.Prerequisites': string;
+  'topic.section.Definition': string;
+  'topic.section.WhyItExists': string;
+  'topic.section.ProblemItSolves': string;
+  'topic.section.HistoricalContext': string;
+  'topic.section.CoreMentalModel': string;
+  'topic.section.CoreConcepts': string;
+  'topic.section.InternalMechanics': string;
+  'topic.section.Syntax': string;
+  'topic.section.BasicExample': string;
+  'topic.section.ProgressiveExamples': string;
+  'topic.section.RealWorldScenario': string;
+  'topic.section.ArchitectureContext': string;
+  'topic.section.PerformanceConsiderations': string;
+  'topic.section.SecurityConsiderations': string;
+  'topic.section.TestingConsiderations': string;
+  'topic.section.BestPractices': string;
+  'topic.section.CommonMistakes': string;
+  'topic.section.TradeOffs': string;
+  'topic.section.Alternatives': string;
+  'topic.section.VersionNotes': string;
+  'topic.section.InterviewQuestions': string;
+  'topic.section.Quiz': string;
+  'topic.section.RelatedTopics': string;
+  'topic.section.NextRecommendedTopic': string;
+  'topic.section.FurtherReading': string;
+  'topic.section.Glossary': string;
+
   'learn.title': string;
   'learn.empty.title': string;
   'learn.empty.body': string;
@@ -226,6 +270,50 @@ const en: Messages = {
     'These settings were changed somewhere else while this screen was open. What you see now is what is actually saved. Apply your change again if you still want it.',
   'settings.unreachable': 'Cannot reach the server. Your settings were not saved.',
 
+  'topic.readingTime': '{minutes} min read',
+  'topic.lastReviewed': 'Last reviewed {date}',
+  'topic.draft': 'Draft — not published',
+  'topic.draft.body': 'You can see this because you review content. Nobody else can.',
+  'topic.deprecated': 'Deprecated',
+  'topic.prerequisites': 'Read these first',
+  'topic.related': 'Related topics',
+  'topic.next': 'Next topic',
+  'topic.contents': 'On this page',
+  'topic.notFound.title': 'No such topic',
+  'topic.notFound.body': 'It may have been renamed, or it may not be published yet.',
+  'topic.versions': 'Applies to {versions}',
+
+  'topic.section.Summary': 'Summary',
+  'topic.section.LearningObjectives': 'Learning objectives',
+  'topic.section.WhyThisTopicMatters': 'Why this topic matters',
+  'topic.section.Prerequisites': 'Prerequisites',
+  'topic.section.Definition': 'Definition',
+  'topic.section.WhyItExists': 'Why it exists',
+  'topic.section.ProblemItSolves': 'The problem it solves',
+  'topic.section.HistoricalContext': 'Historical context',
+  'topic.section.CoreMentalModel': 'Core mental model',
+  'topic.section.CoreConcepts': 'Core concepts',
+  'topic.section.InternalMechanics': 'Internal mechanics',
+  'topic.section.Syntax': 'Syntax',
+  'topic.section.BasicExample': 'Basic example',
+  'topic.section.ProgressiveExamples': 'Progressive examples',
+  'topic.section.RealWorldScenario': 'Real-world scenario',
+  'topic.section.ArchitectureContext': 'Architecture context',
+  'topic.section.PerformanceConsiderations': 'Performance',
+  'topic.section.SecurityConsiderations': 'Security',
+  'topic.section.TestingConsiderations': 'Testing',
+  'topic.section.BestPractices': 'Best practices',
+  'topic.section.CommonMistakes': 'Common mistakes',
+  'topic.section.TradeOffs': 'Trade-offs',
+  'topic.section.Alternatives': 'Alternatives',
+  'topic.section.VersionNotes': 'Version notes',
+  'topic.section.InterviewQuestions': 'Interview questions',
+  'topic.section.Quiz': 'Quiz',
+  'topic.section.RelatedTopics': 'Related topics',
+  'topic.section.NextRecommendedTopic': 'Next topic',
+  'topic.section.FurtherReading': 'Further reading',
+  'topic.section.Glossary': 'Glossary',
+
   'learn.title': 'Learn',
   'learn.empty.title': 'No topics yet',
   'learn.empty.body':
@@ -385,6 +473,50 @@ const tr: Messages = {
   'settings.conflict.body':
     'Bu ekran açıkken ayarlar başka bir yerde değiştirildi. Şu an gördüğün, gerçekten kayıtlı olan. Değişikliğini hâlâ istiyorsan tekrar uygula.',
   'settings.unreachable': 'Sunucuya ulaşılamıyor. Ayarların kaydedilmedi.',
+
+  'topic.readingTime': '{minutes} dk okuma',
+  'topic.lastReviewed': 'Son inceleme: {date}',
+  'topic.draft': 'Taslak — yayınlanmadı',
+  'topic.draft.body': 'Bunu görüyorsun çünkü içeriği sen inceliyorsun. Başka kimse göremez.',
+  'topic.deprecated': 'Kullanımdan kaldırıldı',
+  'topic.prerequisites': 'Önce bunları oku',
+  'topic.related': 'İlgili konular',
+  'topic.next': 'Sıradaki konu',
+  'topic.contents': 'Bu sayfada',
+  'topic.notFound.title': 'Böyle bir konu yok',
+  'topic.notFound.body': 'Adı değişmiş olabilir ya da henüz yayınlanmamış olabilir.',
+  'topic.versions': '{versions} için geçerli',
+
+  'topic.section.Summary': 'Özet',
+  'topic.section.LearningObjectives': 'Öğrenme hedefleri',
+  'topic.section.WhyThisTopicMatters': 'Bu konu neden önemli',
+  'topic.section.Prerequisites': 'Ön koşullar',
+  'topic.section.Definition': 'Tanım',
+  'topic.section.WhyItExists': 'Neden var',
+  'topic.section.ProblemItSolves': 'Çözdüğü problem',
+  'topic.section.HistoricalContext': 'Tarihsel bağlam',
+  'topic.section.CoreMentalModel': 'Temel zihinsel model',
+  'topic.section.CoreConcepts': 'Temel kavramlar',
+  'topic.section.InternalMechanics': 'İç mekanizma',
+  'topic.section.Syntax': 'Sözdizimi',
+  'topic.section.BasicExample': 'Temel örnek',
+  'topic.section.ProgressiveExamples': 'İlerleyen örnekler',
+  'topic.section.RealWorldScenario': 'Gerçek dünya senaryosu',
+  'topic.section.ArchitectureContext': 'Mimari bağlam',
+  'topic.section.PerformanceConsiderations': 'Performans',
+  'topic.section.SecurityConsiderations': 'Güvenlik',
+  'topic.section.TestingConsiderations': 'Test',
+  'topic.section.BestPractices': 'En iyi pratikler',
+  'topic.section.CommonMistakes': 'Sık yapılan hatalar',
+  'topic.section.TradeOffs': 'Ödünleşimler',
+  'topic.section.Alternatives': 'Alternatifler',
+  'topic.section.VersionNotes': 'Sürüm notları',
+  'topic.section.InterviewQuestions': 'Mülakat soruları',
+  'topic.section.Quiz': 'Quiz',
+  'topic.section.RelatedTopics': 'İlgili konular',
+  'topic.section.NextRecommendedTopic': 'Sıradaki konu',
+  'topic.section.FurtherReading': 'İleri okuma',
+  'topic.section.Glossary': 'Sözlük',
 
   'learn.title': 'Öğren',
   'learn.empty.title': 'Henüz konu yok',

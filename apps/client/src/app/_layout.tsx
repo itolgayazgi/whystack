@@ -13,6 +13,7 @@ import { AuthProvider } from '../state/auth';
 import { LanguageProvider } from '../state/language';
 import { PreferencesProvider } from '../state/preferences';
 import { ThemeProvider, useTheme } from '../state/theme';
+import { TopicsProvider } from '../state/topics';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -80,9 +81,15 @@ export default function RootLayout() {
                   sign-in screen, which has to exist before anyone knows who is looking at it, so they
                   start from the device — and the server's answer replaces that the moment it lands. */}
               <PreferencesProvider>
-                <SessionGate>
-                  <Shell />
-                </SessionGate>
+                {/* TopicsProvider is BELOW PreferencesProvider because the list is fetched in the
+                    reader's CONTENT language — and that language is a preference. Above it, the first
+                    request would go out in English and the Turkish reader would see the wrong titles
+                    for as long as it took the preferences to land. */}
+                <TopicsProvider>
+                  <SessionGate>
+                    <Shell />
+                  </SessionGate>
+                </TopicsProvider>
               </PreferencesProvider>
             </AuthProvider>
           </LanguageProvider>
