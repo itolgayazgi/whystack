@@ -9,6 +9,26 @@
 
 export type { AcceptedMessage, AuthResponse, CurrentUser } from './auth';
 export { authApi } from './auth';
+export type {
+  AuthoringCatalog,
+  ContentProblem,
+  DomainOption,
+  EcosystemOption,
+  EditableImplementation,
+  EditableRelationship,
+  EditableSection,
+  EditableTerm,
+  EditableTopic,
+  EditableTranslation,
+  LanguageOption,
+  SaveTopicRequest,
+  SaveTopicResult,
+  SectionScope,
+  SectionTypeOption,
+  StudioTopic,
+  TopicOption,
+} from './authoring';
+export { authoringApi, canAuthor, EDITOR_ROLES } from './authoring';
 export type { ApiClientOptions, AuthTokens } from './client';
 export { ApiClient } from './client';
 export type { SkillLevel, ThemeMode, UserPreferences } from './preferences';

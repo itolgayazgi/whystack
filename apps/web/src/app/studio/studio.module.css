@@ -1,0 +1,489 @@
+/*
+  The WRITING shell. Deliberately not the reading shell.
+
+  Learning and authoring are two mental states, and a frame that carries both splits both. The studio keeps
+  the same tokens — same greens, same gold, same type — and none of the learner's navigation.
+*/
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-3);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+.railBrand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  padding: 0 var(--space-2);
+}
+
+.railBrandLabel {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.railLink {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-small);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.railLink:hover {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
+
+.railLinkActive {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
+
+.railFoot {
+  margin-top: auto;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.railBack {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.railBack:hover {
+  color: var(--color-text-primary);
+}
+
+.main {
+  min-width: 0;
+  padding: var(--space-6);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.title {
+  font-family: var(--font-ui);
+  font-size: var(--text-page-title);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin-top: var(--space-1);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--color-text-muted);
+  max-width: 68ch;
+}
+
+/* ── The workbench ───────────────────────────────────────────────────────────────────────────────── */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+
+.table th {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 500;
+}
+
+.table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  vertical-align: middle;
+}
+
+.rowTitle {
+  color: var(--color-text-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.rowTitle:hover {
+  color: var(--color-accent);
+}
+
+.rowKey {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-code);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.chip {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.chipMissing {
+  border-style: dashed;
+  color: var(--color-warning);
+}
+
+/* Status is the topic's position in the editorial lifecycle — it has to be readable at a glance. */
+.status {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-small);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid currentcolor;
+}
+
+.statusDraft {
+  color: var(--color-ai);
+}
+
+.statusReview {
+  color: var(--color-info);
+}
+
+.statusApproved {
+  color: var(--color-warning);
+}
+
+.statusPublished {
+  color: var(--color-success);
+}
+
+.statusRetired {
+  color: var(--color-deprecated);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.primary,
+.secondary,
+.ghost {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-small);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.primary {
+  background: var(--color-accent);
+  color: var(--color-background);
+  font-weight: 600;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondary {
+  background: transparent;
+  border-color: var(--color-border-interactive);
+  color: var(--color-text-primary);
+}
+
+.secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+  border-color: transparent;
+  padding: var(--space-1) var(--space-2);
+}
+
+.ghost:hover {
+  color: var(--color-error);
+}
+
+/* ── The editor ──────────────────────────────────────────────────────────────────────────────────── */
+
+.editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.panel {
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.panelTitle {
+  font-family: var(--font-ui);
+  font-size: var(--text-section-title);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.panelHint {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-4);
+  max-width: 72ch;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.hint {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.input,
+.select,
+.textarea {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  width: 100%;
+}
+
+.textarea {
+  font-family: var(--font-code);
+  font-size: 13px;
+  line-height: 1.6;
+  min-height: 160px;
+  resize: vertical;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+  border-color: var(--color-border-interactive);
+}
+
+/* Two languages, side by side. This is how you SEE a translation drift — not by remembering. */
+.bilingual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.sectionName {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.mandatory {
+  font-size: 11px;
+  color: var(--color-accent);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.langTag {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+  display: block;
+}
+
+.implementation {
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-muted);
+}
+
+.implementationHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.relationship {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+/* ── The problems rail — the editor's true companion ─────────────────────────────────────────────── */
+
+.rail2 {
+  position: sticky;
+  top: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.problem {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.problem:last-child {
+  border-bottom: none;
+}
+
+.problemRule {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--color-warning);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.problemMessage {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.clean {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--color-success);
+  line-height: 1.6;
+}
+
+.notice {
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-small);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.noticeOk {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.empty {
+  padding: var(--space-6);
+  text-align: center;
+  font-family: var(--font-ui);
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-medium);
+  line-height: 1.6;
+}
+
+@media (max-width: 1100px) {
+  .editor {
+    grid-template-columns: 1fr;
+  }
+
+  .rail2 {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .rail {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .bilingual {
+    grid-template-columns: 1fr;
+  }
+}
