@@ -112,7 +112,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setUser(await authApi.me(client));
         setStatus('signed-in');
 
-        router.push('/');
+        // `/` is the LANDING page — the pitch, for people who are not signed in. Sending somebody who just
+        // authenticated back to a page selling them the product is the internet's most common own goal.
+        router.push('/learn');
       },
 
       signOut: async () => {

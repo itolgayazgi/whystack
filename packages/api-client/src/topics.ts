@@ -112,13 +112,22 @@ interface Single<T> {
 export const topicsApi = {
   list: (
     client: ApiClient,
-    query: { language: string; domain?: string; level?: SkillLevel; pageNumber?: number },
+    query: {
+      language: string;
+      domain?: string;
+      level?: SkillLevel;
+      pageNumber?: number;
+
+      /** The server caps this. It exists so a caller can ask for fewer — never for "all". */
+      pageSize?: number;
+    },
   ) => {
     const parameters = new URLSearchParams({ language: query.language });
 
     if (query.domain) parameters.set('domain', query.domain);
     if (query.level) parameters.set('level', query.level);
     if (query.pageNumber) parameters.set('pageNumber', String(query.pageNumber));
+    if (query.pageSize) parameters.set('pageSize', String(query.pageSize));
 
     return client.request<Collection<TopicSummary>>(`/api/v1/topics?${parameters}`);
   },

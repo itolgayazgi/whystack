@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SignedInRedirect } from '@/components/signed-in-redirect';
 import { Wordmark } from '@/components/wordmark';
 import styles from './page.module.css';
 
@@ -31,6 +32,8 @@ const PILLARS = [
 export default function LandingPage() {
   return (
     <main className={styles.page}>
+      <SignedInRedirect />
+
       <header className={styles.hero}>
         <Wordmark size={72} />
 

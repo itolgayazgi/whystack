@@ -1,0 +1,312 @@
+/*
+  The LEARNING shell. Two columns, and no third.
+
+  `09` forbids "a dashboard filled with unnecessary widgets" by name, and lists "Dashboard density" among the
+  things the interface must avoid. So there is no widget rail, no streak counter, no completion ring. The
+  catalogue is on the left because Principle 02 — Keep Learning Close — requires search and the corpus to be
+  one glance away, and the middle column holds one thing: what to read next.
+*/
+
+.shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  align-items: start;
+}
+
+/* ── The catalogue ───────────────────────────────────────────────────────────────────────────────── */
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-3);
+  border-right: 1px solid var(--color-border);
+}
+
+.search {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+
+.search:focus {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.domain {
+  margin-bottom: var(--space-4);
+}
+
+.domainName {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 0 var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.topicLink {
+  display: block;
+  padding: var(--space-2);
+  border-radius: var(--radius-small);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.topicLink:hover {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
+
+/*
+  The language fallback, ON THE ROW.
+
+  A Turkish reader's list can hold a translated topic and an untranslated one at the same time, so one flag
+  for the whole page would have to lie about one of them. CLAUDE.md §1.7: a fallback is never hidden.
+*/
+.fallback {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0 4px;
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-small);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--color-warning);
+  vertical-align: middle;
+}
+
+/* ── The middle ──────────────────────────────────────────────────────────────────────────────────── */
+
+.main {
+  padding: var(--space-6);
+  max-width: 980px;
+}
+
+.greeting {
+  font-family: var(--font-ui);
+  font-size: var(--text-page-title);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.lede {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  max-width: 64ch;
+  margin-bottom: var(--space-6);
+}
+
+.blockTitle {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.card {
+  display: block;
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  text-decoration: none;
+}
+
+.card:hover {
+  border-color: var(--color-border-interactive);
+}
+
+.cardTitle {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.cardSummary {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  max-width: 68ch;
+  margin-bottom: var(--space-2);
+}
+
+.cardMeta {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/*
+  The roadmap's future home.
+
+  It is a placeholder and it SAYS it is a placeholder. A fake progress bar at 0% would be a lie told in a
+  place the reader is meant to trust, and `09` warns against gamification in the same breath.
+*/
+.roadmapSlot {
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-medium);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  max-width: 68ch;
+}
+
+.empty {
+  padding: var(--space-6);
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-medium);
+  font-family: var(--font-ui);
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+.notice {
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-small);
+  color: var(--color-error);
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+
+/* ── The profile menu ────────────────────────────────────────────────────────────────────────────── */
+
+.menu {
+  position: relative;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill, 999px);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.avatar:hover {
+  border-color: var(--color-border-interactive);
+}
+
+.initial {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-background);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  min-width: 200px;
+  padding: var(--space-2);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  z-index: 10;
+}
+
+.item {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-small);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.itemAccent {
+  color: var(--color-accent);
+}
+
+.separator {
+  height: 1px;
+  margin: var(--space-2) 0;
+  background: var(--color-border);
+}
+
+@media (max-width: 900px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+}
