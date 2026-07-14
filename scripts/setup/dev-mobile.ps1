@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Puts the app on a real phone — the fast human feedback loop.
@@ -118,7 +118,11 @@ $clientBaseUrl = "http://${lanIp}:8081"
 # Metro serves the web build at this address, so the link opens the web app in the phone's browser,
 # which confirms the account against the API. Opening the NATIVE app directly needs Universal Links —
 # a verification file on a real domain, plus an Apple team — which we do not have yet.
-dotnet user-secrets set 'App:ClientBaseUrl' $clientBaseUrl --project $apiProject | Out-Null
+# The email links point at the WEBSITE (ADR-0022), not at Metro.
+#
+# /confirm-email and /reset-password live in apps/web. The mobile app has no deep-link handler, and a
+# confirmation link is clicked from a mail client — often on a laptop, where Metro is not even running.
+dotnet user-secrets set 'App:ClientBaseUrl' 'http://localhost:3000' --project $apiProject | Out-Null
 
 # 2. CORS — AND THIS ONE COST AN EVENING.
 #
@@ -131,12 +135,31 @@ dotnet user-secrets set 'App:ClientBaseUrl' $clientBaseUrl --project $apiProject
 # apart from a dead network, so it says "Cannot reach WhyStack" — an honest message about a cause it
 # has no way of seeing. Which is precisely what happened, and what this script now prevents.
 #
-# localhost stays in the list: the web app on THIS machine still needs it.
-dotnet user-secrets set 'Cors:AllowedOrigins:0' 'http://localhost:8081' --project $apiProject | Out-Null
-dotnet user-secrets set 'Cors:AllowedOrigins:1' $clientBaseUrl --project $apiProject | Out-Null
+# EVERY origin is written, every time — and that is not belt-and-braces, it is a bug fix.
+#
+# .NET configuration providers do not REPLACE an array. They MERGE IT BY INDEX. user-secrets sits above
+# appsettings.json, so writing `Cors:AllowedOrigins:0` overwrites element 0 of whatever appsettings.json
+# declared — and element 2 survives untouched, which makes the result look like a merge and behave like a
+# partial overwrite.
+#
+# An earlier version of this script wrote only indices 0 and 1. appsettings.json had the WEBSITE at index 0.
+# The website's origin was silently deleted, the browser stopped getting Access-Control-Allow-Origin, and
+# the sign-in page said "cannot reach the server" — which was true, and pointed nowhere near the cause.
+#
+# So this list is the WHOLE list. If a surface needs an origin, it is here.
+$origins = @(
+    'http://localhost:3000',        # the website, on this machine
+    "http://${lanIp}:3000",         # the website, from the phone's browser
+    'http://localhost:8081',        # Metro, on this machine
+    $clientBaseUrl                  # Metro, from the phone
+)
+
+for ($i = 0; $i -lt $origins.Count; $i++) {
+    dotnet user-secrets set "Cors:AllowedOrigins:$i" $origins[$i] --project $apiProject | Out-Null
+}
 
 Write-Host "  Email links point at   $clientBaseUrl" -ForegroundColor Green
-Write-Host "  CORS allows            $clientBaseUrl  (the phone's browser)" -ForegroundColor Green
+Write-Host "  CORS allows            $($origins -join ', ')" -ForegroundColor Green
 
 # ── The firewall ───────────────────────────────────────────────────────────────────────────────────
 #

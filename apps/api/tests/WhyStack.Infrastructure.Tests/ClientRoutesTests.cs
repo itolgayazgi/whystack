@@ -1,30 +1,30 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using WhyStack.Infrastructure.Identity;
 
 namespace WhyStack.Infrastructure.Tests;
 
 /// <summary>
-/// The paths in an emailed link must be paths the client actually has.
+/// The paths in an emailed link must be paths the WEBSITE actually has.
 /// </summary>
 /// <remarks>
 /// <b>This test exists because they were not, and nobody noticed.</b>
 ///
-/// <c>AppLinks</c> built <c>/auth/confirm-email</c>. The screen lives at
-/// <c>apps/client/src/app/(auth)/confirm-email.tsx</c> — and a folder in PARENTHESES is an Expo Router
-/// <i>route group</i>: it organises files and <b>does not appear in the URL</b>. The real route is
+/// <c>AppLinks</c> built <c>/auth/confirm-email</c>. The screen lived in a route group — a folder in
+/// PARENTHESES, which organises files and <b>does not appear in the URL</b>. The real route was
 /// <c>/confirm-email</c>.
 ///
 /// So every confirmation and every password-reset link this service had ever sent was a 404. On every
 /// platform. From the first day. It was found by a human registering on a real phone.
 ///
-/// <b>Why the existing tests could not catch it.</b> The endpoint tests generate the link, split the
-/// token back out of it with <c>Split("token=")</c>, and post that token to the API. They never visit
-/// the URL. The path could have said <c>/banana</c> and every one of them would still be green — which
-/// is the whole lesson: a test that reads a value back out of the thing it just wrote has tested
-/// nothing about the thing.
+/// <b>Why the existing tests could not catch it.</b> The endpoint tests generate the link, split the token
+/// back out of it with <c>Split("token=")</c>, and post that token to the API. They never visit the URL.
+/// The path could have said <c>/banana</c> and every one of them would still be green — which is the whole
+/// lesson: a test that reads a value back out of the thing it just wrote has tested nothing about the thing.
 ///
-/// This reads the CLIENT'S OWN ROUTE TREE off disk. Rename a screen and this breaks, loudly, instead of
-/// everybody's email breaking, silently.
+/// <b>The target moved (ADR-0022), and so did this test.</b> Emails now land on <c>apps/web</c> — a mail
+/// link is clicked in a browser, often on a laptop, and the mobile app has no deep-link handler and is not
+/// even installed there. Next.js uses the same route-group convention as Expo Router, so the rule this test
+/// enforces is unchanged; only the tree it reads is.
 /// </remarks>
 public class ClientRoutesTests
 {
@@ -62,39 +62,40 @@ public class ClientRoutesTests
     }
 
     /// <summary>
-    /// Every URL the client can be opened at, derived from the file tree the way Expo Router does it.
+    /// Every URL the website can be opened at, derived from the file tree the way Next.js does it.
     /// </summary>
     private static IReadOnlyCollection<string> ClientRoutes()
     {
-        var appDirectory = Path.Join(RepositoryRoot(), "apps", "client", "src", "app");
+        var appDirectory = Path.Join(RepositoryRoot(), "apps", "web", "src", "app");
 
         Assert.True(
             Directory.Exists(appDirectory),
-            $"The client's route tree is missing: {appDirectory}. In Expo Router the file tree IS the "
-            + "route tree (`06`), so if this directory has moved, the links in every email have moved "
-            + "with it.");
+            $"The website's route tree is missing: {appDirectory}. The file tree IS the route tree, so if "
+            + "this directory has moved, the links in every email have moved with it.");
 
         return Directory
-            .EnumerateFiles(appDirectory, "*.tsx", SearchOption.AllDirectories)
+            .EnumerateFiles(appDirectory, "page.tsx", SearchOption.AllDirectories)
             .Select(file => Path.GetRelativePath(appDirectory, file))
             .Select(relative => relative.Replace('\\', '/'))
 
-            // `_layout.tsx` is not a route; it wraps them.
-            .Where(route => !route.EndsWith("_layout.tsx", StringComparison.Ordinal))
+            // `app/(auth)/sign-in/page.tsx` → `(auth)/sign-in`. The file name is not part of the URL.
+            //
+            // `app/page.tsx` is the ROOT — it has no directory in front of it, so trimming "/page.tsx" from
+            // an 8-character string asks for a negative length. The first version of this did exactly that
+            // and threw before it could check anything, which is the wrong kind of failure: a test that
+            // crashes is a test that proves nothing.
+            .Select(route => route.Length > "page.tsx".Length
+                ? route[..^"/page.tsx".Length]
+                : string.Empty)
 
-            .Select(route => route[..^".tsx".Length])
-
-            // THE RULE THAT WAS MISSED. A segment in parentheses is a route GROUP: it exists to organise
-            // files and is invisible in the URL. `(auth)/confirm-email.tsx` is served at
+            // THE RULE THAT WAS MISSED, and Next.js has it too. A segment in parentheses is a route GROUP:
+            // it organises files and is INVISIBLE in the URL. `(auth)/confirm-email/page.tsx` is served at
             // `/confirm-email`, not at `/auth/confirm-email`.
             .Select(route => string.Join(
                 '/',
                 route.Split('/').Where(segment => !segment.StartsWith('(') || !segment.EndsWith(')'))))
 
-            // `index.tsx` is the directory itself.
-            .Select(route => route.EndsWith("index", StringComparison.Ordinal)
-                ? route[..^"index".Length].TrimEnd('/')
-                : route)
+            .Where(route => route.Length > 0)
 
             .ToHashSet(StringComparer.Ordinal);
     }
