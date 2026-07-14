@@ -1,45 +1,179 @@
 ---
+import Wordmark from '../components/Wordmark.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 
-// Sprint 1 scaffolds this surface; it becomes meaningful when content lands (ADR-0009 §6, Sprint 3+).
-// There are no topic pages yet because there are no topics — content/ is empty, and generating
-// placeholder topics would produce exactly the thin, worthless pages that SEO punishes.
+// The landing page. Static HTML, ZERO JavaScript (ADR-0009) — a reader who came to read does not download
+// an application, and this page is the first proof of that promise rather than an exception to it.
+//
+// Sign-in and registration are NOT here. They live in the app, which has a session, state and a bundle; a
+// login form on this page would mean adding all three to a surface whose entire value is having none of
+// them. The buttons link across.
+const APP = import.meta.env.PUBLIC_APP_URL ?? 'http://localhost:8081';
+
+const PILLARS = [
+  {
+    title: 'Why, then how',
+    body: 'A topic opens with code you would actually write, shows it fail, and derives the concept from the failure. The name comes last — because that is when it has somewhere to land.',
+  },
+  {
+    title: 'One concept, many ecosystems',
+    body: 'Connection pooling exists for a reason that has nothing to do with C#. The reasoning is written once; the implementation panel switches between .NET, Java and Node. The reason transfers — that is the entire point.',
+  },
+  {
+    title: 'Nothing publishes unreviewed',
+    body: 'A model can draft a topic. A model cannot publish one. Every technical term must survive translation verbatim, and the build refuses content that fails the rule.',
+  },
+];
 ---
 
 <BaseLayout
-  title="WhyStack — learn why technologies exist"
-  description="An engineering learning platform that teaches why technologies exist, which problems they solve, and when not to use them. Version-aware, bilingual, offline-capable."
+  title="WhyStack — learn technologies by the reasons they exist"
+  description="An engineering learning platform that teaches why technologies exist, which problem they actually solve, and what they cost you. Version-aware, bilingual, offline-capable."
 >
-  <h1>WhyStack</h1>
+  <header class="hero">
+    <Wordmark size={64} />
 
-  <p>
-    Most documentation tells you <em>how</em>. WhyStack tells you <strong>why</strong> — why a
-    technology exists, which problem it actually solves, what it costs you, and when not to reach for
-    it.
-  </p>
+    <h1>Why before how.</h1>
 
-  <h2>This surface is not the product</h2>
+    <p class="lede">
+      Most documentation tells you <em>how</em>. WhyStack tells you <strong>why</strong> — why a technology
+      exists, which problem it actually solves, what it costs you, and when not to reach for it.
+    </p>
 
-  <p>
-    These pages are the public, readable half. They are static HTML — no application bundle, no
-    JavaScript, no login — so that a search engine, an AI crawler, or someone on a slow connection can
-    read a topic without downloading an app first.
-  </p>
+    <div class="actions">
+      <a class="button primary" href={`${APP}/register`}>Create an account</a>
+      <a class="button" href={`${APP}/sign-in`}>Sign in</a>
+    </div>
+  </header>
 
-  <p>
-    Progress, quizzes, bookmarks, roadmaps and offline Knowledge Packs live in the application. This
-    surface exists so the content can be <em>found</em>.
-  </p>
+  <section class="pillars" aria-label="What makes this different">
+    {
+      PILLARS.map((pillar) => (
+        <article>
+          <h2>{pillar.title}</h2>
+          <p>{pillar.body}</p>
+        </article>
+      ))
+    }
+  </section>
 
-  <h2>Nothing is published yet</h2>
+  <section class="sample" aria-label="What a topic looks like">
+    <h2>What a topic looks like</h2>
 
-  <p>
-    Content is written, reviewed and published from the content repository, and the first topics land
-    in Sprint 3. This page is the generator proving it works — it is not a placeholder for a topic
-    that failed to build.
-  </p>
+    <p>It opens with a bug you can write — in a language you may never use:</p>
 
-  <p>
-    The code is open: <a href="https://github.com/itolgayazgi/whystack">github.com/itolgayazgi/whystack</a>
-  </p>
+    <pre><code>{`char* name = malloc(64);
+strcpy(name, "Ada");
+
+free(name);                 // done with it
+
+printf("%s\\n", name);       // ...one line too late`}</code></pre>
+
+    <p>
+      Most days it prints <code>Ada</code>. Some days it prints whatever the allocator handed to the next
+      caller — which, in a web server, is somebody else's session token. And it does not crash. That is the
+      part worth sitting with.
+    </p>
+
+    <p class="turn"><strong>If you never free memory, who does?</strong></p>
+
+    <p>
+      That question is what earns the <code>Common Language Runtime</code> a name, three paragraphs later.
+      Not before.
+    </p>
+  </section>
+
+  <footer class="foot">
+    <p>
+      This page is static HTML and ships no JavaScript. The application — progress, quizzes, roadmaps and
+      offline packs — lives at <a href={APP}>the app</a>.
+    </p>
+  </footer>
 </BaseLayout>
+
+<style>
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-16);
+    padding: var(--space-48) 0 var(--space-32);
+  }
+
+  .hero h1 {
+    margin: 0;
+  }
+
+  .lede {
+    max-width: 52ch;
+    color: var(--color-text-secondary);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-12);
+    justify-content: center;
+    margin-top: var(--space-8);
+  }
+
+  /* 44px minimum, on a page as much as in the app. A target a finger misses is a target that does not
+     exist, and that does not stop being true because the surface is static. */
+  .button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 var(--space-24);
+    border-radius: var(--radius-medium);
+    border: 1px solid var(--color-border-interactive);
+    color: var(--color-text-primary);
+    text-decoration: none;
+    font-family: var(--font-ui);
+    font-weight: 600;
+  }
+
+  .button.primary {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    /* The background colour, ON the gold. This pair is one of the audited contrast tests in
+       packages/theme — it is measured, not chosen. */
+    color: var(--color-background);
+  }
+
+  .pillars {
+    display: grid;
+    gap: var(--space-24);
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    padding: var(--space-32) 0;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .pillars h2 {
+    margin: 0 0 var(--space-8);
+    font-size: 1.05rem;
+  }
+
+  .pillars p {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+
+  .sample {
+    padding: var(--space-32) 0;
+  }
+
+  .turn {
+    padding-left: var(--space-16);
+    border-left: 3px solid var(--color-accent);
+    font-size: 1.1rem;
+  }
+
+  .foot {
+    padding-top: var(--space-24);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+  }
+</style>

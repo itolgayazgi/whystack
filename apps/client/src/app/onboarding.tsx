@@ -90,9 +90,12 @@ export default function OnboardingRoute() {
     );
   }
 
+  const chosen = LEVELS.find((option) => option.key === level);
+  const levelLabel = chosen ? t(chosen.labelKey) : '';
+
   return (
     <OnboardingRoadmapScreen
-      level={level ? t(LEVELS.find((option) => option.key === level)!.labelKey) : ''}
+      level={levelLabel}
       onBack={() => setStep('level')}
       onSignUp={async () => {
         // Saved BEFORE the redirect. A reader who signs up and comes back must not find their choices gone —

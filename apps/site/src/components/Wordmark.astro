@@ -1,0 +1,73 @@
+---
+interface Props {
+  /** Height of the mark's type, in pixels. Everything else is derived from it. */
+  size?: number;
+}
+
+const { size = 56 } = Astro.props;
+
+// The step is the product. A learner does not climb smoothly — they sit at one level until something
+// clicks, and then they are somewhere else. The mark says that before a single word does.
+//
+// It is TWO BARS AT DIFFERENT HEIGHTS joined by a riser — not one line with a bump in it. That was the
+// first version's mistake, and it read exactly as it was: a flat line with a notch.
+//
+// Drawn as an inline SVG rather than a file: it inherits `currentColor` and the accent token, so it is
+// correct in both themes without a second asset, and it costs no request.
+const rule = Math.max(2, Math.round(size * 0.055));
+const rise = Math.round(size * 0.3);
+const width = Math.round(size * 1.9);
+const lower = Math.round(width * 0.55);
+---
+
+<svg
+  class="wordmark"
+  width={width}
+  height={Math.round(size * 1.6)}
+  viewBox={`0 0 ${width} ${Math.round(size * 1.6)}`}
+  role="img"
+  aria-label="WhyStack"
+  style={`--rule: ${rule}px;`}
+>
+  <text x="0" y={size} class="w" style={`font-size: ${size}px`}>w</text>
+  <text x={Math.round(size * 0.72)} y={size} class="s" style={`font-size: ${size * 1.3}px`}>S</text>
+
+  <!-- lower bar -->
+  <rect x="0" y={size + rise + Math.round(size * 0.12)} width={lower} height={rule} class="bar-low" />
+  <!-- the riser -->
+  <rect x={lower} y={size + Math.round(size * 0.12)} width={rule} height={rise + rule} class="bar-low" />
+  <!-- upper bar, lifted by exactly the riser -->
+  <rect
+    x={lower + rule}
+    y={size + Math.round(size * 0.12)}
+    width={width - lower - rule}
+    height={rule}
+    class="bar-high"
+  />
+</svg>
+
+<style>
+  .wordmark {
+    display: block;
+  }
+
+  .w {
+    fill: var(--color-text-primary);
+    font-family: var(--font-ui);
+    font-weight: 700;
+  }
+
+  .s {
+    fill: var(--color-accent);
+    font-family: var(--font-ui);
+    font-weight: 700;
+  }
+
+  .bar-low {
+    fill: var(--color-text-secondary);
+  }
+
+  .bar-high {
+    fill: var(--color-accent);
+  }
+</style>
