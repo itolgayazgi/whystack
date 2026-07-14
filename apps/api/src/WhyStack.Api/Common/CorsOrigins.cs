@@ -53,6 +53,19 @@ public static class CorsOrigins
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
+        if (origins.Length == 0)
+        {
+            // An API with no origins is not a smaller API — it is one the WEBSITE cannot use. It starts, it
+            // reports healthy, it serves the phone flawlessly (a native client needs no origin), and every
+            // browser request is blocked before it leaves the machine. The only evidence is a console
+            // message on a user's laptop. We have already paid for that lesson once.
+            throw new InvalidOperationException(
+                "No CORS origins are configured, so no browser can call this API — the website would be "
+                + $"unable to sign anybody in. Set '{ShippedKey}' for this environment (as an environment "
+                + "variable: Cors__AllowedOrigins__0=https://whystack.dev), or "
+                + $"'{LocalKey}' for a machine-local origin.");
+        }
+
         foreach (var origin in origins)
         {
             Validate(origin);

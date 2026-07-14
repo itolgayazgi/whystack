@@ -35,6 +35,37 @@ public class CorsOriginsTests
     }
 
     /// <summary>
+    /// The base file ships NO origin, and each environment names its own. This is the layering the real host
+    /// performs: appsettings.json, then appsettings.{Environment}.json on top.
+    /// </summary>
+    [Fact]
+    public void An_environment_file_supplies_the_origin_the_base_file_withholds()
+    {
+        var origins = CorsOrigins.Resolve(Configuration(
+            appsettings: [],                                                // the base ships an empty array
+            userSecrets: new() { ["Cors:AllowedOrigins:0"] = "http://localhost:3000" }));  // Development.json
+
+        Assert.Equal(["http://localhost:3000"], origins);
+    }
+
+    /// <summary>
+    /// No origins means no browser can reach this API — and it would look completely healthy.
+    /// </summary>
+    /// <remarks>
+    /// It starts, it reports healthy, and it serves the PHONE perfectly, because a native client needs no
+    /// origin. Only the website is dead, and only in a browser console on somebody else's machine. A
+    /// deployment that forgets Cors__AllowedOrigins__0 must not be allowed to look like a working one.
+    /// </remarks>
+    [Fact]
+    public void No_origins_at_all_fails_at_startup()
+    {
+        var error = Assert.Throws<InvalidOperationException>(
+            () => CorsOrigins.Resolve(Configuration([])));
+
+        Assert.Contains("Cors__AllowedOrigins__0", error.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// THE BUG, PRESERVED. This is not a test of our code — it is a test of .NET's, and it is here because
     /// nobody believes it until they see it.
     /// </summary>

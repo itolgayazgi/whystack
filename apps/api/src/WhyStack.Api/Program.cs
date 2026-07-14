@@ -4,6 +4,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 using WhyStack.Api.Common;
 using WhyStack.Api.Endpoints;
 using WhyStack.Infrastructure;
@@ -11,7 +12,7 @@ using WhyStack.Infrastructure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecurityTransformer>());
 
 // Infrastructure registers the DbContext, the identity services and the use cases. No EF Core type, no
 // provider and no connection string appears in this file — the API is the composition root, not a
@@ -187,9 +188,18 @@ app.UseExceptionHandler(handler => handler.Run(async context =>
 }));
 app.UseStatusCodePages();
 
+// DEVELOPMENT ONLY, and deliberately so. The OpenAPI document is a complete map of this API — every route,
+// every field, every validation rule. That is a gift to whoever is looking for a way in, and it buys a
+// production deployment nothing: nobody browses a live API by hand.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    // The explorer at http://localhost:5207/scalar/v1 — the OpenAPI document is JSON, and JSON is not a
+    // thing a human tries an endpoint from.
+    app.MapScalarApiReference(options => options
+        .WithTitle("WhyStack API")
+        .AddPreferredSecuritySchemes("Bearer"));
 }
 
 app.UseHttpsRedirection();
