@@ -372,4 +372,209 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                         new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
             ]);
     }
+
+    /// <summary>
+    /// Every topic, at every stage. The editor's workbench.
+    /// </summary>
+    /// <remarks>
+    /// This is the ONE list that shows drafts, and the endpoint serving it is behind the editor roles. The
+    /// reader's list (<c>ITopicRepository.ListAsync</c>) refuses them, and the two must not be merged: a
+    /// single method with an <c>includeDrafts</c> flag is one forgotten argument away from serving every
+    /// half-written topic in the database to the internet.
+    ///
+    /// It does NOT carry the prose. An editor picking a topic from a list needs a title and a status, not
+    /// fifteen sections of Markdown they are not going to read.
+    /// </remarks>
+    public async Task<IReadOnlyList<StudioTopic>> StudioListAsync(CancellationToken cancellationToken)
+    {
+        var rows = await context.Topics
+            .AsNoTracking()
+            .OrderByDescending(topic => topic.UpdatedAtUtc ?? topic.CreatedAtUtc)
+            .Select(topic => new
+            {
+                topic.Id,
+                topic.StableKey,
+                topic.Slug,
+                topic.DefaultTitle,
+                DomainName = topic.Domain!.Name,
+                topic.DefaultLevel,
+                topic.UpdatedAtUtc,
+
+                Version = topic.Versions
+                    .OrderByDescending(version => version.VersionNumber)
+                    .Select(version => new
+                    {
+                        version.Status,
+                        Languages = version.Sections.Select(section => section.LanguageCode).Distinct().ToList(),
+                        Ecosystems = version.Implementations
+                            .Select(implementation => implementation.Ecosystem!.Name)
+                            .ToList(),
+                    })
+                    .First(),
+            })
+            .ToListAsync(cancellationToken);
+
+        return
+        [
+            .. rows.Select(row => new StudioTopic(
+                row.Id,
+                row.StableKey,
+                row.Slug,
+                row.DefaultTitle,
+                row.DomainName,
+                row.DefaultLevel.ToString(),
+                row.Version.Status.ToString(),
+                row.UpdatedAtUtc,
+                row.Version.Languages,
+                row.Version.Ecosystems))
+        ];
+    }
+
+    /// <summary>One topic, in full, for editing.</summary>
+    /// <remarks>
+    /// Everything, in every language, in every ecosystem — because an editor needs both languages side by
+    /// side (that is how a drifted translation is noticed) and every implementation at once. The reading
+    /// endpoint deliberately gives none of that.
+    /// </remarks>
+    public async Task<EditableTopic?> EditableAsync(Guid topicId, CancellationToken cancellationToken)
+    {
+        var topic = await context.Topics
+            .AsNoTracking()
+            .Include(candidate => candidate.Domain)
+            .Include(candidate => candidate.OutgoingRelationships).ThenInclude(edge => edge.ToTopic)
+            .Include(candidate => candidate.Versions).ThenInclude(version => version.Sections)
+            .Include(candidate => candidate.Versions).ThenInclude(version => version.Translations)
+            .Include(candidate => candidate.Versions).ThenInclude(version => version.SupportedVersions)
+            .Include(candidate => candidate.Versions)
+                .ThenInclude(version => version.Implementations)
+                .ThenInclude(implementation => implementation.Ecosystem)
+            .Include(candidate => candidate.Versions)
+                .ThenInclude(version => version.Implementations)
+                .ThenInclude(implementation => implementation.Sections)
+            .SingleOrDefaultAsync(candidate => candidate.Id == topicId, cancellationToken);
+
+        if (topic is null) return null;
+
+        var version = topic.Versions.OrderByDescending(candidate => candidate.VersionNumber).First();
+
+        return new EditableTopic(
+            topic.Id,
+            topic.StableKey,
+            topic.Slug,
+            topic.Domain!.Key,
+            topic.Category.ToString(),
+            topic.DefaultLevel.ToString(),
+            version.Status.ToString(),
+            version.EstimatedReadingMinutes,
+            version.LastReviewedOn,
+            [.. version.SupportedVersions.Select(supported => supported.Version)],
+
+            [.. version.Translations.Select(translation => new EditableTranslation(
+                translation.LanguageCode,
+                translation.Title,
+                translation.Summary,
+                translation.Status.ToString()))],
+
+            [.. version.Sections
+                .OrderBy(section => section.SortOrder)
+                .Select(section => new EditableSection(
+                    section.SectionTypeKey, section.LanguageCode, section.Markdown))],
+
+            [.. version.Implementations.Select(implementation => new EditableImplementation(
+                implementation.Ecosystem!.Key,
+                null,
+                implementation.SupportedVersions,
+                [.. implementation.Sections
+                    .OrderBy(section => section.SortOrder)
+                    .Select(section => new EditableSection(
+                        section.SectionTypeKey, section.LanguageCode, section.Markdown))]))],
+
+            // Keys, not links. The reader gets a title and a slug because they are going to click it; the
+            // editor gets the key, because they are going to change it.
+            [.. topic.OutgoingRelationships.Select(edge => new EditableRelationship(
+                edge.Type.ToString(),
+                edge.ToTopic!.StableKey,
+                edge.ToTopic.DefaultTitle))],
+
+            Convert.ToBase64String(version.RowVersion ?? []),
+
+            // Filled by the handler, which owns the rules. The repository does not validate — it would be a
+            // second place that knows what "valid" means.
+            []);
+    }
+
+    public async Task<IReadOnlyList<EditableTerm>> TermsAsync(CancellationToken cancellationToken)
+    {
+        var terms = await context.Terms
+            .AsNoTracking()
+            .Include(term => term.Explanations)
+            .OrderBy(term => term.Text)
+            .ToListAsync(cancellationToken);
+
+        return
+        [
+            .. terms.Select(term => new EditableTerm(
+                term.Id,
+                term.Text,
+                Split(term.Aliases),
+                Split(term.ForbiddenTranslations),
+                [.. term.Explanations.Select(explanation =>
+                    new TermExplanationModel(explanation.LanguageCode, explanation.Text))]))
+        ];
+    }
+
+    public async Task<Guid> SaveTermAsync(SaveTermCommand command, CancellationToken cancellationToken)
+    {
+        var term = command.Id is null
+            ? null
+            : await context.Terms
+                .Include(candidate => candidate.Explanations)
+                .SingleOrDefaultAsync(candidate => candidate.Id == command.Id, cancellationToken);
+
+        if (term is null)
+        {
+            term = new Term { Id = Guid.CreateVersion7(), Text = command.Text };
+            context.Terms.Add(term);
+        }
+        else
+        {
+            term.Text = command.Text;
+
+            // Replaced, not merged. An explanation the editor deleted must disappear — otherwise it lives on
+            // in the glossary, in a language nobody is maintaining.
+            await context.TermExplanations
+                .Where(explanation => explanation.TermId == term.Id)
+                .ExecuteDeleteAsync(cancellationToken);
+        }
+
+        term.Aliases = string.Join(';', command.Aliases);
+        term.ForbiddenTranslations = string.Join(';', command.ForbiddenTranslations);
+
+        foreach (var explanation in command.Explanations)
+        {
+            context.TermExplanations.Add(new TermExplanation
+            {
+                Id = Guid.CreateVersion7(),
+                TermId = term.Id,
+                LanguageCode = explanation.LanguageCode,
+                Text = explanation.Text,
+            });
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return term.Id;
+    }
+
+    public async Task<bool> DeleteTermAsync(Guid termId, CancellationToken cancellationToken)
+    {
+        var deleted = await context.Terms
+            .Where(term => term.Id == termId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        return deleted > 0;
+    }
+
+    private static IReadOnlyList<string> Split(string value) =>
+        value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }

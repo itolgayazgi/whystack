@@ -210,5 +210,6 @@ public static class DependencyInjection
         services.AddScoped<GetTopicHandler>();
         services.AddScoped<SaveTopicHandler>();
         services.AddScoped<TransitionTopicHandler>();
+        services.AddScoped<ValidateTopicHandler>();
     }
 }

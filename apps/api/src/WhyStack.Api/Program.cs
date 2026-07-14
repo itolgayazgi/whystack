@@ -143,7 +143,43 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-app.UseExceptionHandler();
+// A malformed request body is the CALLER'S problem, not ours — and a 500 says the opposite.
+//
+// ASP.NET Core throws BadHttpRequestException when it cannot bind JSON, and the default exception handler
+// turns that into a 500: "an error occurred while processing your request". That is a lie with a real cost.
+// A client seeing 500 retries, pages somebody, and looks for a bug in the server; a client seeing 400 fixes
+// its payload. Found by sending invalid UTF-8 to the authoring endpoint.
+//
+// `08` mandates Problem Details and forbids custom error shapes, so the answer is a Problem Details 400 —
+// with the parser's own message, because "unexpected character at position 104" is the only thing that
+// actually helps.
+app.UseExceptionHandler(handler => handler.Run(async context =>
+{
+    var feature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+
+    if (feature?.Error is not Microsoft.AspNetCore.Http.BadHttpRequestException badRequest)
+    {
+        // Anything else is genuinely ours. Let the default handler answer it — and keep the stack out of the
+        // response, which it already does.
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+
+        await Results
+            .Problem(statusCode: StatusCodes.Status500InternalServerError, title: "An unexpected error occurred.")
+            .ExecuteAsync(context);
+
+        return;
+    }
+
+    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+    await Results
+        .Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: "The request body could not be read.",
+            detail: badRequest.Message,
+            instance: context.Request.Path)
+        .ExecuteAsync(context);
+}));
 app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())

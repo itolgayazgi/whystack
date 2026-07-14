@@ -2,6 +2,7 @@ using System.Security.Claims;
 using WhyStack.Api.Common;
 using WhyStack.Application.Content;
 using WhyStack.Application.Content.Authoring;
+using WhyStack.Application.Content.Validation;
 using WhyStack.Domain.Identity;
 
 namespace WhyStack.Api.Endpoints;
@@ -25,6 +26,16 @@ public sealed record SaveTopicRequest(
     string? RowVersion);
 
 public sealed record TransitionRequest(string? Status, string? Note);
+
+/// <summary>Validate without saving. `forReview` applies the completeness rules a draft is exempt from.</summary>
+public sealed record ValidateRequest(SaveTopicRequest Topic, bool? ForReview);
+
+public sealed record SaveTermRequest(
+    Guid? Id,
+    string? Text,
+    IReadOnlyList<string>? Aliases,
+    IReadOnlyList<string>? ForbiddenTranslations,
+    IReadOnlyList<TermExplanationModel>? Explanations);
 
 public static class AuthoringEndpoints
 {
@@ -57,6 +68,46 @@ public static class AuthoringEndpoints
                 "What the form is built from. The topic list includes DRAFTS — relating a new topic to one "
                 + "you are still writing is the normal case.");
 
+        authoring.MapGet("/topics", StudioListAsync)
+            .WithName("ListTopicsForStudio")
+            .WithSummary("Every topic, at every stage — the editor's workbench.")
+            .WithDescription(
+                "This is the ONE list that shows drafts. The reader's list refuses them, and the two are "
+                + "separate methods on purpose: one endpoint with an includeDrafts flag is one forgotten "
+                + "argument away from serving every half-written topic to the internet.");
+
+        authoring.MapGet("/topics/{id:guid}", EditableAsync)
+            .WithName("GetTopicForEditing")
+            .WithSummary("One topic, in full, for editing.")
+            .WithDescription(
+                "Every language, every implementation, and the graph as stable KEYS rather than resolved "
+                + "links — an editor is about to change them. Its `problems` list is what is wrong with it "
+                + "right now: a to-do list, not a rejection.");
+
+        authoring.MapPost("/validate", ValidateAsync)
+            .WithName("ValidateTopic")
+            .WithSummary("Validate a draft without saving it.")
+            .WithDescription(
+                "The same rules the save runs, so an editor sees a problem WHILE TYPING rather than after. "
+                + "This is a courtesy — the gate is the save and the transition. Pass `forReview: true` to "
+                + "apply the stricter completeness rules a topic must pass to leave the author's hands.");
+
+        authoring.MapGet("/terms", TermsAsync)
+            .WithName("ListTerms")
+            .WithSummary("The terminology dictionary.");
+
+        authoring.MapPost("/terms", SaveTermAsync)
+            .WithName("SaveTerm")
+            .WithSummary("Create or replace an approved term.")
+            .WithDescription(
+                "The TERM is preserved; only its explanation is translated. `forbiddenTranslations` names the "
+                + "mis-translations by name — a translator rarely drops a term outright, it keeps it in the "
+                + "heading and paraphrases it for five paragraphs, and only naming the paraphrase catches that.");
+
+        authoring.MapDelete("/terms/{id:guid}", DeleteTermAsync)
+            .WithName("DeleteTerm")
+            .WithSummary("Remove a term from the dictionary.");
+
         authoring.MapPost("/topics", SaveAsync)
             .WithName("SaveTopic")
             .WithSummary("Create or replace a topic draft.")
@@ -86,6 +137,134 @@ public static class AuthoringEndpoints
         return Results.Ok(new { data = catalog, metadata = Metadata(http) });
     }
 
+    private static async Task<IResult> StudioListAsync(
+        IContentAuthoringRepository repository,
+        HttpContext http,
+        CancellationToken cancellationToken) =>
+        Results.Ok(new
+        {
+            data = await repository.StudioListAsync(cancellationToken),
+            metadata = Metadata(http),
+        });
+
+    private static async Task<IResult> EditableAsync(
+        Guid id,
+        IContentAuthoringRepository repository,
+        ITopicRepository topics,
+        HttpContext http,
+        CancellationToken cancellationToken)
+    {
+        var topic = await repository.EditableAsync(id, cancellationToken);
+
+        if (topic is null)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Not found",
+                detail: "No such topic.");
+        }
+
+        // The problems are computed HERE, by the layer that owns the rules — not by the repository, which
+        // would be a second place that knows what "valid" means (ADR-0020, Decision 3).
+        var terminology = await topics.TerminologyAsync(cancellationToken);
+
+        var problems = new TopicValidator(terminology).ValidateDraft(new TopicDraft(
+            "en",
+            [
+                .. topic.Sections.Select(section =>
+                    new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
+                .. topic.Implementations
+                    .SelectMany(implementation => implementation.Sections)
+                    .Select(section =>
+                        new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
+            ]));
+
+        return Results.Ok(new
+        {
+            data = topic with { Problems = problems },
+            metadata = Metadata(http),
+        });
+    }
+
+    private static async Task<IResult> ValidateAsync(
+        ValidateRequest request,
+        ValidateTopicHandler handler,
+        HttpContext http,
+        CancellationToken cancellationToken)
+    {
+        var command = ToCommand(request.Topic);
+
+        var result = await handler.HandleAsync(command, request.ForReview ?? false, cancellationToken);
+
+        return result.IsSuccess
+            ? Results.Ok(new { data = result.Value, metadata = Metadata(http) })
+            : result.Error!.ToProblem(http);
+    }
+
+    private static async Task<IResult> TermsAsync(
+        IContentAuthoringRepository repository,
+        HttpContext http,
+        CancellationToken cancellationToken) =>
+        Results.Ok(new
+        {
+            data = await repository.TermsAsync(cancellationToken),
+            metadata = Metadata(http),
+        });
+
+    private static async Task<IResult> SaveTermAsync(
+        SaveTermRequest request,
+        IContentAuthoringRepository repository,
+        HttpContext http,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Text))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status422UnprocessableEntity,
+                title: "Validation failed",
+                detail: "A term needs its canonical spelling. That exact string is what must survive translation.");
+        }
+
+        var id = await repository.SaveTermAsync(
+            new SaveTermCommand(
+                request.Id,
+                request.Text.Trim(),
+                request.Aliases ?? [],
+                request.ForbiddenTranslations ?? [],
+                request.Explanations ?? []),
+            cancellationToken);
+
+        return Results.Ok(new { data = new { id }, metadata = Metadata(http) });
+    }
+
+    private static async Task<IResult> DeleteTermAsync(
+        Guid id,
+        IContentAuthoringRepository repository,
+        CancellationToken cancellationToken)
+    {
+        var deleted = await repository.DeleteTermAsync(id, cancellationToken);
+
+        // 204 either way. Deleting something that is not there is not an error — the caller wanted it gone,
+        // and it is gone. A 404 here would make a retry after a dropped connection look like a failure.
+        return deleted ? Results.NoContent() : Results.NoContent();
+    }
+
+    /// <summary>The request shape, mapped to the command. One place, so the two endpoints cannot drift.</summary>
+    private static SaveTopicCommand ToCommand(SaveTopicRequest request) => new(
+        request.Id,
+        request.StableKey ?? string.Empty,
+        request.Slug ?? string.Empty,
+        request.DomainKey ?? string.Empty,
+        request.Category ?? "Concept",
+        request.Level ?? string.Empty,
+        request.EstimatedReadingMinutes ?? 0,
+        request.SupportedVersions ?? [],
+        request.Translations ?? [],
+        request.Sections ?? [],
+        request.Implementations ?? [],
+        request.Relationships ?? [],
+        request.RowVersion);
+
     private static async Task<IResult> SaveAsync(
         SaveTopicRequest request,
         ClaimsPrincipal principal,
@@ -93,24 +272,7 @@ public static class AuthoringEndpoints
         HttpContext http,
         CancellationToken cancellationToken)
     {
-        var editorId = principal.Id();
-
-        var command = new SaveTopicCommand(
-            request.Id,
-            request.StableKey ?? string.Empty,
-            request.Slug ?? string.Empty,
-            request.DomainKey ?? string.Empty,
-            request.Category ?? "Concept",
-            request.Level ?? string.Empty,
-            request.EstimatedReadingMinutes ?? 0,
-            request.SupportedVersions ?? [],
-            request.Translations ?? [],
-            request.Sections ?? [],
-            request.Implementations ?? [],
-            request.Relationships ?? [],
-            request.RowVersion);
-
-        var result = await handler.HandleAsync(command, editorId, cancellationToken);
+        var result = await handler.HandleAsync(ToCommand(request), principal.Id(), cancellationToken);
 
         return result.IsSuccess
             ? Results.Ok(new { data = result.Value, metadata = Metadata(http) })

@@ -3,7 +3,7 @@ using WhyStack.Application.Content.Validation;
 
 namespace WhyStack.Application.Content.Authoring;
 
-/// <summary>Writes a topic. EF Core stays on the far side of this line.</summary>
+/// <summary>Reads and writes content for the studio. EF Core stays on the far side of this line.</summary>
 public interface IContentAuthoringRepository
 {
     Task<SaveOutcome> SaveAsync(SaveTopicCommand command, Guid editorId, CancellationToken cancellationToken);
@@ -15,7 +15,21 @@ public interface IContentAuthoringRepository
         Guid reviewerId,
         CancellationToken cancellationToken);
 
+    /// <summary>The sections, flattened — what the validator needs and nothing more.</summary>
     Task<TopicDraft?> DraftAsync(Guid topicId, CancellationToken cancellationToken);
+
+    /// <summary>Every topic, at every stage. The editor's workbench, not a reader's list.</summary>
+    Task<IReadOnlyList<StudioTopic>> StudioListAsync(CancellationToken cancellationToken);
+
+    /// <summary>One topic, in full, for editing: every language, every implementation, the graph as keys.</summary>
+    Task<EditableTopic?> EditableAsync(Guid topicId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<EditableTerm>> TermsAsync(CancellationToken cancellationToken);
+
+    Task<Guid> SaveTermAsync(SaveTermCommand command, CancellationToken cancellationToken);
+
+    /// <summary>False when the term does not exist. Deleting one that is not there is not an error.</summary>
+    Task<bool> DeleteTermAsync(Guid termId, CancellationToken cancellationToken);
 }
 
 public sealed record SaveOutcome(Guid Id, string Status, string RowVersion, bool Conflict, string? Error);
