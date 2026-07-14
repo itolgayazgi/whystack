@@ -2,161 +2,177 @@
 
 ## Summary
 
-Every C# variable has a type, and that type decides one thing above all others: whether the variable
-holds the data itself or a reference to it. That single distinction — Value Type versus Reference Type
-— explains most of the surprises beginners meet, and a fair number that catch experienced developers
-too.
+Every C# variable holds one of two things: the data, or a way to reach the data. Which one decides what
+happens when you assign it — and getting that wrong produces the first bug that will genuinely confuse
+you. This topic starts with that bug.
 
 ## Learning Objectives
 
-- Say what a variable actually holds.
-- Distinguish a Value Type from a Reference Type, and predict what assignment does to each.
-- Explain where each one lives, and who cleans it up.
-- Recognise when `null` is possible and when the compiler has ruled it out.
+- Predict what assignment does, before running it.
+- Say what a variable actually holds, for any type.
+- Explain why a method you called changed an object you never asked it to change.
+- Choose `class` or `struct` for a reason you can state.
 
 ## Why This Topic Matters
 
-"I changed the copy and the original changed too" is one of the first genuinely confusing bugs anybody
-writes. It is not a bug in the language. It is the Value Type / Reference Type distinction, met for the
-first time, without a model to explain it.
+"I changed the copy and the original changed too" is the first bug that makes a beginner doubt the
+language. It is not a bug in the language. It is one arrow, and nobody drew it for them.
 
 ## Definition
 
-A variable is a named location holding a value of a declared type. In C# the type is fixed at compile
-time and cannot change: the variable may take a new value, never a new type.
+A variable is a named location holding a value of a declared type. The type is fixed at compile time: the
+variable may take a new value, never a new type.
 
 ## Why It Exists
 
-The distinction exists because two different things are cheap in two different situations.
+Run this in your head. What does it print?
 
-An `int` is four bytes. Copying it is nearly free, and giving every one of them an identity — an
-address, a lifetime, a collector that must track it — would cost far more than the data itself.
+```csharp
+var first  = new List<string> { "x" };
+var second = first;
 
-A `Customer` with fifteen fields and a list of orders is not cheap to copy, and usually you do not want
-to: two parts of the program are meant to be looking at *the same customer*, not at two customers that
-happen to agree.
+second.Add("y");
 
-So C# offers both. A Value Type is the data. A Reference Type is a way to reach the data.
+Console.WriteLine(first.Count);
+```
+
+Most people say **1**. `second` is a copy, you added to the copy, so `first` should still have one item.
+
+It prints **2**.
+
+Now the same shape, with an `int`:
+
+```csharp
+int a = 1;
+int b = a;
+
+b = 2;
+
+Console.WriteLine(a);      // 1 — exactly what you expected.
+```
+
+Same syntax. Same assignment. Opposite result.
+
+This is not an inconsistency and it is not something to memorise. It is one rule, applied twice — and
+until you see the rule, C# will keep surprising you.
 
 ## Problem It Solves
 
-Without the distinction you would pick one behaviour for everything, and both choices are bad.
+Assignment copies **what is in the variable**.
 
-Copy everything, and passing an object to a method becomes expensive and loses identity — you could
-never modify "the" order, only your own copy of it.
+For the `int`, what is in the variable is `1`. Copy it, and you have two independent ones.
 
-Reference everything, and an `int` in a tight loop pays for an allocation, an indirection and a visit
-from the Garbage Collector, for four bytes of data.
+For the `List`, what is in the variable is **not the list**. It is a reference — an arrow, pointing at a
+list that lives somewhere else. Copy the arrow and you have two arrows pointing at **one list**.
+
+Nothing unusual happened in the first snippet. Assignment did exactly the same thing both times.
+
+So why does C# have both? Because a single rule would be wrong for one of them.
+
+Copy everything, and passing a `Customer` to a method means copying fifteen fields and a list of orders.
+Worse: you could never modify *the* customer, only your own copy of one.
+
+Reference everything, and an `int` in a tight loop pays for an allocation, an indirection and a visit from
+the `Garbage Collector` — for four bytes of data.
 
 ## Core Mental Model
 
-Two boxes, and what is inside them:
+Two boxes. What is inside them is the whole topic.
 
 ```text
-Value Type                     Reference Type
+Value Type                        Reference Type
 
-  int x = 42                     var a = new Customer()
+  int x = 42                        var a = new Customer()
 
-  ┌────────┐                     ┌────────┐        ┌──────────────┐
-  │   42   │                     │  ref ──┼───────▶│  Customer    │
-  └────────┘                     └────────┘        │  Name: "Ada" │
-   the data                       a reference      └──────────────┘
-                                                     the data
+  ┌────────┐                        ┌────────┐        ┌──────────────┐
+  │   42   │                        │  ref ──┼───────▶│  Customer    │
+  └────────┘                        └────────┘        │  Name: "Ada" │
+   the data itself                   an arrow         └──────────────┘
+                                                        the data
 
-  Stack                          Stack               Heap
-  gone when the method ends      gone when the       collected when nothing
-                                 method ends         can reach it any more
+  Stack                             Stack               Heap
+  gone when the method ends         gone when the       collected once nothing
+                                    method ends         can reach it
 ```
 
-Assignment always copies **what is in the box**. For a Value Type, that is the data. For a Reference
-Type, that is the arrow — and both variables now point at the same object.
+Assignment copies **the box's contents**. For a `Value Type` that is the data. For a `Reference Type` that
+is the arrow.
 
-That is the whole thing. Every "why did the original change" question is that arrow.
+Every "why did the original change" question is that arrow.
 
 ## Core Concepts
 
-**Value Type.** `int`, `double`, `bool`, `char`, `DateTime`, any `struct`, any `enum`. The variable
-holds the data. Assignment copies it. It lives on the Stack when it is a local — and it disappears when
-the method returns, without the Garbage Collector being involved at all.
+**Value Type** — `int`, `double`, `bool`, `DateTime`, every `struct`, every `enum`. The variable holds the
+data. Assignment copies it. As a local it lives on the `Stack` and disappears when the method returns — the
+`Garbage Collector` is not involved at all.
 
-**Reference Type.** `class`, `string`, arrays, `List<T>`, `record` (unless declared as a `record
-struct`). The variable holds a reference. Assignment copies the reference. The object lives on the Heap
-and is reclaimed by the Garbage Collector once nothing can reach it.
+**Reference Type** — `class`, `string`, arrays, `List<T>`, `record`. The variable holds a reference.
+Assignment copies the reference. The object lives on the `Heap` and is reclaimed once nothing can reach it.
 
-**`null`.** Only a Reference Type can be `null` — a reference to nothing. A Value Type always has a
-value, which is why `int x;` is zero and not "empty". If you want an `int` that might be missing, say
-so: `int?`.
-
-**Type inference.** `var` asks the compiler to write the type for you. It is still static: the type is
-fixed at compile time, and it is not `dynamic`.
+**`null`** — only a `Reference Type` can be `null`: an arrow pointing at nothing. A `Value Type` always has
+a value, which is why `int x;` is zero and not "empty". If you want an `int` that might be missing, say so:
+`int?`.
 
 ## Basic Example
 
 ```csharp
-// Value Type: the copy is a copy.
+// Value Type: the copy really is a copy.
 int a = 1;
 int b = a;
 b = 2;
 // a is still 1.
 
 // Reference Type: the copy is a second arrow to the same object.
-var first = new List<string> { "x" };
+var first  = new List<string> { "x" };
 var second = first;
 second.Add("y");
-// first now has TWO items — because there was only ever one list.
+// first has TWO items — there was only ever one list.
 ```
-
-Nothing unusual happened in the second block. `second = first` copied what was in the box, exactly as
-it did for the `int`. What was in the box was a reference.
 
 ## Real-World Scenario
 
-A method takes a `Customer`, "validates" it, and — helpfully — trims the whitespace from the name
-before checking it.
+A method takes a `Customer`, validates it, and — helpfully — trims the whitespace from the name first.
 
-The caller never asked for its customer to be modified. But `Customer` is a Reference Type, the method
-was handed a reference, and the object it edited is the caller's object. The name is now trimmed
-everywhere, in code that never mentioned trimming.
+The caller never asked for its customer to be modified. But `Customer` is a `Reference Type`, the method
+was handed an arrow, and the object it edited is the caller's object.
 
-This is the most common form of the bug in real systems, and it is not exotic: it is one arrow,
-followed by a method that assumed it had a copy.
+The name is now trimmed everywhere, in code that never mentions trimming. This is the most common form of
+the bug in real systems: one arrow, and a method that assumed it had a copy.
 
 ## Best Practices
 
-- Ask what you want to happen on assignment *before* choosing `class` or `struct`. Identity → class.
+- Ask what you want assignment to *do* before choosing `class` or `struct`. Identity → class.
   Interchangeable data → struct.
-- Keep `struct`s small and immutable. A large mutable struct gets copied on every assignment and every
-  method call, and each copy can be modified independently — which is almost never what anybody meant.
-- Turn on nullable reference types and take the warnings seriously. They turn a run-time
-  `NullReferenceException` into a compile-time error, and that trade is always worth taking.
+- Keep `struct`s small and immutable.
+- Turn on nullable reference types. They turn a run-time `NullReferenceException` into a build error, and
+  that trade is always worth taking.
 - Do not mutate an object a caller handed you unless the method's name says it will.
 
 ## Common Mistakes
 
-**Thinking `string` behaves like a Value Type.** It is a Reference Type. It only *feels* like a value
-because it is immutable — you cannot change it in place, so nobody ever sees a shared modification. The
-arrow is still there.
+**Thinking `string` is a `Value Type`.** It is a `Reference Type`. It only *feels* like a value because it
+is immutable — you cannot change it in place, so nobody ever sees a shared modification. The arrow is still
+there.
 
-**A mutable `struct`.** Every copy can be changed independently, and copies are made everywhere —
-assignment, arguments, `foreach` iteration variables. The modification lands on a copy and vanishes,
-and it does so silently.
+**A mutable `struct`.** Copies are made everywhere: assignment, arguments, `foreach` variables. The
+modification lands on a copy and vanishes — silently.
 
-**Assuming `null` means "empty".** A `null` list is not an empty list. One of them has zero items; the
-other has no list, and iterating it throws.
-
-**Believing `var` hides the type.** It does not; the type is still fixed and still checked. It only
-hides the type *from the reader* — which is why an unclear `var` is a readability problem, not a
-correctness one.
+**Reading `null` as "empty".** A `null` list is not an empty list. One has zero items; the other has no
+list, and iterating it throws.
 
 ## Trade-Offs
 
 | Value Type | Reference Type |
 |---|---|
-| No allocation, no Garbage Collector pressure | Allocated on the Heap; collected later |
-| Copied on every assignment — cheap for 4 bytes, not for 400 | Copying is one reference, whatever the object's size |
-| Cannot be `null` unless you ask (`int?`) | Can be `null`, and will be, at the worst moment |
-| Two variables can never affect each other | Two variables can be the same object — which is often the point |
+| No allocation, no GC pressure | Allocated on the Heap |
+| Copied on every assignment | One reference copied, whatever the size |
+| Cannot be `null` unless you ask | Can be `null` — at the worst moment |
+| Two variables never affect each other | Two variables can be one object |
 
-The trade is between *identity* and *independence*, and neither is the right default. Reach for a
-Reference Type when two parts of the program genuinely mean the same thing; reach for a Value Type when
-they merely mean the same amount.
+The choice is between **identity** and **independence**. Reach for a `Reference Type` when two parts of the
+program genuinely mean the same thing; reach for a `Value Type` when they merely mean the same amount.
+
+:::note
+`string` is a `Reference Type` that behaves like a value. That is immutability doing the work — not a
+special case in the language.
+:::

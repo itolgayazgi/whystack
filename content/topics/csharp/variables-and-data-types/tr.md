@@ -2,94 +2,115 @@
 
 ## Summary
 
-Her C# değişkeninin bir tipi vardır ve o tip, her şeyden önce tek bir şeyi belirler: değişken verinin
-kendisini mi tutuyor, yoksa ona giden bir referansı mı? İşte bu tek ayrım — Value Type'a karşı
-Reference Type — yeni başlayanların karşılaştığı sürprizlerin çoğunu, deneyimli geliştiricileri
-yakalayanların da azımsanmayacak bir kısmını açıklar.
+Her C# değişkeni iki şeyden birini tutar: verinin kendisini, ya da veriye ulaşmanın bir yolunu. Hangisi
+olduğu, atama yaptığınızda ne olacağını belirler — ve bunu yanlış bilmek, sizi gerçekten şaşırtacak ilk
+hatayı doğurur. Bu konu o hatayla başlıyor.
 
 ## Learning Objectives
 
-- Bir değişkenin gerçekte ne tuttuğunu söylemek.
-- Value Type ile Reference Type'ı ayırt etmek ve atamanın her birine ne yaptığını önceden kestirmek.
-- Her birinin nerede yaşadığını ve arkasını kimin topladığını açıklamak.
-- `null`'ın ne zaman mümkün olduğunu, ne zaman derleyicinin bunu elediğini fark etmek.
+- Bir atamanın ne yapacağını, çalıştırmadan önce kestirmek.
+- Herhangi bir tip için, değişkenin gerçekte ne tuttuğunu söylemek.
+- Çağırdığınız bir metodun, değiştirmesini hiç istemediğiniz bir nesneyi neden değiştirdiğini açıklamak.
+- `class` mı `struct` mı sorusuna, gerekçesini söyleyebileceğiniz bir cevap vermek.
 
 ## Why This Topic Matters
 
-"Kopyayı değiştirdim, orijinal de değişti" — herkesin yazdığı ilk gerçekten kafa karıştırıcı
-hatalardan biridir. Bu, dildeki bir hata değildir. Value Type / Reference Type ayrımıyla, açıklayacak
-bir model olmadan, ilk kez karşılaşmaktır.
+"Kopyayı değiştirdim, orijinal de değişti" — yeni başlayan birinin dilden şüphe etmesine yol açan ilk
+hatadır. Dilde bir hata yok. Ortada tek bir ok var, ve kimse onu çizmemiş.
 
 ## Definition
 
-Değişken, bildirilmiş bir tipe ait bir değeri tutan, adlandırılmış bir konumdur. C#'ta tip derleme
-zamanında sabitlenir ve değişemez: değişken yeni bir değer alabilir, yeni bir tip asla alamaz.
+Değişken, bildirilmiş bir tipe ait bir değeri tutan, adlandırılmış bir konumdur. Tip derleme zamanında
+sabitlenir: değişken yeni bir değer alabilir, yeni bir tip asla alamaz.
 
 ## Why It Exists
 
-Ayrım vardır, çünkü iki farklı durumda iki farklı şey ucuzdur.
+Şunu kafanızda çalıştırın. Ne basar?
 
-Bir `int` dört bayttır. Kopyalanması neredeyse bedavadır; her birine bir kimlik vermek — bir adres, bir
-yaşam süresi, onu izlemek zorunda olan bir toplayıcı — verinin kendisinden çok daha pahalıya patlardı.
+```csharp
+var first  = new List<string> { "x" };
+var second = first;
 
-On beş alanı ve bir sipariş listesi olan bir `Customer` ise kopyalaması ucuz değildir ve genellikle
-kopyalamak da istemezsiniz: programın iki parçasının *aynı müşteriye* bakması beklenir, tesadüfen aynı
-şeyi söyleyen iki müşteriye değil.
+second.Add("y");
 
-C# bu yüzden ikisini de sunar. Value Type verinin kendisidir. Reference Type ise veriye ulaşmanın bir
-yoludur.
+Console.WriteLine(first.Count);
+```
+
+Çoğu kişi **1** der. `second` bir kopya, siz kopyaya ekleme yaptınız, `first` hâlâ tek elemanlı olmalı.
+
+**2** basar.
+
+Şimdi aynı şekil, bir `int` ile:
+
+```csharp
+int a = 1;
+int b = a;
+
+b = 2;
+
+Console.WriteLine(a);      // 1 — tam da beklediğiniz gibi.
+```
+
+Aynı sözdizimi. Aynı atama. Zıt sonuç.
+
+Bu bir tutarsızlık değil, ezberlenecek bir şey de değil. Tek bir kuralın iki kez uygulanması — ve o kuralı
+görene kadar C# sizi şaşırtmaya devam edecek.
 
 ## Problem It Solves
 
-Ayrım olmasaydı her şey için tek bir davranış seçmek zorunda kalırdınız ve iki seçenek de kötüdür.
+Atama, **değişkenin içindekini** kopyalar.
 
-Her şeyi kopyalarsanız, bir nesneyi metoda geçirmek pahalılaşır ve kimlik kaybolur — "o" siparişi asla
-değiştiremezsiniz, yalnızca kendi kopyanızı.
+`int` için değişkenin içindeki şey `1`. Kopyalayın, elinizde birbirinden bağımsız iki tane olur.
 
-Her şeyi referansla tutarsanız, sıkı bir döngüdeki bir `int`, dört baytlık veri için bir bellek
-ayırmanın, bir dolaylılığın ve Garbage Collector'ın ziyaretinin bedelini öder.
+`List` için değişkenin içindeki şey **liste değil.** Bir referans — başka bir yerde duran bir listeyi
+gösteren bir ok. Oku kopyalayın, elinizde **tek bir listeyi** gösteren iki ok olur.
+
+İlk kod parçasında olağandışı hiçbir şey olmadı. Atama, iki seferde de tam olarak aynı işi yaptı.
+
+Peki C# neden ikisini birden sunuyor? Çünkü tek bir kural, birinde yanlış olurdu.
+
+Her şeyi kopyalarsanız, bir `Customer`'ı metoda geçirmek on beş alanı ve bir sipariş listesini kopyalamak
+demektir. Daha kötüsü: "o" müşteriyi asla değiştiremezsiniz, yalnızca kendi kopyanızı.
+
+Her şeyi referansla tutarsanız, sıkı bir döngüdeki bir `int`, dört baytlık veri için bir bellek ayırmanın,
+bir dolaylılığın ve `Garbage Collector`'ın ziyaretinin bedelini öder.
 
 ## Core Mental Model
 
-İki kutu, ve içlerinde ne olduğu:
+İki kutu. İçlerinde ne olduğu, konunun tamamı.
 
 ```text
-Value Type                     Reference Type
+Value Type                        Reference Type
 
-  int x = 42                     var a = new Customer()
+  int x = 42                        var a = new Customer()
 
-  ┌────────┐                     ┌────────┐        ┌──────────────┐
-  │   42   │                     │  ref ──┼───────▶│  Customer    │
-  └────────┘                     └────────┘        │  Name: "Ada" │
-   verinin kendisi                bir referans     └──────────────┘
-                                                     verinin kendisi
+  ┌────────┐                        ┌────────┐        ┌──────────────┐
+  │   42   │                        │  ref ──┼───────▶│  Customer    │
+  └────────┘                        └────────┘        │  Name: "Ada" │
+   verinin kendisi                   bir ok           └──────────────┘
+                                                        verinin kendisi
 
-  Stack                          Stack               Heap
-  metot bitince gider            metot bitince       artık hiçbir şey erişemeyince
-                                 gider               toplanır
+  Stack                             Stack               Heap
+  metot bitince gider               metot bitince       ona hiçbir şey erişemeyince
+                                    gider               toplanır
 ```
 
-Atama her zaman **kutunun içindekini** kopyalar. Value Type için bu, verinin kendisidir. Reference Type
-için bu, oktur — ve artık iki değişken de aynı nesneyi gösterir.
+Atama **kutunun içindekini** kopyalar. `Value Type` için bu, verinin kendisi. `Reference Type` için bu, ok.
 
-Hepsi bu kadar. "Orijinal neden değişti" sorularının tamamı o oktur.
+"Orijinal neden değişti" sorularının tamamı o oktur.
 
 ## Core Concepts
 
-**Value Type.** `int`, `double`, `bool`, `char`, `DateTime`, her `struct`, her `enum`. Değişken verinin
-kendisini tutar. Atama onu kopyalar. Yerel bir değişkense Stack üzerinde yaşar — ve metot dönünce,
-Garbage Collector hiç işin içine girmeden yok olur.
+**Value Type** — `int`, `double`, `bool`, `DateTime`, her `struct`, her `enum`. Değişken verinin kendisini
+tutar. Atama onu kopyalar. Yerel bir değişkense `Stack` üzerinde yaşar ve metot dönünce yok olur —
+`Garbage Collector` hiç işin içine girmez.
 
-**Reference Type.** `class`, `string`, dizi'ler, `List<T>`, `record` (`record struct` olarak
-bildirilmediyse). Değişken bir referans tutar. Atama referansı kopyalar. Nesne Heap üzerinde yaşar ve
-ona hiçbir şey erişemez hale gelince Garbage Collector tarafından geri kazanılır.
+**Reference Type** — `class`, `string`, dizi, `List<T>`, `record`. Değişken bir referans tutar. Atama
+referansı kopyalar. Nesne `Heap` üzerinde yaşar ve ona hiçbir şey erişemez hale gelince geri kazanılır.
 
-**`null`.** Yalnızca bir Reference Type `null` olabilir — hiçbir şeye giden bir referans. Bir Value Type
+**`null`** — yalnızca bir `Reference Type` `null` olabilir: hiçbir şeyi göstermeyen bir ok. Bir `Value Type`
 her zaman bir değere sahiptir; `int x;` bu yüzden sıfırdır, "boş" değil. Eksik olabilecek bir `int`
 istiyorsanız bunu söyleyin: `int?`.
-
-**Tip çıkarımı.** `var`, derleyiciden tipi sizin yerinize yazmasını ister. Yine de statiktir: tip
-derleme zamanında sabitlenir ve `dynamic` değildir.
 
 ## Basic Example
 
@@ -101,64 +122,56 @@ b = 2;
 // a hâlâ 1.
 
 // Reference Type: kopya, aynı nesneye giden ikinci bir oktur.
-var first = new List<string> { "x" };
+var first  = new List<string> { "x" };
 var second = first;
 second.Add("y");
-// first artık İKİ eleman içeriyor — çünkü baştan beri tek bir liste vardı.
+// first artık İKİ elemanlı — baştan beri tek bir liste vardı.
 ```
-
-İkinci blokta olağandışı hiçbir şey olmadı. `second = first`, tıpkı `int` için yaptığı gibi, kutunun
-içindekini kopyaladı. Kutunun içindeki bir referanstı.
 
 ## Real-World Scenario
 
-Bir metot `Customer` alıyor, onu "doğruluyor" ve — yardımsever bir biçimde — kontrol etmeden önce
-isimdeki boşlukları kırpıyor.
+Bir metot `Customer` alıyor, onu doğruluyor ve — yardımsever bir biçimde — kontrol etmeden önce isimdeki
+boşlukları kırpıyor.
 
-Çağıran taraf, müşterisinin değiştirilmesini hiç istemedi. Ama `Customer` bir Reference Type, metoda
-bir referans verildi ve düzenlediği nesne çağıranın nesnesi. İsim artık her yerde kırpılmış durumda —
-kırpmadan hiç söz etmeyen kodun içinde.
+Çağıran taraf, müşterisinin değiştirilmesini hiç istemedi. Ama `Customer` bir `Reference Type`, metoda bir
+ok verildi, ve düzenlediği nesne çağıranın nesnesi.
 
-Gerçek sistemlerde bu hatanın en yaygın biçimidir ve egzotik değildir: bir ok, ve elinde kopya olduğunu
-sanan bir metot.
+İsim artık her yerde kırpılmış durumda — kırpmadan hiç söz etmeyen bir kodun içinde. Gerçek sistemlerde bu
+hatanın en yaygın biçimi budur: bir ok, ve elinde kopya olduğunu sanan bir metot.
 
 ## Best Practices
 
-- `class` mı `struct` mı diye seçmeden *önce*, atamada ne olmasını istediğinizi sorun. Kimlik → class.
+- `class` mı `struct` mı diye seçmeden önce, atamada ne olmasını istediğinizi sorun. Kimlik → class.
   Birbirinin yerine geçebilen veri → struct.
-- `struct`'ları küçük ve değişmez tutun. Büyük ve değiştirilebilir bir struct her atamada ve her metot
-  çağrısında kopyalanır, ve her kopya bağımsız olarak değiştirilebilir — ki bunu neredeyse hiç kimse
-  kastetmez.
-- Nullable reference type'ları açın ve uyarıları ciddiye alın. Çalışma zamanındaki bir
-  `NullReferenceException`'ı derleme zamanındaki bir hataya çevirirler; bu takas her zaman kârlıdır.
+- `struct`'ları küçük ve değişmez tutun.
+- Nullable reference type'ları açın. Çalışma zamanındaki bir `NullReferenceException`'ı derleme hatasına
+  çevirirler; bu takas her zaman kârlıdır.
 - Metodun adı söylemiyorsa, çağıranın size verdiği nesneyi değiştirmeyin.
 
 ## Common Mistakes
 
-**`string`'i Value Type gibi davranıyor sanmak.** O bir Reference Type'tır. Değermiş gibi *hissettirir*,
-çünkü değişmezdir — yerinde değiştiremezsiniz, dolayısıyla paylaşılan bir değişikliği kimse görmez. Ok
-hâlâ oradadır.
+**`string`'i `Value Type` sanmak.** O bir `Reference Type`. Değermiş gibi *hissettirir*, çünkü değişmezdir —
+yerinde değiştiremezsiniz, dolayısıyla paylaşılan bir değişikliği kimse görmez. Ok hâlâ oradadır.
 
-**Değiştirilebilir bir `struct`.** Her kopya bağımsız olarak değişebilir ve kopyalar her yerde
-çıkarılır — atama, argüman, `foreach` döngü değişkeni. Değişiklik bir kopyanın üzerine düşer ve
-kaybolur; hem de sessizce.
+**Değiştirilebilir bir `struct`.** Kopyalar her yerde çıkarılır: atama, argüman, `foreach` değişkeni.
+Değişiklik bir kopyanın üzerine düşer ve kaybolur — sessizce.
 
 **`null`'ı "boş" sanmak.** `null` bir liste, boş bir liste değildir. Birinin sıfır elemanı vardır;
 diğerinin listesi yoktur ve üzerinde dönmeye kalkarsanız hata fırlatır.
-
-**`var`'ın tipi gizlediğini sanmak.** Gizlemez; tip hâlâ sabittir ve hâlâ denetlenir. Yalnızca tipi
-*okuyucudan* gizler — anlaşılmayan bir `var` bu yüzden bir okunabilirlik problemidir, doğruluk problemi
-değil.
 
 ## Trade-Offs
 
 | Value Type | Reference Type |
 |---|---|
-| Bellek ayırma yok, Garbage Collector üzerinde baskı yok | Heap üzerinde ayrılır; sonra toplanır |
-| Her atamada kopyalanır — 4 bayt için ucuz, 400 bayt için değil | Kopyalanan tek bir referanstır, nesne ne kadar büyük olursa olsun |
-| Siz istemedikçe `null` olamaz (`int?`) | `null` olabilir — ve en kötü anda olur |
-| İki değişken birbirini asla etkileyemez | İki değişken aynı nesne olabilir — ki çoğu zaman amaç budur |
+| Bellek ayırma yok, GC baskısı yok | Heap üzerinde ayrılır |
+| Her atamada kopyalanır | Tek bir referans kopyalanır |
+| Siz istemedikçe `null` olamaz | `null` olabilir — en kötü anda |
+| İki değişken birbirini etkilemez | İki değişken tek nesne olabilir |
 
-Takas *kimlik* ile *bağımsızlık* arasındadır ve hiçbiri doğru varsayılan değildir. Programın iki parçası
-gerçekten aynı şeyi kastediyorsa Reference Type'a uzanın; yalnızca aynı miktarı kastediyorlarsa Value
-Type'a.
+Seçim **kimlik** ile **bağımsızlık** arasında. Programın iki parçası gerçekten aynı şeyi kastediyorsa
+`Reference Type`'a uzanın; yalnızca aynı miktarı kastediyorlarsa `Value Type`'a.
+
+:::note
+`string`, değer gibi davranan bir `Reference Type`. Bu işi yapan şey değişmezlik — dilde özel bir istisna
+değil.
+:::

@@ -45,5 +45,6 @@ export {
 
 export { type Problem, type ProblemRule, problem } from './validation/problem';
 export { validateGraph, validateUniqueKeys } from './validation/validate-graph';
+export { validateProse } from './validation/validate-prose';
 export { validateTerminology } from './validation/validate-terminology';
 export { validateTopic } from './validation/validate-topic';

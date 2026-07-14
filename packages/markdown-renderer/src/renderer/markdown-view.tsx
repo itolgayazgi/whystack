@@ -240,11 +240,20 @@ function CodeBlockView({
 }
 
 /**
- * A table, which scrolls sideways rather than squeezing.
+ * A table.
  *
- * `10` requires tables, and a phone is 390 points wide. Squeezing a three-column comparison into that
- * produces one word per line and a table nobody can read — which is worse than making them swipe, because
- * a swipe is a gesture people already know.
+ * <b>The reviewer's word for the first version was "göz yoran" — it hurts the eyes.</b> He was right, and
+ * the cause was mostly content: full sentences in two narrow columns, wrapping into tall stacks of text
+ * beside each other. No renderer rescues that, so the content validator now refuses it (ADR-0019): a cell
+ * holds a fact, not a paragraph.
+ *
+ * What the renderer owes a SHORT table is legibility, and that is three things:
+ *
+ *   · ROOM. Wide cells, generous padding. A comparison you have to squint at is not a comparison.
+ *   · A ROW YOU CAN FOLLOW. Zebra striping, because on a phone the eye loses the line between two columns
+ *     long before it loses the columns.
+ *   · NO VERTICAL RULES. They chop a row into pieces and are the single biggest source of visual noise in
+ *     a small table. The horizontal rules do the work; the vertical ones only add clutter.
  */
 function TableView({
   table,
@@ -263,14 +272,19 @@ function TableView({
     <View
       key={key}
       style={{
-        minWidth: 140,
+        minWidth: 200,
+        maxWidth: 320,
         flex: 1,
-        padding: space[12],
-        borderRightWidth: StyleSheet.hairlineWidth,
-        borderRightColor: color.border,
+        paddingHorizontal: space[16],
+        paddingVertical: space[12],
       }}
     >
-      <Text style={[textStyle(header ? 'label' : 'bodySmall'), header ? { color: color.textPrimary } : null]}>
+      <Text
+        style={[
+          textStyle(header ? 'label' : 'bodySmall'),
+          { color: header ? color.textPrimary : color.textSecondary },
+        ]}
+      >
         <Inlines inlines={inlines} theme={theme} onTopicPress={onTopicPress} />
       </Text>
     </View>
@@ -301,6 +315,9 @@ function TableView({
               flexDirection: 'row',
               borderTopWidth: StyleSheet.hairlineWidth,
               borderTopColor: color.border,
+              // Zebra. On a phone the eye loses the ROW long before it loses the column, and a stripe is
+              // the cheapest way to keep "you get this" next to "you give up that".
+              backgroundColor: rowIndex % 2 === 1 ? color.surfaceMuted : 'transparent',
             }}
           >
             {row.map((column, columnIndex) => cell(column, columnIndex, false))}

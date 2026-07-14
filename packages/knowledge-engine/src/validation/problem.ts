@@ -25,7 +25,8 @@ export type ProblemRule =
   | 'terminology.forbidden'
   | 'graph.unknown-topic'
   | 'graph.self-reference'
-  | 'link.broken';
+  | 'link.broken'
+  | 'prose.table-cell-too-long';
 
 export function problem(file: string, rule: ProblemRule, message: string): Problem {
   return { file, rule, message };

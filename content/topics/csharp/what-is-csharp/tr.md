@@ -2,155 +2,182 @@
 
 ## Summary
 
-C#, .NET üzerinde çalışan, statik tipli ve nesne yönelimli bir dildir. Siz C# yazarsınız, derleyici onu
-Intermediate Language'e çevirir, Common Language Runtime da program çalışırken bunu makine koduna
-dönüştürür. Bu üç adımı anlamak, dilin geri kalanında gizemli görünen şeylerin çoğunu açıklar.
+C#, yönetilen bir runtime üzerinde çalışan, statik tipli bir dildir. Bu cümle, yönetilen bir runtime
+olmadan neler olduğunu görmeden hiçbir işe yaramaz. O yüzden bu konu bir hatayla başlıyor — C#'ın
+yazılmasını imkânsız kıldığı bir hatayla — ve oradan geriye, o imkânsızlığı sağlayan mekanizmaya
+yürüyor.
 
 ## Learning Objectives
 
-- C#'ın neye derlendiğini ve gerçekte neyin çalıştığını açıklamak.
-- Common Language Runtime'ın rolünü tarif etmek.
-- Managed Code'un neden var olduğunu ve size ne kazandırdığını söylemek.
-- C#'ın hangi problemleri ortadan kaldırmak için tasarlandığını — ve hangilerini kaldırmadığını — ayırt
-  etmek.
+- C#'ın ortadan kaldırdığı bellek hatasını yazabilmek ve patladığında neye mal olduğunu söyleyebilmek.
+- Programınız çalıştığında aslında neyin eline teslim edildiğini, ve bunun neden CPU olmadığını açıklamak.
+- `Managed Code`'un size ne kazandırdığını ve karşılığında neyi aldığını söylemek.
+- Bu takasın sizin için ne zaman yanlış olduğuna karar verebilmek.
 
 ## Why This Topic Matters
 
-Sonradan gelen karışıklıkların neredeyse hepsi — bir `.dll`'in neden Linux'ta da çalıştığı, belleğin
-neden elle serbest bırakılmadığı, bir tip hatasının neden program başlamadan yakalandığı — yazdığınız
-kod ile onu çalıştıran CPU arasında olan bitene dayanır. Bunu bir kez oturtun, on iki başka konu
-şaşırtıcı olmaktan çıkar.
+Sonradan gelen bütün soruların cevabı aynı yerde: bir `.dll` neden Linux'ta da çalışıyor, belleği neden
+kimse serbest bırakmıyor, tip hatası neden programı değil derlemeyi durduruyor. Bunu bir kere oturtun,
+on iki başka konu şaşırtıcı olmaktan çıkar.
 
 ## Definition
 
-C#, Intermediate Language'e derlenen ve Common Language Runtime tarafından çalıştırılan genel amaçlı
-bir programlama dilidir. Statik tiplidir: her ifadenin tipi program çalışmadan önce bilinir ve
-denetlenir.
+C#, `Intermediate Language`'e derlenen ve `Common Language Runtime` tarafından çalıştırılan genel amaçlı
+bir dildir. Runtime, program çalışırken belleği yönetir ve `Type Safety`'yi zorlar.
 
 ## Why It Exists
 
-C#, alternatifleri istenmeyen bir takas dayattığı için ortaya çıktı.
+Koddan başlayalım. C ile:
 
-C ve C++ size hız ve denetim verdi, belleğin sorumluluğunu da size yükledi — yani koca bir güvenlik
-açığı sınıfını, sonsuza kadar, her satırda önlemek sizin işinizdi. Bu yükü sırtınızdan alan diller ise
-performanstan, çoğu zaman da statik tiplerden vazgeçti.
+```c
+char* name = malloc(64);
+strcpy(name, "Ada");
 
-C#, bellek yönetimi yükünü üstlenirken hızdan ve tip denetiminden vazgeçmemek üzere tasarlandı. Anlaşma
-budur ve adını koymaya değer, çünkü geri kalan her şey bundan çıkar.
+free(name);                 // işimiz bitti
+
+printf("%s\n", name);       // ...bir satır geç kaldık
+```
+
+Bu ne basar?
+
+Çoğu gün: `Ada`. Bellek serbest bırakıldı ama henüz kimse üstüne yazmadı, baytlar hâlâ orada duruyor.
+Program çalışır. Testler geçer. Yayına çıkar.
+
+Bazı günler: çöp. Bazı günler ise **allocator'ın bir sonraki çağırana verdiği şey** — ki bir web
+sunucusunda bu, başka birinin oturum token'ıdır.
+
+Ve çökmez. Asıl üzerinde durulması gereken yer burası. Çöken hata, bulduğunuz hatadır. Bu hata bir yıl
+boyunca kusursuz çalışır, sonra bir gün başka bir kullanıcının verisini log'a basar.
 
 ## Problem It Solves
 
-Somut problem *use-after-free ve ailesidir*: sarkan pointer'lar, çift serbest bırakma, sızıntılar,
-buffer taşmaları. Bunlar egzotik şeyler değildir. Yazılım tarihinin en çok istismar edilen hata
-sınıfıdır.
+Yukarıdaki hatanın bir adı var — *use-after-free* — ve bir ailesi: çift serbest bırakma, sarkan
+pointer, buffer taşması, sızıntı. Hepsi birlikte, yazılım tarihinde en çok istismar edilmiş hata
+sınıfını oluşturuyor.
 
-C# bunları, belleği serbest bırakmanıza hiç izin vermeyerek ortadan kaldırır. Programın artık
-erişemediği belleği Garbage Collector geri kazanır. Bunun ne zaman olacağı üzerindeki doğrudan
-denetimi kaybedersiniz; karşılığında yanlış olamayacağı garantisini alırsınız.
+Hepsinin kaynağı tek bir ayrıcalık: **belleğin ne zaman bırakılacağına siz karar veriyorsunuz.**
 
-## Historical Context
+C# bu ayrıcalığı elinizden alıyor. `free` diye bir şey yok. Erken çağıracağınız bir şey yok, iki kez
+çağıracağınız bir şey yok, unutacağınız bir şey yok. Yukarıdaki kod **yazılamıyor.**
 
-C# 2000 yılında, Microsoft tarafından, .NET ile birlikte ortaya çıktı. Java, Garbage Collector'a sahip
-yönetilen bir runtime'ın ciddi işler için kullanılabilir olduğunu çoktan göstermişti. C# bu önermeden
-yola çıktı ve o zamandan beri fonksiyonel dillerden fikirler devşirdi — pattern matching, record'lar,
-yer yer varsayılan olarak değişmezlik — ama bir C ya da Java programcısının ilk gün okuyabileceği bir
-dil olarak kaldı.
+Ve bu, konunun asıl sorusunu doğuruyor:
+
+> Belleği hiç serbest bırakmıyorsanız, kim bırakıyor?
 
 ## Core Mental Model
 
-Zihninizde üç katmanı, bu sırayla tutun:
+Birinin izliyor olması gerek. Çağırdığınız bir kütüphane değil — programınızın *altında* duran, hangi
+nesnelere hâlâ erişilebildiğini bilen bir şey.
+
+O şey `Common Language Runtime`. Kodunuz CPU üzerinde çalışmıyor. CLR üzerinde çalışıyor; CPU üzerinde
+çalışan CLR:
 
 ```text
-C# kaynak  ──derleyici──▶  Intermediate Language  ──JIT──▶  makine kodu
-   (.cs)                         (.dll)                    (CPU'nun çalıştırdığı)
+   C# kaynak kodu
+        │  derleyici
+        ▼
+   Intermediate Language        ← bir .dll'in içinde gerçekte bulunan şey
+        │  Common Language Runtime  (Just-In-Time)
+        ▼
+   makine kodu                  ← mümkün olan en son anda üretilir
 ```
 
-Derleyici makine kodu üretmez. Intermediate Language üretir ve bu CPU'dan bağımsızdır. Aynı `.dll`'in
-hem x64 bir sunucuda hem ARM bir dizüstünde çalışmasının sebebi budur: makine kodu, mümkün olan en son
-anda, Just-In-Time derleyicisi tarafından, gerçekten bulduğu CPU için üretilir.
+Derleyici makine kodu **üretmiyor**. `Intermediate Language` üretiyor — runtime'ın anladığı,
+CPU'dan bağımsız komutlar.
 
-.NET hakkındaki "bu nasıl çalışabiliyor" sorularının neredeyse hepsinin cevabı, makine kodunun program
-başlayana kadar var olmadığını hatırlamaktır.
+Bundan iki şey doğrudan çıkıyor.
+
+**Bellek yönetilebilir**, çünkü runtime kodunuzla makine arasında duruyor. Elinizde hangi referanslar
+var biliyor; dolayısıyla artık neye erişemediğinizi de biliyor. Erişilemeyeni geri alabiliyor.
+
+**Aynı `.dll` hem x64 sunucuda hem ARM dizüstünde çalışıyor**, çünkü makine kodu program başlayana kadar
+ortada yoktu. `Just-In-Time` derleyicisi onu, gerçekten bulduğu CPU için üretti.
+
+.NET hakkındaki "bu nasıl çalışabiliyor" sorularının neredeyse hepsinin cevabı bu son cümle.
 
 ## Core Concepts
 
-**Statik tipleme.** Her ifadenin, derleyicinin bildiği bir tipi vardır. `int x = "hello";` çalışma
-zamanında patlamaz — derlenmez bile. Hata sınıfı, program var olmadan önce ortadan kalkar.
+Kelimelerin artık konacak bir yeri var.
 
-**Managed Code.** Kodunuz doğrudan CPU üzerinde değil, Common Language Runtime'ın gözetiminde çalışır.
-Runtime bellek yönetimini, Type Safety'yi ve exception yönetimini sağlar. Bir miktar denetimden
-vazgeçersiniz; karşılığında artık yazamayacağınız koca bir hata sınıfını geri alırsınız.
+**Managed Code** — CPU üzerinde doğrudan değil, CLR'ın gözetiminde çalışan kod. Bir miktar denetimden
+vazgeçiyorsunuz; karşılığında artık yazamayacağınız koca bir hata sınıfını geri alıyorsunuz.
 
-**Garbage Collection.** Bellek, siz söylediğinizde değil, erişilemez hale geldiğinde geri kazanılır.
-C++'tan en büyük fark budur; hem C#'ın güvenliğinin hem de zaman zaman yaşanan gecikme sürprizlerinin
-kaynağıdır.
+**Garbage Collector** — hiçbir şeyin erişemediği belleği geri kazanan runtime bileşeni. Yukarıdaki
+`free`'nin sorduğu soruyu cevaplıyor. Ama **sizin cevaplayacağınızdan daha geç** cevaplıyor, ve bedel bu.
 
-**Geniş bir standart kütüphane.** Collection'lar, HTTP, JSON, kriptografi, asenkronluk — kutunun
-içinde. C#'ta üretken olmanın büyük bölümü, zaten var olanı öğrenmektir.
+**Type Safety** — bir değer, yalnızca gerçekte ne ise o şekilde kullanılabilir. Derleyici denetler,
+runtime bir daha denetler. `int x = "hello";` çalışırken patlamaz. **Derlenmez.**
+
+**Intermediate Language** — her `.dll`'in içindeki, CPU'dan bağımsız komut kümesi. Ne kaynak kod, ne
+makine kodu. JIT'in yediği şey.
 
 ## Basic Example
 
 ```csharp
-// Tip derleme zamanında denetlenir. Bellek çalışma zamanında yönetilir.
-// Bu iki cümlenin ikisi de C için doğru değildir.
-var greeting = "Hello";
-var length = greeting.Length;   // int — ve derleyici bunu bilir
+var name = "Ada";
 
-Console.WriteLine($"{greeting} has {length} characters.");
+Console.WriteLine(name);
+
+// Buraya `name`'i serbest bırakan bir satır ekleyemezsiniz.
+// "Eklememelisiniz" değil. EKLEYEMEZSİNİZ. Öyle bir API yok.
 ```
 
-`greeting` bir `string`'dir — derleyici bunu çıkarsar, tahmin etmez. `var` dinamik tipleme değildir;
-tip derleme zamanında sabitlenir ve sonradan değişemez. Ve burada hiçbir şey string'i serbest bırakmaz:
-metot bitince erişilemez hale gelir, gerisini Garbage Collector daha sonra halleder.
+Metot bitince `name` erişilemez hale gelir. Garbage Collector onu bir süre sonra geri kazanır — ne zaman
+olduğu size söylenmez, ve umursamanız da beklenmez.
 
 ## Real-World Scenario
 
-Bir API dakikada on bin istek alıyor. Her biri request nesneleri ayırıyor, JSON ayrıştırıyor, yanıt
-oluşturuyor.
+Dakikada on bin istek alan bir API. Her istek bellek ayırıyor: bir request nesnesi, ayrıştırılmış JSON,
+bir yanıt.
 
-C'de bu ayırmaların her biri, unutmamanız ve iki kez yapmamanız gereken bir `free()` demektir. C#'ta
-ayırırsınız ve düşünmeyi bırakırsınız. Kısa ömürlü nesneleri Garbage Collector ucuza geri kazanır,
-çünkü tam da bu şekle göre optimize edilmiştir: nesnelerin çoğu genç ölür.
+C'de bunların her biri, unutmamanız ve iki kez yapmamanız gereken bir `free` demek — dakikada on bin kez,
+beş kişinin elinden geçmiş bir kodda.
 
-Asıl düşündüğünüz şey duraklamalardır. Bir toplama, thread'lerinizi durdurur. Çoğu servis için bu
-mikrosaniyelerdir ve kimse fark etmez. Bir alım-satım sistemi için olmayabilir — takasın bir slogan
-değil, gerçek bir mühendislik kararı haline geldiği yer tam da burasıdır.
+C#'ta ayırıyorsunuz ve düşünmeyi bırakıyorsunuz. GC tam da bu şekle göre optimize edilmiş, çünkü nesnelerin
+çoğu genç ölüyor: biten isteğe ait olanlar neredeyse bedavaya toplanıyor.
+
+Asıl düşündüğünüz şey duraklama oluyor. Bir toplama, thread'lerinizi durduruyor. Çoğu servis için bu
+mikrosaniyelerdir ve kimse fark etmez. Bir alım-satım sistemi için etmeyebilir — ve takasın slogan olmaktan
+çıkıp mühendislik kararına dönüştüğü an tam olarak burasıdır.
 
 ## Best Practices
 
-- Tip sağ taraftan bariz değilse, `var` yerine açık tipi tercih edin. `var` gürültüyü azaltmak içindir,
-  bilgiyi saklamak için değil.
-- Derleyicinin size yardım etmesine izin verin. Nullable reference type'lar, `readonly`, `sealed` —
-  her biri çalışma zamanındaki bir olasılığı derleme zamanındaki bir hataya dönüştürür.
+- Derleyicinin işinizi almasına izin verin: nullable reference type'lar, `readonly`, `sealed`. Her biri
+  çalışma zamanındaki bir olasılığı derleme hatasına çevirir.
 - Standart kütüphanede zaten ne olduğunu, onu yazmadan önce öğrenin. Büyük bölümü orada.
 - Ölçülmüş bir sebebiniz olmadan Garbage Collector ile güreşmeyin.
 
 ## Common Mistakes
 
-**`var`'ı "dinamik" sanmak.** Değildir. Tip derleme zamanında sabitlenir; `var` yalnızca "sağ tarafta
-zaten söyledin, iki kez söyletme" demektir.
+**`GC.Collect()` çağırmak.** Neredeyse her zaman yanlış. Tam bir toplamayı, genellikle runtime'ın
+seçeceğinden daha kötü bir anda zorlar — ve asıl problemi gizler. O problem de neredeyse her zaman,
+birinin unuttuğu bir referansın nesneyi hayatta tutmasıdır.
 
-**`GC.Collect()` çağırmak.** Neredeyse her zaman yanlıştır. Tam bir toplamayı, genellikle runtime'ın
-seçeceğinden daha kötü bir anda zorlar ve asıl problemi gizler — ki o problem genellikle, birinin
-unuttuğu bir referansın nesneyi hayatta tutmasıdır.
+**`Managed Code`'u "bellek problemi olmaz" diye anlamak.** Belleği **bozamazsınız**. Ama gayet iyi
+**sızdırabilirsiniz**. Hiç aboneliği kaldırılmayan bir event handler, bağlı olduğu bütün nesne grafiğini
+sonsuza kadar hayatta tutar; ve Garbage Collector her baytını sadakatle korur — çünkü onun durduğu yerden
+bakınca, siz o nesneye hâlâ erişebiliyorsunuz.
 
-**Managed Code'u "bellek problemi olmaz" diye anlamak.** Belleği bozamazsınız. Ama gayet iyi
-sızdırabilirsiniz — hiç aboneliği kaldırılmayan bir event handler, bağlı olduğu tüm nesne grafiğini
-sonsuza kadar hayatta tutar ve Garbage Collector her baytını sadakatle korur.
+**`var`'ı "dinamik" sanmak.** Tip derleme zamanında sabitlenir. `var` yalnızca şu demek: "sağ tarafta zaten
+söyledin, bana iki kez söyletme."
 
 ## Trade-Offs
 
 | Kazandığınız | Vazgeçtiğiniz |
 |---|---|
-| use-after-free yok, çift serbest bırakma yok, buffer taşması yok | Belleğin ne zaman bırakılacağı üzerindeki belirlenimci denetim |
-| Tip hataları program çalışmadan yakalanır | Dinamik bir dilin özgürlüğünün bir kısmı |
-| Aynı binary birçok CPU'da çalışır | Just-In-Time derlemesi için bir miktar başlangıç süresi |
-| Kutunun içinde geniş bir kütüphane | Kodunuzun yanında dağıtılacak büyük bir runtime |
+| use-after-free asla olmaz | Belleğin ne zaman bırakılacağı |
+| Tip hataları çalışmadan yakalanır | Dinamik dilin bir miktar özgürlüğü |
+| Tek binary, çok CPU | Biraz başlangıç süresi (JIT) |
+| Kutuda geniş bir kütüphane | Dağıtılacak büyük bir runtime |
 
-En çok önem taşıyan satır birincisidir. Diğer satırlar birer tercihtir; o satır ise artık
-yazamayacağınız bir güvenlik açığı sınıfıdır — ve dilin var olma sebebidir.
+Birinci satır bir tercih değil. Artık **yazamayacağınız** bir güvenlik açığı sınıfı, ve dilin var olma
+sebebi. Diğer üçü zevk meselesi.
+
+:::warning
+GC "bellek problemi olmaz" demek değil. "Bellek **bozulmaz**" demek. Sızıntı hâlâ sizin.
+:::
 
 ## Further Reading
 
-- Common Language Runtime yürütme modeli üzerine .NET runtime dokümantasyonu.
+- CLR yürütme modeli üzerine .NET runtime dokümantasyonu.
 - "Yaklaşık olarak" cevabının yetmediği sorular için C# dil şartnamesi.
