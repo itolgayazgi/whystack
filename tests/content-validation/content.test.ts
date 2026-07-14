@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import {
   type Problem,
   validateGraph,
+  validateProse,
   validateTerminology,
   validateTopic,
   validateUniqueKeys,
@@ -50,6 +51,14 @@ describe.each(topics)('$metadataFile', ({ topic, metadataFile, fileOf }) => {
 
   it('preserves technical terminology in every translation', () => {
     expect(report(validateTerminology(topic.bodies, dictionary, fileOf))).toBe('');
+  });
+
+  it('puts facts in its tables, not paragraphs', () => {
+    // ADR-0019. The reviewer's words were "göz yoran" — it hurts the eyes — and no renderer can fix a
+    // table that should have been a paragraph. So it fails the build instead.
+    const problems = topic.bodies.flatMap((body) => validateProse(body, fileOf(body)));
+
+    expect(report(problems)).toBe('');
   });
 
   it('is not published without human review', () => {

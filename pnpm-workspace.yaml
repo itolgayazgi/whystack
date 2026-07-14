@@ -15,6 +15,18 @@ catalog:
   typescript: ~6.0.3
   vitest: ^3.2.7
 
+  # Parses the educational Markdown into a token tree. We render the tree ourselves — every colour,
+  # size and space has to come from packages/theme (CLAUDE.md §1.8), which no off-the-shelf renderer
+  # can know about. What we do NOT write is the parser: tables, nested lists and fenced blocks are a
+  # decade of edge cases, and `10` requires all of them.
+  #
+  # markdown-it rather than a smaller one because `10` also requires callouts — notes, warnings,
+  # best-practice and version boxes — and markdown-it-container gives them a real syntax (`:::warning`)
+  # instead of a convention we would have to invent and then police.
+  markdown-it: ^14.1.0
+  markdown-it-container: ^4.0.0
+  '@types/markdown-it': ^14.1.2
+
   # Reads `topic.yaml` and the terminology dictionary. The repository's first runtime dependency, and it
   # earns it: the alternative was JSON, and a metadata file nobody can put a comment in is a metadata
   # file whose decisions are unexplainable. `yaml` has no transitive dependencies of its own.

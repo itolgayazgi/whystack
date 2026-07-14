@@ -1,0 +1,32 @@
+{
+  "name": "@whystack/markdown-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Parses educational Markdown into a token tree, and renders it with design tokens. One parse, two renderers: React Native and (later) the static site.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "sideEffects": false,
+  "//exports": "Two entry points, and the split is the design. `.` is the PARSER: pure TypeScript, no React, no React Native — so the Astro site (which ships zero JavaScript) can consume the same tree at build time. `./native` is the renderer, and it is the only half that knows what a View is.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./native": "./src/renderer/markdown-view.tsx"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@whystack/theme": "workspace:*",
+    "markdown-it": "catalog:",
+    "markdown-it-container": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
