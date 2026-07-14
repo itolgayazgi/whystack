@@ -1,17 +1,129 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using WhyStack.Domain.Content;
+using WhyStack.Domain.Identity;
 
 namespace WhyStack.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// The Content domain's mapping (`07` — Content, Topic Versioning and Localization domains).
+/// The Content domain's mapping (`07`; ADR-0020, ADR-0021).
 /// </summary>
 /// <remarks>
-/// Enums are stored as STRINGS. `07`'s naming rules and `08`'s wire contract both forbid a bare integer
-/// standing in for a product concept — and a migration that reorders an enum turns every stored 3 into a
-/// different meaning, silently, in data nobody re-reads.
+/// Enums are stored as STRINGS. `08`'s wire contract forbids a bare integer standing in for a product
+/// concept, and a migration that reorders an enum turns every stored 3 into a different meaning — silently,
+/// in data nobody re-reads.
 /// </remarks>
+public class KnowledgeDomainConfiguration : IEntityTypeConfiguration<KnowledgeDomain>
+{
+    public void Configure(EntityTypeBuilder<KnowledgeDomain> builder)
+    {
+        builder.ToTable("KnowledgeDomains");
+        builder.HasKey(domain => domain.Id);
+
+        builder.Property(domain => domain.Key).HasMaxLength(64).IsRequired();
+        builder.Property(domain => domain.Name).HasMaxLength(128).IsRequired();
+
+        builder.HasIndex(domain => domain.Key).IsUnique().HasDatabaseName("UX_KnowledgeDomains_Key");
+
+        builder.HasData(
+            Seed("backend", "Backend", 1),
+            Seed("database", "Database", 2),
+            Seed("language", "Language", 3),
+            Seed("architecture", "Architecture", 4),
+            Seed("networking", "Networking", 5),
+            Seed("devops", "DevOps", 6),
+            Seed("security", "Security", 7),
+            Seed("testing", "Testing", 8));
+    }
+
+    // Deterministic ids. A Guid.NewGuid() in a seed produces a DIFFERENT migration on every developer's
+    // machine, and the second one to run it wipes the first one's rows.
+    private static KnowledgeDomain Seed(string key, string name, int order) => new()
+    {
+        Id = DeterministicId.For($"domain:{key}"),
+        Key = key,
+        Name = name,
+        SortOrder = order,
+    };
+}
+
+public class EcosystemConfiguration : IEntityTypeConfiguration<Ecosystem>
+{
+    public void Configure(EntityTypeBuilder<Ecosystem> builder)
+    {
+        builder.ToTable("Ecosystems");
+        builder.HasKey(ecosystem => ecosystem.Id);
+
+        builder.Property(ecosystem => ecosystem.Key).HasMaxLength(64).IsRequired();
+        builder.Property(ecosystem => ecosystem.Name).HasMaxLength(128).IsRequired();
+
+        builder.HasIndex(ecosystem => ecosystem.Key).IsUnique().HasDatabaseName("UX_Ecosystems_Key");
+
+        // Java, Node.js and PHP are seeded but NOT available. The onboarding screen shows them as "coming
+        // soon" rather than hiding them — a promise a reader can see is worth more than a shorter list —
+        // and a topic must never be written against one, which is what the flag prevents.
+        builder.HasData(
+            Seed("dotnet", ".NET", available: true, 1),
+            Seed("java", "Java", available: false, 2),
+            Seed("nodejs", "Node.js", available: false, 3),
+            Seed("php", "PHP", available: false, 4));
+    }
+
+    private static Ecosystem Seed(string key, string name, bool available, int order) => new()
+    {
+        Id = DeterministicId.For($"ecosystem:{key}"),
+        Key = key,
+        Name = name,
+        IsAvailable = available,
+        SortOrder = order,
+    };
+}
+
+public class ProgrammingLanguageConfiguration : IEntityTypeConfiguration<ProgrammingLanguage>
+{
+    public void Configure(EntityTypeBuilder<ProgrammingLanguage> builder)
+    {
+        builder.ToTable("ProgrammingLanguages");
+        builder.HasKey(language => language.Id);
+
+        builder.Property(language => language.Key).HasMaxLength(64).IsRequired();
+        builder.Property(language => language.Name).HasMaxLength(128).IsRequired();
+        builder.Property(language => language.FenceLanguage).HasMaxLength(32).IsRequired();
+
+        builder.HasIndex(language => language.Key).IsUnique().HasDatabaseName("UX_ProgrammingLanguages_Key");
+
+        builder
+            .HasOne(language => language.Ecosystem)
+            .WithMany(ecosystem => ecosystem.Languages)
+            .HasForeignKey(language => language.EcosystemId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasData(
+            Seed("dotnet", "csharp", "C#", "csharp", 1),
+            Seed("dotnet", "fsharp", "F#", "fsharp", 2),
+            Seed("java", "java", "Java", "java", 1),
+            Seed("java", "kotlin", "Kotlin", "kotlin", 2),
+            Seed("nodejs", "typescript", "TypeScript", "ts", 1),
+            Seed("nodejs", "javascript", "JavaScript", "js", 2),
+            Seed("php", "php", "PHP", "php", 1));
+    }
+
+    private static ProgrammingLanguage Seed(
+        string ecosystem,
+        string key,
+        string name,
+        string fence,
+        int order) => new()
+        {
+            Id = DeterministicId.For($"language:{key}"),
+            EcosystemId = DeterministicId.For($"ecosystem:{ecosystem}"),
+            Key = key,
+            Name = name,
+            FenceLanguage = fence,
+            SortOrder = order,
+        };
+}
+
 public class TopicConfiguration : IEntityTypeConfiguration<Topic>
 {
     public void Configure(EntityTypeBuilder<Topic> builder)
@@ -19,27 +131,32 @@ public class TopicConfiguration : IEntityTypeConfiguration<Topic>
         builder.ToTable("Topics");
         builder.HasKey(topic => topic.Id);
 
-        // The identity. Unique because everything in the graph resolves through it: two topics claiming
-        // the same key are two pages the rest of the system cannot tell apart, and whichever the importer
-        // writes second wins — silently.
+        // The identity. Unique because everything in the graph resolves through it: two topics claiming the
+        // same key are two pages the rest of the system cannot tell apart, and whichever the writer commits
+        // second wins — silently.
         builder.Property(topic => topic.StableKey).HasMaxLength(128).IsRequired();
         builder.HasIndex(topic => topic.StableKey).IsUnique().HasDatabaseName("UX_Topics_StableKey");
 
-        // The URL. Every topic page is a lookup by this, so it is the one index a reader actually waits on.
         builder.Property(topic => topic.Slug).HasMaxLength(128).IsRequired();
         builder.HasIndex(topic => topic.Slug).IsUnique().HasDatabaseName("UX_Topics_Slug");
 
-        builder.Property(topic => topic.Technology).HasMaxLength(64).IsRequired();
         builder.Property(topic => topic.DefaultTitle).HasMaxLength(256).IsRequired();
-
         builder.Property(topic => topic.Category).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(topic => topic.DefaultLevel).HasConversion<string>().HasMaxLength(16).IsRequired();
 
-        // "Every published C# topic for a Junior" is the query behind the roadmap and the topic list, and
-        // it is the first one that will be slow. Covering it here costs nothing now and a migration later.
+        // Restrict, not Cascade. Deleting a domain that still has topics in it should FAIL — the topics are
+        // the asset, and a foreign key is the last thing standing between a careless DELETE and the corpus.
         builder
-            .HasIndex(topic => new { topic.Technology, topic.DefaultLevel })
-            .HasDatabaseName("IX_Topics_Technology_DefaultLevel");
+            .HasOne(topic => topic.Domain)
+            .WithMany()
+            .HasForeignKey(topic => topic.DomainId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // "Every published Backend topic for a Junior" is the query behind the roadmap and the topic list,
+        // and it is the first one that will be slow.
+        builder
+            .HasIndex(topic => new { topic.DomainId, topic.DefaultLevel })
+            .HasDatabaseName("IX_Topics_DomainId_DefaultLevel");
     }
 }
 
@@ -53,15 +170,10 @@ public class TopicVersionConfiguration : IEntityTypeConfiguration<TopicVersion>
         builder.Property(version => version.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
         builder.Property(version => version.CanonicalLanguageCode).HasMaxLength(8).IsRequired();
 
-        // The pointer back to content/, and the bytes it held when it was imported. `07` names both:
-        // "MarkdownPath links the database record to repository content. ContentHash helps detect file
-        // changes." The hash is also what a response can be cached against — content, not clock.
-        builder.Property(version => version.MarkdownPath).HasMaxLength(512).IsRequired();
-        builder.Property(version => version.ContentHash).HasMaxLength(64).IsRequired();
-
         builder.Property(version => version.RowVersion).IsRowVersion();
 
-        builder.HasIndex(version => new { version.TopicId, version.VersionNumber })
+        builder
+            .HasIndex(version => new { version.TopicId, version.VersionNumber })
             .IsUnique()
             .HasDatabaseName("UX_TopicVersions_TopicId_VersionNumber");
 
@@ -82,12 +194,9 @@ public class TopicTranslationConfiguration : IEntityTypeConfiguration<TopicTrans
 
         builder.Property(translation => translation.LanguageCode).HasMaxLength(8).IsRequired();
         builder.Property(translation => translation.Title).HasMaxLength(256).IsRequired();
-        builder.Property(translation => translation.MarkdownPath).HasMaxLength(512).IsRequired();
-        builder.Property(translation => translation.ContentHash).HasMaxLength(64).IsRequired();
+        builder.Property(translation => translation.Summary).HasMaxLength(512);
         builder.Property(translation => translation.Status).HasConversion<string>().HasMaxLength(24).IsRequired();
 
-        // One translation per language per version — and this is the index the language resolver hits on
-        // every topic request, twice: once for the language the reader asked for, once for the fallback.
         builder
             .HasIndex(translation => new { translation.TopicVersionId, translation.LanguageCode })
             .IsUnique()
@@ -109,15 +218,20 @@ public class TopicSectionConfiguration : IEntityTypeConfiguration<TopicSection>
         builder.HasKey(section => section.Id);
 
         builder.Property(section => section.SectionTypeKey).HasMaxLength(64).IsRequired();
+        builder.Property(section => section.LanguageCode).HasMaxLength(8).IsRequired();
+
+        // nvarchar(max). A topic section is prose and it is the product; capping it would be a limit nobody
+        // chose, discovered by an author mid-sentence.
+        builder.Property(section => section.Markdown).IsRequired();
 
         builder
-            .HasIndex(section => new { section.TopicVersionId, section.SectionTypeKey })
+            .HasIndex(section => new { section.TopicVersionId, section.SectionTypeKey, section.LanguageCode })
             .IsUnique()
-            .HasDatabaseName("UX_TopicSections_TopicVersionId_SectionTypeKey");
+            .HasDatabaseName("UX_TopicSections_Version_Type_Language");
 
         // A foreign key to the reference table, not a free string. This is what makes ADR-0002's promise
-        // enforceable rather than aspirational: a section type that is not in the blueprint cannot be
-        // inserted, and one that IS in the blueprint can never be dropped without the database saying so.
+        // enforceable rather than aspirational: a section type nobody approved cannot be inserted, even if
+        // every layer above forgets to check.
         builder
             .HasOne<SectionType>()
             .WithMany()
@@ -129,6 +243,73 @@ public class TopicSectionConfiguration : IEntityTypeConfiguration<TopicSection>
             .HasOne(section => section.TopicVersion)
             .WithMany(version => version.Sections)
             .HasForeignKey(section => section.TopicVersionId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class TopicImplementationConfiguration : IEntityTypeConfiguration<TopicImplementation>
+{
+    public void Configure(EntityTypeBuilder<TopicImplementation> builder)
+    {
+        builder.ToTable("TopicImplementations");
+        builder.HasKey(implementation => implementation.Id);
+
+        builder.Property(implementation => implementation.SupportedVersions).HasMaxLength(128).IsRequired();
+
+        // One implementation per ecosystem per version. Two would mean the reader's `[ .NET ▾ ]` control has
+        // two answers and no way to choose between them.
+        builder
+            .HasIndex(implementation => new { implementation.TopicVersionId, implementation.EcosystemId })
+            .IsUnique()
+            .HasDatabaseName("UX_TopicImplementations_TopicVersionId_EcosystemId");
+
+        builder
+            .HasOne(implementation => implementation.TopicVersion)
+            .WithMany(version => version.Implementations)
+            .HasForeignKey(implementation => implementation.TopicVersionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .HasOne(implementation => implementation.Ecosystem)
+            .WithMany()
+            .HasForeignKey(implementation => implementation.EcosystemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
+            .HasOne<ProgrammingLanguage>()
+            .WithMany()
+            .HasForeignKey(implementation => implementation.ProgrammingLanguageId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class ImplementationSectionConfiguration : IEntityTypeConfiguration<ImplementationSection>
+{
+    public void Configure(EntityTypeBuilder<ImplementationSection> builder)
+    {
+        builder.ToTable("ImplementationSections");
+        builder.HasKey(section => section.Id);
+
+        builder.Property(section => section.SectionTypeKey).HasMaxLength(64).IsRequired();
+        builder.Property(section => section.LanguageCode).HasMaxLength(8).IsRequired();
+        builder.Property(section => section.Markdown).IsRequired();
+
+        builder
+            .HasIndex(section => new { section.TopicImplementationId, section.SectionTypeKey, section.LanguageCode })
+            .IsUnique()
+            .HasDatabaseName("UX_ImplementationSections_Impl_Type_Language");
+
+        builder
+            .HasOne<SectionType>()
+            .WithMany()
+            .HasForeignKey(section => section.SectionTypeKey)
+            .HasPrincipalKey(type => type.Key)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
+            .HasOne(section => section.Implementation)
+            .WithMany(implementation => implementation.Sections)
+            .HasForeignKey(section => section.TopicImplementationId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
@@ -155,6 +336,37 @@ public class TopicSupportedVersionConfiguration : IEntityTypeConfiguration<Topic
     }
 }
 
+public class TopicReviewConfiguration : IEntityTypeConfiguration<TopicReview>
+{
+    public void Configure(EntityTypeBuilder<TopicReview> builder)
+    {
+        builder.ToTable("TopicReviews");
+        builder.HasKey(review => review.Id);
+
+        builder.Property(review => review.FromStatus).HasConversion<string>().HasMaxLength(24).IsRequired();
+        builder.Property(review => review.ToStatus).HasConversion<string>().HasMaxLength(24).IsRequired();
+        builder.Property(review => review.Note).HasMaxLength(2000);
+
+        builder
+            .HasIndex(review => review.TopicVersionId)
+            .HasDatabaseName("IX_TopicReviews_TopicVersionId");
+
+        builder
+            .HasOne<TopicVersion>()
+            .WithMany()
+            .HasForeignKey(review => review.TopicVersionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Restrict. A reviewer's account being deleted must not erase the record that they approved
+        // something — that record is the only evidence a human opened the gate (CLAUDE.md §1.5).
+        builder
+            .HasOne<User>()
+            .WithMany()
+            .HasForeignKey(review => review.ReviewerId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public class TopicRelationshipConfiguration : IEntityTypeConfiguration<TopicRelationship>
 {
     public void Configure(EntityTypeBuilder<TopicRelationship> builder)
@@ -169,8 +381,8 @@ public class TopicRelationshipConfiguration : IEntityTypeConfiguration<TopicRela
             .IsUnique()
             .HasDatabaseName("UX_TopicRelationships_From_To_Type");
 
-        // Traversed in both directions: "what does this topic require" and "what requires this topic".
-        // The second is how a roadmap is built, and without this index it is a scan of the whole graph.
+        // Traversed in both directions: "what does this topic require" and "what requires this topic". The
+        // second is how a roadmap is built, and without this index it is a scan of the whole graph.
         builder.HasIndex(relationship => relationship.ToTopicId).HasDatabaseName("IX_TopicRelationships_ToTopicId");
 
         builder
@@ -179,10 +391,9 @@ public class TopicRelationshipConfiguration : IEntityTypeConfiguration<TopicRela
             .HasForeignKey(relationship => relationship.FromTopicId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Restrict, NOT Cascade. Two cascade paths into one table is a "may cause cycles or multiple
-        // cascade paths" error from SQL Server — and even if it were allowed, deleting a topic should not
-        // silently delete the edges that point AT it. Those edges are other topics' prerequisites; they
-        // are that topic's problem to fix, loudly, not ours to erase quietly.
+        // Restrict, NOT Cascade. Two cascade paths into one table is a SQL Server error — and even if it
+        // were allowed, deleting a topic should not silently delete the edges that point AT it. Those edges
+        // are other topics' prerequisites; they are that topic's problem to fix, loudly, not ours to erase.
         builder
             .HasOne(relationship => relationship.ToTopic)
             .WithMany()
@@ -200,43 +411,119 @@ public class SectionTypeConfiguration : IEntityTypeConfiguration<SectionType>
         // The KEY is the key. A surrogate id here would buy nothing and cost a join on every section.
         builder.HasKey(type => type.Key);
         builder.Property(type => type.Key).HasMaxLength(64);
+        builder.Property(type => type.Scope).HasConversion<string>().HasMaxLength(16).IsRequired();
 
-        // Seeded from `10`'s Master Topic Structure, in its order (ADR-0002, Decision 3/4). A section in
-        // the blueprint that is missing here is ADDED — never dropped. This is the whole reason it is a
-        // table: the next educational section is a row, not a migration and an argument.
+        // Seeded from `10`'s Master Topic Structure, in its order (ADR-0002 Decisions 3/4), and now carrying
+        // ADR-0021's classification.
+        //
+        // The Scope column IS the decision. `TradeOffs` is a Concept — a pool is a guess in every runtime.
+        // `Syntax` is an Implementation — it is nothing BUT the language. Classify one wrong and either the
+        // reasoning gets duplicated per ecosystem (the defect ADR-0021 removes) or a code sample claims to
+        // be language-independent.
         builder.HasData(
-            Seed("Summary", 1),
-            Seed("LearningObjectives", 2),
-            Seed("WhyThisTopicMatters", 3),
-            Seed("Prerequisites", 4, graphDerived: true),
-            Seed("Definition", 5),
-            Seed("WhyItExists", 6),
-            Seed("ProblemItSolves", 7),
-            Seed("HistoricalContext", 8),
-            Seed("CoreMentalModel", 9),
-            Seed("CoreConcepts", 10),
-            Seed("InternalMechanics", 11),
-            Seed("Syntax", 12),
-            Seed("BasicExample", 13),
-            Seed("ProgressiveExamples", 14),
-            Seed("RealWorldScenario", 15),
-            Seed("ArchitectureContext", 16),
-            Seed("PerformanceConsiderations", 17),
-            Seed("SecurityConsiderations", 18),
-            Seed("TestingConsiderations", 19),
-            Seed("BestPractices", 20),
-            Seed("CommonMistakes", 21),
-            Seed("TradeOffs", 22),
-            Seed("Alternatives", 23),
-            Seed("VersionNotes", 24),
-            Seed("InterviewQuestions", 25),
-            Seed("Quiz", 26),
-            Seed("RelatedTopics", 27, graphDerived: true),
-            Seed("NextRecommendedTopic", 28, graphDerived: true),
-            Seed("FurtherReading", 29),
-            Seed("Glossary", 30, graphDerived: true));
+            Concept("Summary", 1, mandatory: true),
+            Concept("LearningObjectives", 2, mandatory: true),
+            Concept("WhyThisTopicMatters", 3, mandatory: true),
+            Graph("Prerequisites", 4),
+            Concept("Definition", 5, mandatory: true),
+            Concept("WhyItExists", 6, mandatory: true),
+            Concept("ProblemItSolves", 7, mandatory: true),
+            Concept("HistoricalContext", 8, mandatory: false),
+            Concept("CoreMentalModel", 9, mandatory: true),
+            Concept("CoreConcepts", 10, mandatory: true),
+
+            // Implementation-scoped: these are the panel behind the `[ .NET ▾ ]` control.
+            Implementation("InternalMechanics", 11),
+            Implementation("Syntax", 12),
+            Implementation("BasicExample", 13),
+            Implementation("ProgressiveExamples", 14),
+
+            Concept("RealWorldScenario", 15, mandatory: true),
+            Concept("ArchitectureContext", 16, mandatory: false),
+            Concept("PerformanceConsiderations", 17, mandatory: false),
+            Concept("SecurityConsiderations", 18, mandatory: false),
+            Concept("TestingConsiderations", 19, mandatory: false),
+            Concept("BestPractices", 20, mandatory: true),
+            Concept("CommonMistakes", 21, mandatory: true),
+            Concept("TradeOffs", 22, mandatory: true),
+            Concept("Alternatives", 23, mandatory: false),
+
+            Implementation("VersionNotes", 24),
+
+            Concept("InterviewQuestions", 25, mandatory: false),
+            Concept("Quiz", 26, mandatory: false),
+            Graph("RelatedTopics", 27),
+            Graph("NextRecommendedTopic", 28),
+            Concept("FurtherReading", 29, mandatory: false),
+            Graph("Glossary", 30));
     }
 
-    private static SectionType Seed(string key, int sortOrder, bool graphDerived = false) =>
-        new() { Key = key, SortOrder = sortOrder, IsGraphDerived = graphDerived };
+    private static SectionType Concept(string key, int order, bool mandatory) => new()
+    {
+        Key = key,
+        SortOrder = order,
+        Scope = SectionScope.Concept,
+        IsGraphDerived = false,
+        IsMandatory = mandatory,
+    };
+
+    private static SectionType Implementation(string key, int order) => new()
+    {
+        Key = key,
+        SortOrder = order,
+        Scope = SectionScope.Implementation,
+        IsGraphDerived = false,
+
+        // Mandatory ON AN IMPLEMENTATION, not on the topic. A topic with no code — "what is a transaction?"
+        // — has no implementation at all, and demanding a Syntax section from it would be demanding syntax
+        // for an idea.
+        IsMandatory = false,
+    };
+
+    private static SectionType Graph(string key, int order) => new()
+    {
+        Key = key,
+        SortOrder = order,
+        Scope = SectionScope.Concept,
+        IsGraphDerived = true,
+        IsMandatory = false,
+    };
+}
+
+public class TermConfiguration : IEntityTypeConfiguration<Term>
+{
+    public void Configure(EntityTypeBuilder<Term> builder)
+    {
+        builder.ToTable("Terms");
+        builder.HasKey(term => term.Id);
+
+        builder.Property(term => term.Text).HasMaxLength(128).IsRequired();
+        builder.Property(term => term.Aliases).HasMaxLength(256);
+        builder.Property(term => term.ForbiddenTranslations).HasMaxLength(512);
+
+        builder.HasIndex(term => term.Text).IsUnique().HasDatabaseName("UX_Terms_Text");
+    }
+}
+
+public class TermExplanationConfiguration : IEntityTypeConfiguration<TermExplanation>
+{
+    public void Configure(EntityTypeBuilder<TermExplanation> builder)
+    {
+        builder.ToTable("TermExplanations");
+        builder.HasKey(explanation => explanation.Id);
+
+        builder.Property(explanation => explanation.LanguageCode).HasMaxLength(8).IsRequired();
+        builder.Property(explanation => explanation.Text).HasMaxLength(1000).IsRequired();
+
+        builder
+            .HasIndex(explanation => new { explanation.TermId, explanation.LanguageCode })
+            .IsUnique()
+            .HasDatabaseName("UX_TermExplanations_TermId_LanguageCode");
+
+        builder
+            .HasOne<Term>()
+            .WithMany(term => term.Explanations)
+            .HasForeignKey(explanation => explanation.TermId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
 }

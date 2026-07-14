@@ -21,10 +21,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\WhyStack.Infrastructure\WhyStack.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\WhyStack.Domain\WhyStack.Domain.csproj" />
-
-    <!-- The content importer is a tool, not a layer — but it writes to the database, so it is tested
-         against the same real SQL Server as everything else that does. -->
-    <ProjectReference Include="..\..\tools\WhyStack.ContentImport\WhyStack.ContentImport.csproj" />
   </ItemGroup>
 
 </Project>

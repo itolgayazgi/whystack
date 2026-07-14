@@ -61,6 +61,7 @@ export interface Messages {
   'settings.conflict.body': string;
   'settings.unreachable': string;
 
+  'topic.implementation': string;
   'topic.readingTime': string;
   'topic.lastReviewed': string;
   'topic.draft': string;
@@ -270,6 +271,7 @@ const en: Messages = {
     'These settings were changed somewhere else while this screen was open. What you see now is what is actually saved. Apply your change again if you still want it.',
   'settings.unreachable': 'Cannot reach the server. Your settings were not saved.',
 
+  'topic.implementation': 'Implementation',
   'topic.readingTime': '{minutes} min read',
   'topic.lastReviewed': 'Last reviewed {date}',
   'topic.draft': 'Draft — not published',
@@ -474,6 +476,7 @@ const tr: Messages = {
     'Bu ekran açıkken ayarlar başka bir yerde değiştirildi. Şu an gördüğün, gerçekten kayıtlı olan. Değişikliğini hâlâ istiyorsan tekrar uygula.',
   'settings.unreachable': 'Sunucuya ulaşılamıyor. Ayarların kaydedilmedi.',
 
+  'topic.implementation': 'İmplementasyon',
   'topic.readingTime': '{minutes} dk okuma',
   'topic.lastReviewed': 'Son inceleme: {date}',
   'topic.draft': 'Taslak — yayınlanmadı',

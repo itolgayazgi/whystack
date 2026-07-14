@@ -101,10 +101,6 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
                 // nothing to do with what it asserts.
                 ["SessionMaintenance:Enabled"] = "false",
 
-                // The real content/, found by walking up from the test binary. The topic endpoints read
-                // real Markdown from disk (`07`: the database stores the path, the file holds the words),
-                // so a fixture directory here would test a parser against text nobody ships.
-                ["Content:Root"] = FindContentRoot(),
             });
         });
 
@@ -115,34 +111,6 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
         });
     }
 
-    /// <summary>
-    /// Walks up from the test binary until it finds <c>content/topics</c>.
-    /// </summary>
-    /// <remarks>
-    /// A relative path would depend on the build configuration, the target framework and whoever last
-    /// changed the output directory — three things that have nothing to do with where the content is.
-    /// Searching for the thing itself is stable under all three.
-    /// </remarks>
-    private static string FindContentRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-
-        while (directory is not null)
-        {
-            var candidate = Path.Join(directory.FullName, "content");
-
-            if (Directory.Exists(Path.Join(candidate, "topics")))
-            {
-                return candidate;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException(
-            $"No content/topics directory above {AppContext.BaseDirectory}. The topic endpoints read real "
-            + "Markdown from disk; without it these tests would be testing a parser against nothing.");
-    }
 }
 
 /// <summary>The same application, with the rate limit turned down so it can actually be tripped.</summary>

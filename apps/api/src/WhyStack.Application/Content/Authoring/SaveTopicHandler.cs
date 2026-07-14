@@ -1,0 +1,138 @@
+using WhyStack.Application.Common;
+using WhyStack.Application.Content.Validation;
+
+namespace WhyStack.Application.Content.Authoring;
+
+/// <summary>Writes a topic. EF Core stays on the far side of this line.</summary>
+public interface IContentAuthoringRepository
+{
+    Task<SaveOutcome> SaveAsync(SaveTopicCommand command, Guid editorId, CancellationToken cancellationToken);
+
+    Task<Result<TransitionOutcome>> TransitionAsync(
+        Guid topicId,
+        string toStatus,
+        string? note,
+        Guid reviewerId,
+        CancellationToken cancellationToken);
+
+    Task<TopicDraft?> DraftAsync(Guid topicId, CancellationToken cancellationToken);
+}
+
+public sealed record SaveOutcome(Guid Id, string Status, string RowVersion, bool Conflict, string? Error);
+
+public sealed record TransitionOutcome(string Status);
+
+/// <summary>
+/// Save a topic. Validation runs HERE, on the server, on every save (ADR-0020, Decision 3).
+/// </summary>
+/// <remarks>
+/// The client also validates — it calls the same rules through an endpoint, so the editor sees a problem
+/// while typing instead of after a deploy. That is a courtesy. <b>This is the gate.</b> A rule a client can
+/// skip is not a rule, and the client is a program anybody can replace with curl.
+///
+/// A DRAFT is allowed to be incomplete: an author saves a half-written topic twenty times an hour, and a
+/// validator that refused every one of those is a validator they route around. What is refused is
+/// PUBLISHING an incomplete topic — see <c>TransitionTopicHandler</c>. Two rules bite immediately anyway,
+/// because they are cheap to fix now and expensive to fix at a hundred topics: a translated technical term,
+/// and a table cell that is a paragraph.
+/// </remarks>
+public sealed class SaveTopicHandler(
+    IContentAuthoringRepository repository,
+    ITopicRepository topics)
+{
+    public async Task<Result<SaveTopicResult>> HandleAsync(
+        SaveTopicCommand command,
+        Guid editorId,
+        CancellationToken cancellationToken)
+    {
+        var problems = Validate(command);
+
+        if (problems.Any(problem => problem.Rule.StartsWith("metadata.", StringComparison.Ordinal)))
+        {
+            // Metadata problems are REFUSED, not reported. A topic with no stable key is not a draft with a
+            // warning on it — it is a row the graph cannot address, and letting it exist means every edge that
+            // ever points at it is broken from the moment it is written.
+            return Error.Validation(problems.ToDictionary(
+                problem => problem.Field,
+                problem => new[] { problem.Message }));
+        }
+
+        var terminology = await topics.TerminologyAsync(cancellationToken);
+        var validator = new TopicValidator(terminology);
+
+        var content = validator.ValidateDraft(new TopicDraft(
+            "en",
+            [
+                .. command.Sections.Select(section =>
+                    new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
+                .. command.Implementations.SelectMany(implementation => implementation.Sections)
+                    .Select(section => new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
+            ]));
+
+        var outcome = await repository.SaveAsync(command, editorId, cancellationToken);
+
+        if (outcome.Conflict)
+        {
+            // Somebody else saved between this editor's read and their write. Not an error they caused, and
+            // not something to resolve for them — they are told, and they decide.
+            return new Error(
+                ErrorCodes.ConcurrencyConflict,
+                "This topic was changed somewhere else while you were editing it. Reload to see what is "
+                + "actually saved, then re-apply your change.");
+        }
+
+        if (outcome.Error is not null)
+        {
+            return Error.Validation("stableKey", outcome.Error);
+        }
+
+        // The content problems come back WITH the saved topic, not instead of it. A draft is allowed to have
+        // them; the editor is the one who fixes them, and they cannot fix what they cannot save.
+        return Result<SaveTopicResult>.Success(
+            new SaveTopicResult(outcome.Id, outcome.Status, outcome.RowVersion, [.. content]));
+    }
+
+    /// <summary>The shape, not the prose. A topic with no identity is not a draft — it is a broken row.</summary>
+    private static List<ContentProblem> Validate(SaveTopicCommand command)
+    {
+        var problems = new List<ContentProblem>();
+
+        void Require(bool ok, string field, string message)
+        {
+            if (!ok) problems.Add(new ContentProblem(field, "metadata.invalid", message));
+        }
+
+        Require(
+            !string.IsNullOrWhiteSpace(command.StableKey),
+            "stableKey",
+            "A stable key is required. It is the topic's identity — every graph edge and every roadmap entry "
+            + "resolves through it, and it never changes after this.");
+
+        Require(
+            IsSlug(command.Slug),
+            "slug",
+            "A slug is lowercase letters, digits and hyphens. It is the URL.");
+
+        Require(
+            !string.IsNullOrWhiteSpace(command.DomainKey),
+            "domainKey",
+            "A topic belongs to a domain — Backend, Database — not to a language (ADR-0021).");
+
+        Require(
+            command.EstimatedReadingMinutes > 0,
+            "estimatedReadingMinutes",
+            "Reading time must be a positive number of minutes.");
+
+        Require(
+            command.Translations.Any(translation => translation.LanguageCode == "en"),
+            "translations",
+            "English is required. It is the canonical language, and a translation with no source cannot be "
+            + "reviewed against anything.");
+
+        return problems;
+    }
+
+    private static bool IsSlug(string slug) =>
+        !string.IsNullOrWhiteSpace(slug)
+        && slug.All(character => char.IsAsciiLetterLower(character) || char.IsAsciiDigit(character) || character == '-');
+}

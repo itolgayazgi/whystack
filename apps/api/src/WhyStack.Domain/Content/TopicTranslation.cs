@@ -19,9 +19,16 @@ public class TopicTranslation
     /// <summary>The title in this language. Titles ARE translated; technical terms inside them are not.</summary>
     public required string Title { get; set; }
 
-    public required string MarkdownPath { get; set; }
-
-    public required string ContentHash { get; set; }
+    /// <summary>
+    /// One paragraph, shown in the topic list and in search results.
+    /// </summary>
+    /// <remarks>
+    /// Separate from the `Summary` SECTION, and not a duplicate of it. The section is the first thing a
+    /// reader reads; this is what makes them decide to. `07` names it on the table, and ADR-0009's static
+    /// pages need it as the meta description — a page whose description is its first paragraph reads, in a
+    /// search result, like a page that begins mid-sentence.
+    /// </remarks>
+    public string? Summary { get; set; }
 
     public required TranslationStatus Status { get; set; }
 

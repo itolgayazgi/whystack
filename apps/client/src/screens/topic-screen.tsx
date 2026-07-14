@@ -3,9 +3,9 @@ import { parse } from '@whystack/markdown-renderer';
 import { MarkdownView } from '@whystack/markdown-renderer/native';
 import { radius, reading, space } from '@whystack/theme';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import type { TopicDetail, TopicLink } from '../api/topics';
+import type { TopicDetail, TopicImplementation, TopicLink } from '../api/topics';
 import { EmptyState } from '../components/empty-state';
 import { LanguageFallbackNotice } from '../components/language-fallback-notice';
 import { Notice } from '../components/notice';
@@ -89,6 +89,11 @@ export function TopicScreen({ slug }: { slug: string }) {
         <Section key={section.sectionType} type={section.sectionType} markdown={section.markdown} />
       ))}
 
+      {/* The panel behind the `[ .NET ▾ ]` control — and it is NOT rendered when there is nothing behind it.
+          A topic with no code ("what is a transaction?") has no implementation, and an empty panel would be
+          a promise the page cannot keep (ADR-0021, Decision 4). */}
+      {topic.implementations.length > 0 ? <Implementations implementations={topic.implementations} /> : null}
+
       {topic.graph.related.length > 0 ? (
         <GraphSection titleKey="topic.related" links={topic.graph.related} />
       ) : null}
@@ -168,6 +173,79 @@ function Section({ type, markdown }: { type: string; markdown: string }) {
         theme={{ color: theme.color, textStyle: theme.textStyle }}
         onTopicPress={(target) => router.push({ pathname: '/topics/[slug]', params: { slug: target } })}
       />
+    </View>
+  );
+}
+
+/**
+ * The implementation panel (ADR-0021).
+ *
+ * The concept ABOVE this is one page for everybody — why the thing exists, what it costs. Only this changes
+ * with the ecosystem, and a reader can switch: that is the whole point of teaching the reason first, because
+ * the reason transfers. A reader who has never written Java can still learn what HikariCP is FOR.
+ */
+function Implementations({ implementations }: { implementations: TopicImplementation[] }) {
+  const { color, textStyle } = useTheme();
+  const { t } = useLanguage();
+
+  const [selected, setSelected] = useState(
+    implementations.find((implementation) => implementation.isPreferred)?.ecosystemKey ??
+      implementations[0]?.ecosystemKey,
+  );
+
+  const current = implementations.find((implementation) => implementation.ecosystemKey === selected);
+
+  if (!current) return null;
+
+  return (
+    <View style={{ marginTop: reading.sectionSpacing }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: space[12],
+          borderRadius: radius.medium,
+          borderWidth: 1,
+          borderColor: color.border,
+          backgroundColor: color.surfaceMuted,
+        }}
+      >
+        <Text style={[textStyle('label'), { color: color.textMuted }]}>{t('topic.implementation')}</Text>
+
+        <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', gap: space[8] }}>
+          {implementations.map((implementation) => {
+            const active = implementation.ecosystemKey === selected;
+
+            return (
+              <Pressable
+                key={implementation.ecosystemKey}
+                testID={`impl-${implementation.ecosystemKey}`}
+                accessibilityRole="radio"
+                aria-checked={active}
+                onPress={() => setSelected(implementation.ecosystemKey)}
+                style={{
+                  minHeight: 44,
+                  justifyContent: 'center',
+                  paddingHorizontal: space[16],
+                  borderRadius: radius.small,
+                  borderWidth: active ? 2 : 1,
+                  borderColor: active ? color.accent : color.borderStrong,
+                  backgroundColor: active ? color.surface : 'transparent',
+                }}
+              >
+                <Text style={[textStyle('label'), { color: active ? color.accent : color.textSecondary }]}>
+                  {implementation.ecosystemName}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {current.sections.map((section) => (
+        <Section key={section.sectionType} type={section.sectionType} markdown={section.markdown} />
+      ))}
     </View>
   );
 }

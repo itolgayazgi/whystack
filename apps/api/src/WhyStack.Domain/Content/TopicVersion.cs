@@ -1,12 +1,10 @@
 namespace WhyStack.Domain.Content;
 
-/// <summary>
-/// One revision of a topic's educational content (`07` — Topic Versioning Domain).
-/// </summary>
+/// <summary>One revision of a topic's content (`07` — Topic Versioning Domain).</summary>
 /// <remarks>
-/// The Markdown is not here. <see cref="MarkdownPath"/> points into <c>content/</c> and
-/// <see cref="ContentHash"/> says which bytes were imported — which is how a stale row is detected
-/// without reading the file, and how a cache can be keyed by content rather than by time.
+/// There is no <c>MarkdownPath</c> any more. ADR-0020 moved the source of truth into the database: the text
+/// is in <see cref="TopicSection"/> and <see cref="ImplementationSection"/>, and <c>content/</c> is written
+/// back OUT of here as the published record.
 /// </remarks>
 public class TopicVersion
 {
@@ -14,19 +12,13 @@ public class TopicVersion
 
     public required Guid TopicId { get; init; }
 
-    /// <summary>1 for the first import. A meaningful revision of published content creates the next one.</summary>
+    /// <summary>1 for the first draft. A meaningful revision of published content creates the next one.</summary>
     public required int VersionNumber { get; init; }
 
     public required ContentStatus Status { get; set; }
 
     /// <summary>English. A translation with no canonical source cannot be reviewed against anything.</summary>
     public required string CanonicalLanguageCode { get; set; }
-
-    /// <summary>Repository-relative, so a row can always be traced to the file that produced it.</summary>
-    public required string MarkdownPath { get; set; }
-
-    /// <summary>SHA-256 of the canonical file. Detects a changed file without opening it.</summary>
-    public required string ContentHash { get; set; }
 
     public required int EstimatedReadingMinutes { get; set; }
 
@@ -39,11 +31,20 @@ public class TopicVersion
     public DateTime CreatedAtUtc { get; init; }
     public DateTime? UpdatedAtUtc { get; set; }
 
+    /// <summary>
+    /// Two editors, one topic, two browser tabs.
+    /// </summary>
+    /// <remarks>
+    /// Now that content is authored in the application rather than merged in git, the concurrent-edit
+    /// problem is ours. Without this, the second save silently discards the first — and nobody is told,
+    /// because both requests succeeded.
+    /// </remarks>
     public byte[]? RowVersion { get; set; }
 
     public Topic? Topic { get; init; }
     public ICollection<TopicTranslation> Translations { get; init; } = [];
     public ICollection<TopicSection> Sections { get; init; } = [];
+    public ICollection<TopicImplementation> Implementations { get; init; } = [];
     public ICollection<TopicSupportedVersion> SupportedVersions { get; init; } = [];
 }
 
@@ -52,7 +53,8 @@ public class TopicVersion
 /// </summary>
 /// <remarks>
 /// <c>AiDraft → Published</c> is forbidden by name in CLAUDE.md §1.5, and it is unreachable here rather
-/// than merely discouraged — see <see cref="ContentLifecycle.MayTransition"/>.
+/// than merely discouraged — see <see cref="ContentLifecycle.MayTransition"/>. Moving the source of truth
+/// into the database (ADR-0020) moved the gate; it did not open it.
 /// </remarks>
 public enum ContentStatus
 {
@@ -71,9 +73,9 @@ public static class ContentLifecycle
 {
     /// <summary>Forward by exactly one stage, or back to any earlier one.</summary>
     /// <remarks>
-    /// Backwards is not a violation — a reviewer who finds a problem sends it as far back as it needs to
-    /// go, and that is the review working. Forwards is one stage at a time, because every gate between a
-    /// draft and a reader is a gate a human has to open.
+    /// Backwards is not a violation — a reviewer who finds a problem sends it as far back as it needs to go,
+    /// and that is the review working. Forwards is one stage at a time, because every gate between a draft
+    /// and a reader is a gate a human has to open.
     /// </remarks>
     public static bool MayTransition(ContentStatus from, ContentStatus to) =>
         to == from + 1 || to < from;
@@ -83,17 +85,35 @@ public static class ContentLifecycle
         status is ContentStatus.Published or ContentStatus.Deprecated;
 }
 
-/// <summary>
-/// A technology version this topic's claims hold for ("8", "9", "10").
-/// </summary>
-/// <remarks>
-/// A child table rather than a comma-separated column, because this is the thing every "does this apply
-/// to my .NET?" query filters on — and a query that has to <c>LIKE '%9%'</c> a string column cannot use
-/// an index and will match "19".
-/// </remarks>
+/// <summary>A technology version the topic's claims hold for.</summary>
 public class TopicSupportedVersion
 {
     public Guid Id { get; init; }
     public required Guid TopicVersionId { get; init; }
     public required string Version { get; init; }
+}
+
+/// <summary>
+/// Who moved this topic, when, and why (`07` § Editorial Workflow Domain).
+/// </summary>
+/// <remarks>
+/// This table is the price of ADR-0020. Content used to be reviewed in a pull request, and git answered
+/// "who changed this, and why". It is no longer, so the database has to answer instead — and an editorial
+/// gate with no record of who opened it is not a gate, it is a formality.
+/// </remarks>
+public class TopicReview
+{
+    public Guid Id { get; init; }
+
+    public required Guid TopicVersionId { get; init; }
+
+    public required Guid ReviewerId { get; init; }
+
+    public required ContentStatus FromStatus { get; init; }
+    public required ContentStatus ToStatus { get; init; }
+
+    /// <summary>Optional, and it should not be. A rejection with no reason is a rejection nobody can act on.</summary>
+    public string? Note { get; init; }
+
+    public DateTime CreatedAtUtc { get; init; }
 }

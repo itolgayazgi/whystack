@@ -60,14 +60,14 @@ public static class TopicsEndpoints
         ListTopicsHandler handler,
         HttpContext http,
         CancellationToken cancellationToken,
-        string? technology = null,
+        string? domain = null,
         string? level = null,
         string? language = null,
         int? pageNumber = null,
         int? pageSize = null)
     {
         var result = await handler.HandleAsync(
-            technology,
+            domain,
             level,
             LanguageOf(language),
             pageNumber,
@@ -99,11 +99,13 @@ public static class TopicsEndpoints
         GetTopicHandler handler,
         HttpContext http,
         CancellationToken cancellationToken,
-        string? language = null)
+        string? language = null,
+        string? ecosystem = null)
     {
         var result = await handler.HandleAsync(
             slug,
             LanguageOf(language),
+            ecosystem,
             MayReadDraftsAs(principal),
             cancellationToken);
 

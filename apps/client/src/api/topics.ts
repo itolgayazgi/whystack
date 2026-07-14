@@ -20,7 +20,12 @@ export interface TopicSummary {
   stableKey: string;
   slug: string;
   title: string;
-  technology: string;
+  summary: string | null;
+
+  /** A topic belongs to a DOMAIN — Backend, Database — not to a language (ADR-0021). */
+  domainKey: string;
+  domainName: string;
+
   category: string;
   level: SkillLevel;
   supportedVersions: string[];
@@ -58,10 +63,31 @@ export interface TopicSection {
   markdown: string;
 }
 
+/**
+ * What sits behind the `[ .NET ▾ ]` control (ADR-0021).
+ *
+ * ALL of them arrive, not just the reader's own — the concept above the panel is the same page for
+ * everybody, and someone who wants to see how Java does it should be able to switch without another round
+ * trip. `isPreferred` says which one OPENS. It does not filter.
+ */
+export interface TopicImplementation {
+  ecosystemKey: string;
+  ecosystemName: string;
+  supportedVersions: string;
+  isPreferred: boolean;
+  sections: TopicSection[];
+}
+
 export interface TopicDetail extends Omit<TopicSummary, 'language'> {
   lastReviewedOn: string;
   language: LanguageResolution;
+
+  /** The concept. Written once, true in every ecosystem. */
   sections: TopicSection[];
+
+  /** Empty for a topic with no code — "what is a transaction?". */
+  implementations: TopicImplementation[];
+
   graph: TopicGraph;
 }
 
@@ -86,11 +112,11 @@ interface Single<T> {
 export const topicsApi = {
   list: (
     client: ApiClient,
-    query: { language: string; technology?: string; level?: SkillLevel; pageNumber?: number },
+    query: { language: string; domain?: string; level?: SkillLevel; pageNumber?: number },
   ) => {
     const parameters = new URLSearchParams({ language: query.language });
 
-    if (query.technology) parameters.set('technology', query.technology);
+    if (query.domain) parameters.set('domain', query.domain);
     if (query.level) parameters.set('level', query.level);
     if (query.pageNumber) parameters.set('pageNumber', String(query.pageNumber));
 
@@ -104,8 +130,13 @@ export const topicsApi = {
    * differently depending on who clicks it cannot be cached, cannot be indexed (ADR-0009), and cannot be
    * discussed. The reader's PREFERENCE still decides; it just decides somewhere a URL can carry.
    */
-  get: (client: ApiClient, slug: string, language: string) =>
-    client.request<Single<TopicDetail>>(
-      `/api/v1/topics/${encodeURIComponent(slug)}?language=${encodeURIComponent(language)}`,
-    ),
+  get: (client: ApiClient, slug: string, language: string, ecosystem?: string) => {
+    const parameters = new URLSearchParams({ language });
+
+    // The reader's ecosystem chooses which implementation panel OPENS. It does not hide the others —
+    // that is the point of teaching the reason first: the reason transfers (ADR-0021).
+    if (ecosystem) parameters.set('ecosystem', ecosystem);
+
+    return client.request<Single<TopicDetail>>(`/api/v1/topics/${encodeURIComponent(slug)}?${parameters}`);
+  },
 };

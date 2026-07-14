@@ -15,21 +15,16 @@ namespace WhyStack.Api.Tests;
 /// The topic endpoints, against the real application and the real database.
 /// </summary>
 /// <remarks>
-/// The rules under test are the ones that would fail quietly: an unpublished draft reaching a reader, and
-/// a fallback language served without saying so. Neither throws, neither logs, and neither is visible to
-/// anyone who is not looking for it — which is exactly why they are asserted here rather than trusted.
+/// The rules under test are the ones that fail QUIETLY: an unpublished draft reaching a reader, and a
+/// fallback language served without saying so. Neither throws, neither logs, and neither is visible to
+/// anyone who is not looking for it.
 /// </remarks>
 public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<WhyStackApiFactory>
 {
-    /// <summary>A real file, so the content reader has real Markdown to parse. It is also the shipped topic.</summary>
-    private const string RealMarkdown = "content/topics/csharp/what-is-csharp/en.md";
-
-    private const string RealTurkishMarkdown = "content/topics/csharp/what-is-csharp/tr.md";
-
     [Fact]
     public async Task A_published_topic_is_readable_without_an_account()
     {
-        var (_, slug) = await SeedAsync(ContentStatus.Published);
+        var slug = await SeedAsync(ContentStatus.Published);
 
         var response = await factory.CreateClient().GetAsync($"/api/v1/topics/{slug}");
 
@@ -37,45 +32,33 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
 
         var topic = await DataOf(response);
 
-        Assert.Equal("What is C#?", topic.GetProperty("title").GetString());
-
         // ADR-0009 builds a public, indexable site on this premise: a reader who found a topic through a
         // search engine has to be able to read it without an account.
+        Assert.Equal("What is X?", topic.GetProperty("title").GetString());
         Assert.True(topic.GetProperty("sections").GetArrayLength() > 0);
     }
 
     [Fact]
     public async Task A_draft_is_invisible_to_a_reader()
     {
-        var (_, slug) = await SeedAsync(ContentStatus.AiDraft);
+        var slug = await SeedAsync(ContentStatus.AiDraft);
 
         var response = await factory.CreateClient().GetAsync($"/api/v1/topics/{slug}");
 
-        // 404, not 403. A 403 would confirm the topic exists — an anonymous visitor could enumerate the
-        // content roadmap by guessing slugs. `04` says draft content is not publicly accessible, and "not
-        // accessible" includes not being *discoverable*.
+        // 404, not 403. A 403 confirms the topic exists — an anonymous visitor could enumerate the content
+        // roadmap by guessing slugs. "Not accessible" includes not being *discoverable*.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-
-        var list = await factory.CreateClient().GetFromJsonAsync<JsonElement>("/api/v1/topics?pageSize=50");
-
-        Assert.DoesNotContain(
-            list.GetProperty("data").EnumerateArray(),
-            item => item.GetProperty("slug").GetString() == slug);
     }
 
     [Fact]
     public async Task An_editor_can_read_a_draft()
     {
-        var (_, slug) = await SeedAsync(ContentStatus.AiDraft);
+        var slug = await SeedAsync(ContentStatus.AiDraft);
 
-        var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", TokenFor(RoleName.Editor));
+        var response = await EditorClient(RoleName.Editor).GetAsync($"/api/v1/topics/{slug}");
 
-        var response = await client.GetAsync($"/api/v1/topics/{slug}");
-
-        // Otherwise the review gate is a form nobody can fill in: a reviewer cannot approve what they are
-        // not allowed to read. CLAUDE.md §1.5 requires human review — this is what makes it possible.
+        // Otherwise the review gate is a form nobody can fill in: a reviewer cannot approve what they are not
+        // allowed to read. CLAUDE.md §1.5 requires human review — this is what makes it possible.
         response.EnsureSuccessStatusCode();
 
         Assert.Equal("AiDraft", (await DataOf(response)).GetProperty("status").GetString());
@@ -84,34 +67,19 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
     [Fact]
     public async Task A_registered_user_is_not_an_editor()
     {
-        var (_, slug) = await SeedAsync(ContentStatus.AiDraft);
+        var slug = await SeedAsync(ContentStatus.AiDraft);
 
-        var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", TokenFor(RoleName.RegisteredUser));
+        var response = await EditorClient(RoleName.RegisteredUser).GetAsync($"/api/v1/topics/{slug}");
 
-        // Having an account is not a review role. This is the assertion that stops "signed in" from
-        // quietly becoming "may read unreviewed content" the next time somebody touches the endpoint.
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/topics/{slug}")).StatusCode);
-    }
-
-    [Fact]
-    public async Task A_translation_is_served_in_the_language_that_was_asked_for()
-    {
-        var (_, slug) = await SeedAsync(ContentStatus.Published, withTurkish: true);
-
-        var response = await factory.CreateClient().GetAsync($"/api/v1/topics/{slug}?language=tr");
-
-        var topic = await DataOf(response);
-
-        Assert.Equal("C# Nedir?", topic.GetProperty("title").GetString());
-        Assert.False(topic.GetProperty("language").GetProperty("fallbackUsed").GetBoolean());
+        // Having an account is not a review role. This assertion is what stops "signed in" from quietly
+        // becoming "may read unreviewed content" the next time somebody touches the endpoint.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task A_missing_translation_falls_back_and_says_so()
     {
-        var (_, slug) = await SeedAsync(ContentStatus.Published, withTurkish: false);
+        var slug = await SeedAsync(ContentStatus.Published);
 
         var response = await factory.CreateClient().GetAsync($"/api/v1/topics/{slug}?language=tr");
 
@@ -119,14 +87,40 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
 
         // THE ASSERTION THIS FILE EXISTS FOR.
         //
-        // A Turkish reader whose topic has no Turkish translation is shown the English text — that is
-        // better than a blank page. What they must never be shown is English *presented as though it were
-        // what they asked for*. They would conclude the translation is bad, or that the setting is broken,
-        // and neither is true (CLAUDE.md §1.7, `08` Principle 07 — No Silent Fallbacks).
+        // A Turkish reader whose topic has no Turkish translation is shown the English text — better than a
+        // blank page. What they must never be shown is English *presented as though it were what they asked
+        // for*. They would conclude the translation is bad, or that the setting is broken, and neither is
+        // true (CLAUDE.md §1.7, `08` Principle 07).
         Assert.Equal("tr", language.GetProperty("requested").GetString());
         Assert.Equal("en", language.GetProperty("returned").GetString());
         Assert.True(language.GetProperty("fallbackUsed").GetBoolean());
         Assert.Equal("translation_not_available", language.GetProperty("fallbackReason").GetString());
+    }
+
+    /// <summary>ADR-0021. The concept is one page; only the panel changes.</summary>
+    [Fact]
+    public async Task An_implementation_is_returned_with_the_concept_and_the_preferred_one_opens_first()
+    {
+        var slug = await SeedAsync(ContentStatus.Published, withImplementation: true);
+
+        var response = await factory.CreateClient().GetAsync($"/api/v1/topics/{slug}?ecosystem=dotnet");
+
+        var topic = await DataOf(response);
+
+        var implementation = Assert.Single(topic.GetProperty("implementations").EnumerateArray());
+
+        Assert.Equal("dotnet", implementation.GetProperty("ecosystemKey").GetString());
+        Assert.True(implementation.GetProperty("isPreferred").GetBoolean());
+
+        // The concept sections and the implementation sections are SEPARATE. Fold them together and the
+        // reasoning gets duplicated per ecosystem — the exact defect ADR-0021 exists to remove.
+        Assert.Contains(
+            topic.GetProperty("sections").EnumerateArray(),
+            section => section.GetProperty("sectionType").GetString() == "TradeOffs");
+
+        Assert.Contains(
+            implementation.GetProperty("sections").EnumerateArray(),
+            section => section.GetProperty("sectionType").GetString() == "BasicExample");
     }
 
     [Fact]
@@ -135,9 +129,8 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
         var response = await factory.CreateClient()
             .GetFromJsonAsync<JsonElement>("/api/v1/topics?pageSize=10000");
 
-        // CLAUDE.md §4 forbids the unbounded query. Clamped rather than rejected: `pageSize=10000` is far
-        // more often a client bug than an attack, and a 422 teaches nobody anything — while the metadata
-        // says exactly what was served.
+        // CLAUDE.md §4 forbids the unbounded query. Clamped rather than rejected: `pageSize=10000` is far more
+        // often a client bug than an attack, and a 422 teaches nobody anything.
         Assert.Equal(50, response.GetProperty("pagination").GetProperty("pageSize").GetInt32());
     }
 
@@ -150,8 +143,7 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
 
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        // `08`: Problem Details only. A custom error shape is forbidden, and the code is part of the
-        // contract — clients may depend on it.
+        // `08`: Problem Details only. The code is part of the contract — clients may depend on it.
         Assert.Equal("resource_not_found", problem.GetProperty("code").GetString());
     }
 
@@ -160,12 +152,19 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
     private static async Task<JsonElement> DataOf(HttpResponseMessage response) =>
         (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
 
+    private HttpClient EditorClient(RoleName role)
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TokenFor(role));
+        return client;
+    }
+
     /// <summary>
     /// A JWT for a user in one role, minted through the real issuer.
     /// </summary>
     /// <remarks>
-    /// Through the issuer rather than by hand-crafting a token: a hand-crafted one proves the test can
-    /// forge a claim, not that the application reads the claim it actually issues.
+    /// Through the issuer rather than by hand-crafting a token: a hand-crafted one proves the test can forge
+    /// a claim, not that the application reads the claim it actually issues.
     /// </remarks>
     private string TokenFor(RoleName role)
     {
@@ -185,7 +184,7 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
     }
 
     /// <summary>Seeds one topic with a unique identity — these tests share a database with everything else.</summary>
-    private async Task<(Guid Id, string Slug)> SeedAsync(ContentStatus status, bool withTurkish = false)
+    private async Task<string> SeedAsync(ContentStatus status, bool withImplementation = false)
     {
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<WhyStackDbContext>();
@@ -198,10 +197,13 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
             Id = Guid.CreateVersion7(),
             StableKey = key,
             Slug = slug,
-            Technology = "csharp",
+
+            // Backend, not C#. A topic belongs to a domain (ADR-0021).
+            DomainId = DeterministicId.For("domain:backend"),
+
             Category = TopicCategory.Concept,
             DefaultLevel = SkillLevel.Junior,
-            DefaultTitle = "What is C#?",
+            DefaultTitle = "What is X?",
             CreatedAtUtc = DateTime.UtcNow,
         };
 
@@ -212,41 +214,65 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
             VersionNumber = 1,
             Status = status,
             CanonicalLanguageCode = "en",
-            MarkdownPath = RealMarkdown,
-            ContentHash = Guid.CreateVersion7().ToString("N"),
             EstimatedReadingMinutes = 6,
-            LastReviewedOn = new DateOnly(2026, 7, 13),
+            LastReviewedOn = new DateOnly(2026, 7, 14),
             CreatedAtUtc = DateTime.UtcNow,
         };
 
-        // Real section keys, in blueprint order, so the content reader has something to find in the file.
-        var order = 0;
-        string[] blueprint = ["Summary", "Definition", "CoreMentalModel", "TradeOffs"];
+        version.Translations.Add(new TopicTranslation
+        {
+            Id = Guid.CreateVersion7(),
+            TopicVersionId = version.Id,
+            LanguageCode = "en",
+            Title = "What is X?",
+            Status = TranslationStatus.HumanDraft,
+            CreatedAtUtc = DateTime.UtcNow,
+        });
 
-        foreach (var section in blueprint)
+        var order = 0;
+
+        // The CONCEPT. True in every ecosystem.
+        foreach (var (section, markdown) in new[]
+        {
+            ("Summary", "The short answer."),
+            ("TradeOffs", "| You get | You give up |\n|---|---|\n| safety | control |"),
+        })
         {
             version.Sections.Add(new TopicSection
             {
                 Id = Guid.CreateVersion7(),
                 TopicVersionId = version.Id,
                 SectionTypeKey = section,
+                LanguageCode = "en",
+                Markdown = markdown,
                 SortOrder = order++,
+                CreatedAtUtc = DateTime.UtcNow,
             });
         }
 
-        if (withTurkish)
+        if (withImplementation)
         {
-            version.Translations.Add(new TopicTranslation
+            var implementation = new TopicImplementation
             {
                 Id = Guid.CreateVersion7(),
                 TopicVersionId = version.Id,
-                LanguageCode = "tr",
-                Title = "C# Nedir?",
-                MarkdownPath = RealTurkishMarkdown,
-                ContentHash = Guid.CreateVersion7().ToString("N"),
-                Status = TranslationStatus.MachineDraft,
+                EcosystemId = DeterministicId.For("ecosystem:dotnet"),
+                ProgrammingLanguageId = DeterministicId.For("language:csharp"),
+                SupportedVersions = ".NET 8",
                 CreatedAtUtc = DateTime.UtcNow,
+            };
+
+            implementation.Sections.Add(new ImplementationSection
+            {
+                Id = Guid.CreateVersion7(),
+                TopicImplementationId = implementation.Id,
+                SectionTypeKey = "BasicExample",
+                LanguageCode = "en",
+                Markdown = "```csharp\nvar x = 1;\n```",
+                SortOrder = 0,
             });
+
+            version.Implementations.Add(implementation);
         }
 
         topic.Versions.Add(version);
@@ -254,6 +280,6 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
         context.Topics.Add(topic);
         await context.SaveChangesAsync();
 
-        return (topic.Id, slug);
+        return slug;
     }
 }

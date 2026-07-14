@@ -1,0 +1,375 @@
+using Microsoft.EntityFrameworkCore;
+using WhyStack.Application.Common;
+using WhyStack.Application.Content.Authoring;
+using WhyStack.Application.Content.Validation;
+using WhyStack.Domain.Content;
+using WhyStack.Domain.Users;
+
+namespace WhyStack.Infrastructure.Persistence;
+
+public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimeProvider clock)
+    : IContentAuthoringRepository
+{
+    public async Task<SaveOutcome> SaveAsync(
+        SaveTopicCommand command,
+        Guid editorId,
+        CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
+
+        var domain = await context.KnowledgeDomains
+            .SingleOrDefaultAsync(candidate => candidate.Key == command.DomainKey, cancellationToken);
+
+        if (domain is null)
+        {
+            return new SaveOutcome(Guid.Empty, string.Empty, string.Empty, false, $"No domain \"{command.DomainKey}\".");
+        }
+
+        var topic = command.Id is null
+            ? null
+            : await context.Topics
+                .Include(candidate => candidate.Versions).ThenInclude(version => version.Sections)
+                .Include(candidate => candidate.Versions).ThenInclude(version => version.Translations)
+                .Include(candidate => candidate.Versions).ThenInclude(version => version.SupportedVersions)
+                .Include(candidate => candidate.Versions)
+                    .ThenInclude(version => version.Implementations)
+                    .ThenInclude(implementation => implementation.Sections)
+                .SingleOrDefaultAsync(candidate => candidate.Id == command.Id, cancellationToken);
+
+        if (command.Id is not null && topic is null)
+        {
+            return new SaveOutcome(Guid.Empty, string.Empty, string.Empty, false, "No such topic.");
+        }
+
+        TopicVersion version;
+
+        if (topic is null)
+        {
+            topic = new Topic
+            {
+                Id = Guid.CreateVersion7(),
+                StableKey = command.StableKey,
+                Slug = command.Slug,
+                DomainId = domain.Id,
+                Category = Enum.Parse<TopicCategory>(command.Category),
+                DefaultLevel = Enum.Parse<SkillLevel>(command.Level),
+                DefaultTitle = command.Translations.First(translation => translation.LanguageCode == "en").Title,
+                CreatedAtUtc = now,
+            };
+
+            version = new TopicVersion
+            {
+                Id = Guid.CreateVersion7(),
+                TopicId = topic.Id,
+                VersionNumber = 1,
+
+                // AiDraft, always, and never anything further. A topic is born unreviewed no matter who typed
+                // it — CLAUDE.md §1.5 is about what has been READ, not about who did the typing, and an
+                // editor creating a topic has not yet reviewed it either.
+                Status = ContentStatus.AiDraft,
+
+                CanonicalLanguageCode = "en",
+                EstimatedReadingMinutes = command.EstimatedReadingMinutes,
+                LastReviewedOn = DateOnly.FromDateTime(now),
+                CreatedAtUtc = now,
+            };
+
+            topic.Versions.Add(version);
+            context.Topics.Add(topic);
+        }
+        else
+        {
+            version = topic.Versions.OrderByDescending(candidate => candidate.VersionNumber).First();
+
+            // Optimistic concurrency, and the one line that is it.
+            //
+            // EF builds the UPDATE's WHERE from the ORIGINAL value of the concurrency token. Overwriting that
+            // with what the CLIENT last saw is what turns "save this topic" into "save this topic, given that
+            // this is what I was looking at" — and it is why a second tab cannot silently revert this edit.
+            if (!string.IsNullOrEmpty(command.RowVersion))
+            {
+                context.Entry(version).Property(entity => entity.RowVersion).OriginalValue =
+                    Convert.FromBase64String(command.RowVersion);
+            }
+
+            topic.Slug = command.Slug;
+            topic.DomainId = domain.Id;
+            topic.Category = Enum.Parse<TopicCategory>(command.Category);
+            topic.DefaultLevel = Enum.Parse<SkillLevel>(command.Level);
+            topic.DefaultTitle = command.Translations.First(translation => translation.LanguageCode == "en").Title;
+            topic.UpdatedAtUtc = now;
+
+            version.EstimatedReadingMinutes = command.EstimatedReadingMinutes;
+            version.UpdatedAtUtc = now;
+
+            await ClearAsync(version.Id, cancellationToken);
+        }
+
+        Fill(version, command, now);
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return new SaveOutcome(topic.Id, version.Status.ToString(), string.Empty, Conflict: true, null);
+        }
+
+        await ReplaceRelationshipsAsync(topic.Id, command.Relationships, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new SaveOutcome(
+            topic.Id,
+            version.Status.ToString(),
+            Convert.ToBase64String(version.RowVersion ?? []),
+            Conflict: false,
+            null);
+    }
+
+    /// <summary>
+    /// Everything under the version is REPLACED, not merged.
+    /// </summary>
+    /// <remarks>
+    /// A merge would leave a section behind after the editor deleted it — a heading in the table of contents
+    /// pointing at text nobody wrote. What is on screen is what is saved (ADR-0020).
+    ///
+    /// Deleted by QUERY, not through the change tracker. Emptying a tracked navigation whose foreign key is
+    /// required tells EF to ORPHAN the children, and it then issues a DELETE for rows a previous statement
+    /// already removed: "expected to affect 1 row(s), but actually affected 0". That bug is why this method
+    /// looks the way it does.
+    /// </remarks>
+    private async Task ClearAsync(Guid versionId, CancellationToken cancellationToken)
+    {
+        await context.ImplementationSections
+            .Where(section => context.TopicImplementations
+                .Where(implementation => implementation.TopicVersionId == versionId)
+                .Select(implementation => implementation.Id)
+                .Contains(section.TopicImplementationId))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        await context.TopicImplementations
+            .Where(implementation => implementation.TopicVersionId == versionId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        await context.TopicSections
+            .Where(section => section.TopicVersionId == versionId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        await context.TopicSupportedVersions
+            .Where(supported => supported.TopicVersionId == versionId)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
+
+    private void Fill(TopicVersion version, SaveTopicCommand command, DateTime now)
+    {
+        foreach (var supported in command.SupportedVersions.Distinct())
+        {
+            context.TopicSupportedVersions.Add(new TopicSupportedVersion
+            {
+                Id = Guid.CreateVersion7(),
+                TopicVersionId = version.Id,
+                Version = supported,
+            });
+        }
+
+        var order = 0;
+
+        foreach (var section in command.Sections)
+        {
+            context.TopicSections.Add(new TopicSection
+            {
+                Id = Guid.CreateVersion7(),
+                TopicVersionId = version.Id,
+                SectionTypeKey = section.SectionTypeKey,
+                LanguageCode = section.LanguageCode,
+                Markdown = section.Markdown,
+                SortOrder = order++,
+                CreatedAtUtc = now,
+            });
+        }
+
+        foreach (var incoming in command.Implementations)
+        {
+            var ecosystemId = DeterministicId.For($"ecosystem:{incoming.EcosystemKey}");
+
+            var implementation = new TopicImplementation
+            {
+                Id = Guid.CreateVersion7(),
+                TopicVersionId = version.Id,
+                EcosystemId = ecosystemId,
+                ProgrammingLanguageId = incoming.ProgrammingLanguageKey is null
+                    ? null
+                    : DeterministicId.For($"language:{incoming.ProgrammingLanguageKey}"),
+                SupportedVersions = incoming.SupportedVersions,
+                CreatedAtUtc = now,
+            };
+
+            context.TopicImplementations.Add(implementation);
+
+            var implementationOrder = 0;
+
+            foreach (var section in incoming.Sections)
+            {
+                context.ImplementationSections.Add(new ImplementationSection
+                {
+                    Id = Guid.CreateVersion7(),
+                    TopicImplementationId = implementation.Id,
+                    SectionTypeKey = section.SectionTypeKey,
+                    LanguageCode = section.LanguageCode,
+                    Markdown = section.Markdown,
+                    SortOrder = implementationOrder++,
+                });
+            }
+        }
+
+        // Translations are upserted rather than replaced: the STATUS on one is a review decision, and
+        // deleting the row to re-insert it would quietly reset a human's judgement to MachineDraft.
+        foreach (var incoming in command.Translations)
+        {
+            var translation = version.Translations
+                .SingleOrDefault(candidate => candidate.LanguageCode == incoming.LanguageCode);
+
+            if (translation is null)
+            {
+                version.Translations.Add(new TopicTranslation
+                {
+                    Id = Guid.CreateVersion7(),
+                    TopicVersionId = version.Id,
+                    LanguageCode = incoming.LanguageCode,
+                    Title = incoming.Title,
+                    Summary = incoming.Summary,
+                    Status = TranslationStatus.HumanDraft,
+                    CreatedAtUtc = now,
+                });
+
+                continue;
+            }
+
+            translation.Title = incoming.Title;
+            translation.Summary = incoming.Summary;
+            translation.UpdatedAtUtc = now;
+        }
+    }
+
+    /// <summary>
+    /// The edges of THIS topic are replaced. Scoped, and the scope matters.
+    /// </summary>
+    /// <remarks>
+    /// Deleting every relationship in the table and rebuilding only this topic's would be identical for a
+    /// full-corpus import and catastrophic for a single save: it would erase the entire Knowledge Graph every
+    /// time an editor pressed Save.
+    /// </remarks>
+    private async Task ReplaceRelationshipsAsync(
+        Guid topicId,
+        IReadOnlyList<RelationshipCommand> relationships,
+        CancellationToken cancellationToken)
+    {
+        await context.TopicRelationships
+            .Where(edge => edge.FromTopicId == topicId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        if (relationships.Count == 0) return;
+
+        var keys = relationships.Select(relationship => relationship.ToStableKey).Distinct().ToList();
+
+        var idOf = await context.Topics
+            .Where(topic => keys.Contains(topic.StableKey))
+            .ToDictionaryAsync(topic => topic.StableKey, topic => topic.Id, cancellationToken);
+
+        foreach (var relationship in relationships)
+        {
+            // An edge pointing at a topic nobody wrote is a dead link in somebody's learning path — and it
+            // would be discovered by a learner, months later, clicking a prerequisite that goes nowhere.
+            if (!idOf.TryGetValue(relationship.ToStableKey, out var toId)) continue;
+            if (toId == topicId) continue;
+
+            context.TopicRelationships.Add(new TopicRelationship
+            {
+                Id = Guid.CreateVersion7(),
+                FromTopicId = topicId,
+                ToTopicId = toId,
+                Type = Enum.Parse<RelationshipType>(relationship.Type),
+            });
+        }
+    }
+
+    public async Task<Result<TransitionOutcome>> TransitionAsync(
+        Guid topicId,
+        string toStatus,
+        string? note,
+        Guid reviewerId,
+        CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow().UtcDateTime;
+        var target = Enum.Parse<ContentStatus>(toStatus);
+
+        var version = await context.TopicVersions
+            .Where(candidate => candidate.TopicId == topicId)
+            .OrderByDescending(candidate => candidate.VersionNumber)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (version is null)
+        {
+            return new Error(ErrorCodes.ResourceNotFound, "No such topic.");
+        }
+
+        if (!ContentLifecycle.MayTransition(version.Status, target))
+        {
+            // The transition CLAUDE.md forbids by name. A topic advances one stage at a time, and every gate
+            // between a model's draft and a reader is a gate a human has to open — one at a time, on purpose.
+            return Error.Validation(
+                "status",
+                $"{version.Status} → {target} is not a legal transition (10 § Topic Lifecycle). A topic advances "
+                + "one stage at a time; it may not skip a review.");
+        }
+
+        context.TopicReviews.Add(new TopicReview
+        {
+            Id = Guid.CreateVersion7(),
+            TopicVersionId = version.Id,
+            ReviewerId = reviewerId,
+            FromStatus = version.Status,
+            ToStatus = target,
+            Note = note,
+            CreatedAtUtc = now,
+        });
+
+        version.Status = target;
+        version.UpdatedAtUtc = now;
+
+        if (target == ContentStatus.Published && version.PublishedAtUtc is null)
+        {
+            version.PublishedAtUtc = now;
+            version.LastReviewedOn = DateOnly.FromDateTime(now);
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return Result<TransitionOutcome>.Success(new TransitionOutcome(target.ToString()));
+    }
+
+    public async Task<TopicDraft?> DraftAsync(Guid topicId, CancellationToken cancellationToken)
+    {
+        var version = await context.TopicVersions
+            .AsNoTracking()
+            .Include(candidate => candidate.Sections)
+            .Include(candidate => candidate.Implementations).ThenInclude(implementation => implementation.Sections)
+            .Where(candidate => candidate.TopicId == topicId)
+            .OrderByDescending(candidate => candidate.VersionNumber)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (version is null) return null;
+
+        return new TopicDraft(
+            version.CanonicalLanguageCode,
+            [
+                .. version.Sections.Select(section =>
+                    new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
+                .. version.Implementations
+                    .SelectMany(implementation => implementation.Sections)
+                    .Select(section =>
+                        new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
+            ]);
+    }
+}

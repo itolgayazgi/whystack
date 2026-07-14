@@ -18,13 +18,21 @@ public class WhyStackDbContext(DbContextOptions<WhyStackDbContext> options) : Db
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
 
+    public DbSet<KnowledgeDomain> KnowledgeDomains => Set<KnowledgeDomain>();
+    public DbSet<Ecosystem> Ecosystems => Set<Ecosystem>();
+    public DbSet<ProgrammingLanguage> ProgrammingLanguages => Set<ProgrammingLanguage>();
     public DbSet<Topic> Topics => Set<Topic>();
     public DbSet<TopicVersion> TopicVersions => Set<TopicVersion>();
     public DbSet<TopicTranslation> TopicTranslations => Set<TopicTranslation>();
     public DbSet<TopicSection> TopicSections => Set<TopicSection>();
+    public DbSet<TopicImplementation> TopicImplementations => Set<TopicImplementation>();
+    public DbSet<ImplementationSection> ImplementationSections => Set<ImplementationSection>();
+    public DbSet<TopicReview> TopicReviews => Set<TopicReview>();
     public DbSet<TopicSupportedVersion> TopicSupportedVersions => Set<TopicSupportedVersion>();
     public DbSet<TopicRelationship> TopicRelationships => Set<TopicRelationship>();
     public DbSet<SectionType> SectionTypes => Set<SectionType>();
+    public DbSet<Term> Terms => Set<Term>();
+    public DbSet<TermExplanation> TermExplanations => Set<TermExplanation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

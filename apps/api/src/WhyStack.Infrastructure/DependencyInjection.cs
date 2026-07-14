@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using WhyStack.Application.Abstractions;
 using WhyStack.Application.Content;
+using WhyStack.Application.Content.Authoring;
 using WhyStack.Application.Identity.Confirmation;
 using WhyStack.Application.Identity.Login;
 using WhyStack.Application.Identity.Logout;
@@ -15,7 +16,6 @@ using WhyStack.Application.Users.Preferences;
 using WhyStack.Application.Users.Profile;
 using WhyStack.Application.Identity.Sessions;
 using WhyStack.Application.Identity.Tokens;
-using WhyStack.Infrastructure.Content;
 using WhyStack.Infrastructure.Identity;
 using WhyStack.Infrastructure.Maintenance;
 using WhyStack.Infrastructure.Persistence;
@@ -86,25 +86,16 @@ public static class DependencyInjection
         services.AddScoped<IIdentityRepository, IdentityRepository>();
         services.AddScoped<IUserPreferencesRepository, UserPreferencesRepository>();
 
-        AddContent(services, configuration);
+        AddContent(services);
         AddMaintenance(services, configuration);
     }
 
-    private static void AddContent(IServiceCollection services, IConfiguration configuration)
+    private static void AddContent(IServiceCollection services)
     {
-        services
-            .AddOptions<ContentOptions>()
-            .Bind(configuration.GetSection(ContentOptions.Section))
-            .Validate(options => !string.IsNullOrWhiteSpace(options.Root), "Content:Root must be set.")
-            .ValidateOnStart();
-
-        // The Markdown is cached by CONTENT HASH — invalidated by exactly one thing, the content changing.
-        // A size limit is not set: the corpus is Markdown, it is measured in megabytes, and the alternative
-        // (re-reading a file on every request to a topic page) is a disk hit on the hottest path there is.
-        services.AddMemoryCache();
-
+        // The Markdown is in the database now (ADR-0020). There is no file to read, no path to configure and
+        // no cache keyed by a content hash — the row IS the content.
         services.AddScoped<ITopicRepository, TopicRepository>();
-        services.AddSingleton<ITopicContentReader, FileSystemTopicContentReader>();
+        services.AddScoped<IContentAuthoringRepository, ContentAuthoringRepository>();
     }
 
     private static void AddMaintenance(IServiceCollection services, IConfiguration configuration)
@@ -217,5 +208,7 @@ public static class DependencyInjection
         services.AddScoped<UpdatePreferencesHandler>();
         services.AddScoped<ListTopicsHandler>();
         services.AddScoped<GetTopicHandler>();
+        services.AddScoped<SaveTopicHandler>();
+        services.AddScoped<TransitionTopicHandler>();
     }
 }

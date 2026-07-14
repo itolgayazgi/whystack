@@ -57,7 +57,15 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // A named policy, not a role attribute repeated on every endpoint. One place decides who may write
+    // content, and a new authoring route inherits it by joining the group — rather than by somebody
+    // remembering to copy a string.
+    options.AddPolicy(
+        WhyStack.Api.Endpoints.AuthoringEndpoints.EditorPolicy,
+        policy => policy.RequireRole(WhyStack.Api.Endpoints.EditorRoles.All));
+});
 
 // The web client runs on a different origin than the API (8081 vs 5207 in development), so the browser
 // will not let it call us at all without this.
@@ -172,6 +180,7 @@ app.MapHealthChecks(
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapTopicEndpoints();
+app.MapAuthoringEndpoints();
 
 app.Run();
 

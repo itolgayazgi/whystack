@@ -3,13 +3,16 @@ using WhyStack.Domain.Users;
 namespace WhyStack.Domain.Content;
 
 /// <summary>
-/// The canonical identity of an educational topic (`07` — Content Domain; `10`, ADR-0002).
+/// A CONCEPT (ADR-0021). It belongs to a domain — Backend, Database — not to a language.
 /// </summary>
 /// <remarks>
-/// The database stores metadata, relationships and publishing state. It does NOT store the Markdown —
-/// `07` is explicit: "Markdown may exist in files. The database stores metadata, relationships and
-/// publishing state." <see cref="TopicVersion.MarkdownPath"/> and <see cref="TopicVersion.ContentHash"/>
-/// are the link back to <c>content/</c>, which stays the single source of truth (ADR-0018).
+/// `Connection Pooling` is Backend. It is Backend in .NET and it is Backend in Java, and the reason it
+/// exists is the same in both. The product's promise is *"why before how"*, and until this was modelled the
+/// database could not tell the difference between the why (written once) and the how (written per
+/// ecosystem).
+///
+/// A topic ABOUT a language — "What is C#?" — is still a topic. Its subject happens to be the language, and
+/// its domain is Language. That is not the same thing as a concept implemented in one.
 /// </remarks>
 public class Topic
 {
@@ -17,25 +20,22 @@ public class Topic
 
     /// <summary>
     /// The identity, and it never changes. Every graph edge, quiz reference and roadmap entry resolves
-    /// through this string — so renaming it is not a rename, it is a deletion and a different topic.
+    /// through this string — so renaming it is not a rename: it is a deletion and a different topic.
     /// </summary>
     public required string StableKey { get; init; }
 
     /// <summary>The URL segment. May be corrected; <see cref="StableKey"/> absorbs the consequences.</summary>
     public required string Slug { get; set; }
 
-    /// <summary>
-    /// The technology slug from <c>content/</c> ("csharp", "sql-server"). `07` models a Technology
-    /// Catalog with a foreign key; that catalog is Sprint 5's, and this column becomes the key then.
-    /// </summary>
-    public required string Technology { get; set; }
+    /// <summary>Backend, Database, Networking… The concept's home. NOT a language (ADR-0021).</summary>
+    public required Guid DomainId { get; set; }
 
     public required TopicCategory Category { get; set; }
 
     /// <summary>
     /// The same four levels a learner states about themselves (`07` — TopicLevels: "These levels are
-    /// permanent product concepts"). One enum, not two: a topic written for a Mid-Level reader and a
-    /// reader who calls themselves Mid-Level must mean the same thing, or the roadmap cannot match them.
+    /// permanent product concepts"). One enum, not two: a topic written for a Mid-Level reader and a reader
+    /// who calls themselves Mid-Level must mean the same thing, or the roadmap cannot match them.
     /// </summary>
     public required SkillLevel DefaultLevel { get; set; }
 
@@ -47,6 +47,7 @@ public class Topic
     public DateTime CreatedAtUtc { get; init; }
     public DateTime? UpdatedAtUtc { get; set; }
 
+    public KnowledgeDomain? Domain { get; init; }
     public ICollection<TopicVersion> Versions { get; init; } = [];
     public ICollection<TopicRelationship> OutgoingRelationships { get; init; } = [];
 }

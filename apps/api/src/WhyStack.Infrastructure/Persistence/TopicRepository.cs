@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WhyStack.Application.Content;
+using WhyStack.Application.Content.Validation;
 using WhyStack.Domain.Content;
 
 namespace WhyStack.Infrastructure.Persistence;
@@ -11,8 +12,8 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
     /// </summary>
     /// <remarks>
     /// `04`: "Draft content is not publicly accessible." Everything before Published is somebody's work in
-    /// progress — a model's draft, a half-finished review. Deprecated stays visible, deliberately: a reader
-    /// who followed a link to an old topic is better served by the old topic and a warning than by a 404.
+    /// progress. Deprecated stays visible, deliberately: a reader who followed a link to an old topic is
+    /// better served by the old topic and a warning than by a 404.
     /// </remarks>
     private static readonly ContentStatus[] PubliclyVisible = [ContentStatus.Published, ContentStatus.Deprecated];
 
@@ -20,49 +21,167 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
     {
         var topics = Readable(query.IncludeDrafts);
 
-        if (!string.IsNullOrWhiteSpace(query.Technology))
+        if (!string.IsNullOrWhiteSpace(query.Domain))
         {
-            topics = topics.Where(topic => topic.Technology == query.Technology);
+            topics = topics.Where(topic => topic.Domain!.Key == query.Domain);
         }
 
-        if (!string.IsNullOrWhiteSpace(query.Level) && Enum.TryParse<Domain.Users.SkillLevel>(query.Level, true, out var level))
+        if (!string.IsNullOrWhiteSpace(query.Level)
+            && Enum.TryParse<Domain.Users.SkillLevel>(query.Level, true, out var level))
         {
             topics = topics.Where(topic => topic.DefaultLevel == level);
         }
 
-        // COUNT before Skip/Take. Doing it after would count the page, and the pagination metadata would
-        // tell every client there is exactly one page — forever.
+        // COUNT before Skip/Take. After, it would count the page — and the pagination metadata would tell
+        // every client there is exactly one page, forever.
         var total = await topics.CountAsync(cancellationToken);
 
+        // The LIST DOES NOT CARRY THE PROSE, and that is the point of having two shapes.
+        //
+        // Twenty topics, each with fifteen sections of Markdown, is megabytes of text sent so that a card can
+        // show a title. Under ADR-0018 this was free — the text was in a file nobody loaded. Now it is a
+        // column, and "SELECT *" on a content table is how a list screen becomes the slowest page in the app.
         var page = await topics
-            .OrderBy(topic => topic.Technology)
+            .OrderBy(topic => topic.Domain!.SortOrder)
             .ThenBy(topic => topic.DefaultLevel)
             .ThenBy(topic => topic.DefaultTitle)
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
-            .Select(Projection())
+            .Select(topic => new
+            {
+                topic.Id,
+                topic.StableKey,
+                topic.Slug,
+                DomainKey = topic.Domain!.Key,
+                DomainName = topic.Domain.Name,
+                topic.Category,
+                topic.DefaultLevel,
+                topic.DefaultTitle,
+
+                Version = topic.Versions
+                    .OrderByDescending(version => version.VersionNumber)
+                    .Select(version => new
+                    {
+                        version.Status,
+                        version.CanonicalLanguageCode,
+                        version.EstimatedReadingMinutes,
+                        version.LastReviewedOn,
+                        SupportedVersions = version.SupportedVersions.Select(supported => supported.Version).ToList(),
+                        Translations = version.Translations
+                            .Select(translation => new
+                            {
+                                translation.LanguageCode,
+                                translation.Title,
+                                translation.Summary,
+                                translation.Status,
+                            })
+                            .ToList(),
+                    })
+                    .First(),
+            })
             .ToListAsync(cancellationToken);
 
-        return new Page<TopicRecord>(page, query.PageNumber, query.PageSize, total);
+        var records = page
+            .Select(topic => new TopicRecord(
+                topic.Id,
+                topic.StableKey,
+                topic.Slug,
+                topic.DomainKey,
+                topic.DomainName,
+                topic.Category.ToString(),
+                topic.DefaultLevel.ToString(),
+                topic.Version.Status.ToString(),
+                topic.DefaultTitle,
+                topic.Version.CanonicalLanguageCode,
+                topic.Version.EstimatedReadingMinutes,
+                topic.Version.LastReviewedOn,
+                topic.Version.SupportedVersions,
+                [],
+                [],
+                topic.Version.Translations
+                    .Select(translation => new TopicTranslationRecord(
+                        translation.LanguageCode,
+                        translation.Title,
+                        translation.Summary,
+                        translation.Status.ToString()))
+                    .ToList(),
+                []))
+            .ToList();
+
+        return new Page<TopicRecord>(records, query.PageNumber, query.PageSize, total);
     }
 
     public async Task<TopicRecord?> FindBySlugAsync(
         string slug,
         bool includeDrafts,
-        CancellationToken cancellationToken) =>
-        await Readable(includeDrafts)
-            .Where(topic => topic.Slug == slug)
-            .Select(Projection())
-            .SingleOrDefaultAsync(cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        var topic = await Readable(includeDrafts)
+            .Include(candidate => candidate.Domain)
+            .Include(candidate => candidate.OutgoingRelationships)
+            .Include(candidate => candidate.Versions).ThenInclude(version => version.Sections)
+            .Include(candidate => candidate.Versions).ThenInclude(version => version.Translations)
+            .Include(candidate => candidate.Versions).ThenInclude(version => version.SupportedVersions)
+            .Include(candidate => candidate.Versions)
+                .ThenInclude(version => version.Implementations)
+                .ThenInclude(implementation => implementation.Ecosystem)
+            .Include(candidate => candidate.Versions)
+                .ThenInclude(version => version.Implementations)
+                .ThenInclude(implementation => implementation.Sections)
+            .SingleOrDefaultAsync(candidate => candidate.Slug == slug, cancellationToken);
+
+        if (topic is null) return null;
+
+        var version = topic.Versions.OrderByDescending(candidate => candidate.VersionNumber).First();
+
+        return new TopicRecord(
+            topic.Id,
+            topic.StableKey,
+            topic.Slug,
+            topic.Domain!.Key,
+            topic.Domain.Name,
+            topic.Category.ToString(),
+            topic.DefaultLevel.ToString(),
+            version.Status.ToString(),
+            topic.DefaultTitle,
+            version.CanonicalLanguageCode,
+            version.EstimatedReadingMinutes,
+            version.LastReviewedOn,
+            [.. version.SupportedVersions.Select(supported => supported.Version)],
+
+            [.. version.Sections
+                .OrderBy(section => section.SortOrder)
+                .Select(section => new TopicSectionRecord(
+                    section.SectionTypeKey, section.LanguageCode, section.Markdown, section.SortOrder))],
+
+            [.. version.Implementations.Select(implementation => new TopicImplementationRecord(
+                implementation.Id,
+                implementation.Ecosystem!.Key,
+                implementation.Ecosystem.Name,
+                null,
+                null,
+                implementation.SupportedVersions,
+                [.. implementation.Sections
+                    .OrderBy(section => section.SortOrder)
+                    .Select(section => new TopicSectionRecord(
+                        section.SectionTypeKey, section.LanguageCode, section.Markdown, section.SortOrder))]))],
+
+            [.. version.Translations.Select(translation => new TopicTranslationRecord(
+                translation.LanguageCode,
+                translation.Title,
+                translation.Summary,
+                translation.Status.ToString()))],
+
+            [.. topic.OutgoingRelationships.Select(edge => new TopicEdge(edge.Type.ToString(), edge.ToTopicId))]);
+    }
 
     public async Task<IReadOnlyDictionary<Guid, TopicLink>> LinksForAsync(
         IReadOnlyCollection<Guid> topicIds,
         string language,
         CancellationToken cancellationToken)
     {
-        // A graph edge may point at a topic that is not published yet. The edge stays in the database — the
-        // author declared it and it is true — but the reader is not offered a link to a page they cannot
-        // open. It simply does not appear, which is what a link to nothing should do.
+        // An edge may point at a topic that is not published yet. The edge stays — the author declared it and
+        // it is true — but the reader is not offered a link to a page they cannot open.
         var links = await Readable(includeDrafts: false)
             .Where(topic => topicIds.Contains(topic.Id))
             .Select(topic => new
@@ -72,9 +191,8 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
                 topic.Slug,
                 topic.DefaultTitle,
 
-                // One query, not one per topic. The translated title comes back in the same round trip; an
-                // N+1 here would turn a twenty-item "related topics" list into twenty-one queries on the
-                // page a reader waits longest for.
+                // One query, not one per topic. An N+1 here would turn a twenty-item "related topics" list
+                // into twenty-one round trips, on the page a reader waits longest for.
                 TranslatedTitle = topic.Versions
                     .OrderByDescending(version => version.VersionNumber)
                     .SelectMany(version => version.Translations)
@@ -89,75 +207,71 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
             link => new TopicLink(link.StableKey, link.Slug, link.TranslatedTitle ?? link.DefaultTitle));
     }
 
+    public async Task<AuthoringCatalog> CatalogAsync(CancellationToken cancellationToken)
+    {
+        var domains = await context.KnowledgeDomains
+            .AsNoTracking()
+            .OrderBy(domain => domain.SortOrder)
+            .Select(domain => new DomainOption(domain.Key, domain.Name))
+            .ToListAsync(cancellationToken);
+
+        var ecosystems = await context.Ecosystems
+            .AsNoTracking()
+            .OrderBy(ecosystem => ecosystem.SortOrder)
+            .Select(ecosystem => new EcosystemOption(
+                ecosystem.Key,
+                ecosystem.Name,
+                ecosystem.IsAvailable,
+                ecosystem.Languages
+                    .OrderBy(language => language.SortOrder)
+                    .Select(language => new LanguageOption(language.Key, language.Name, language.FenceLanguage))
+                    .ToList()))
+            .ToListAsync(cancellationToken);
+
+        var sections = await context.SectionTypes
+            .AsNoTracking()
+            .OrderBy(type => type.SortOrder)
+            .Select(type => new SectionTypeOption(
+                type.Key, type.SortOrder, type.Scope, type.IsMandatory, type.IsGraphDerived))
+            .ToListAsync(cancellationToken);
+
+        // Every topic, INCLUDING drafts. An editor relating a new topic to one they are still writing is the
+        // normal case, not an edge case. This is the one place drafts are listed to a caller, and the endpoint
+        // that serves it is behind the editor roles.
+        var topics = await context.Topics
+            .AsNoTracking()
+            .OrderBy(topic => topic.DefaultTitle)
+            .Select(topic => new TopicOption(topic.Id, topic.StableKey, topic.DefaultTitle))
+            .ToListAsync(cancellationToken);
+
+        return new AuthoringCatalog(domains, ecosystems, sections, topics);
+    }
+
+    public async Task<IReadOnlyCollection<TerminologyEntry>> TerminologyAsync(CancellationToken cancellationToken)
+    {
+        var terms = await context.Terms
+            .AsNoTracking()
+            .Select(term => new { term.Text, term.Aliases, term.ForbiddenTranslations })
+            .ToListAsync(cancellationToken);
+
+        return
+        [
+            .. terms.Select(term => new TerminologyEntry(
+                term.Text,
+                Split(term.Aliases),
+                Split(term.ForbiddenTranslations)))
+        ];
+    }
+
+    private static IReadOnlyList<string> Split(string value) =>
+        value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
     private IQueryable<Topic> Readable(bool includeDrafts)
     {
         var topics = context.Topics.AsNoTracking().Where(topic => topic.IsActive);
 
         return includeDrafts
             ? topics
-            : topics.Where(topic => topic.Versions
-                .Any(version => PubliclyVisible.Contains(version.Status)));
+            : topics.Where(topic => topic.Versions.Any(version => PubliclyVisible.Contains(version.Status)));
     }
-
-    /// <summary>
-    /// One projection, used by every read.
-    /// </summary>
-    /// <remarks>
-    /// A projection rather than <c>Include</c>: EF translates this to a single query with the joins it
-    /// actually needs, and it never materialises a Topic entity nobody asked for. It also means the columns
-    /// this API depends on are written down in exactly one place — add a field to <see cref="TopicRecord"/>
-    /// and the compiler shows you the only line that has to change.
-    /// </remarks>
-    private static System.Linq.Expressions.Expression<Func<Topic, TopicRecord>> Projection() =>
-        topic => new TopicRecord(
-            topic.Id,
-            topic.StableKey,
-            topic.Slug,
-            topic.Technology,
-            topic.Category.ToString(),
-            topic.DefaultLevel.ToString(),
-
-            topic.Versions.OrderByDescending(version => version.VersionNumber)
-                .Select(version => version.Status.ToString()).First(),
-
-            topic.DefaultTitle,
-
-            topic.Versions.OrderByDescending(version => version.VersionNumber)
-                .Select(version => version.CanonicalLanguageCode).First(),
-
-            topic.Versions.OrderByDescending(version => version.VersionNumber)
-                .Select(version => version.MarkdownPath).First(),
-
-            topic.Versions.OrderByDescending(version => version.VersionNumber)
-                .Select(version => version.ContentHash).First(),
-
-            topic.Versions.OrderByDescending(version => version.VersionNumber)
-                .Select(version => version.EstimatedReadingMinutes).First(),
-
-            topic.Versions.OrderByDescending(version => version.VersionNumber)
-                .Select(version => version.LastReviewedOn).First(),
-
-            topic.Versions.OrderByDescending(version => version.VersionNumber)
-                .SelectMany(version => version.SupportedVersions)
-                .Select(supported => supported.Version)
-                .ToList(),
-
-            topic.Versions.OrderByDescending(version => version.VersionNumber)
-                .SelectMany(version => version.Sections)
-                .OrderBy(section => section.SortOrder)
-                .Select(section => section.SectionTypeKey)
-                .ToList(),
-
-            topic.Versions.OrderByDescending(version => version.VersionNumber)
-                .SelectMany(version => version.Translations)
-                .Select(translation => new TopicTranslationRecord(
-                    translation.LanguageCode,
-                    translation.Title,
-                    translation.MarkdownPath,
-                    translation.ContentHash))
-                .ToList(),
-
-            topic.OutgoingRelationships
-                .Select(edge => new TopicEdge(edge.Type.ToString(), edge.ToTopicId))
-                .ToList());
 }
