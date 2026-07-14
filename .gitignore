@@ -77,3 +77,6 @@ desktop.ini
 # was valid at some point in the past, made by whoever last remembered to regenerate it. The only
 # manifest worth trusting is the one this run produced.
 tests/content-validation/dist/
+
+# Next.js build output.
+.next/

@@ -1,0 +1,89 @@
+/*
+  The base sheet. Everything here is a TOKEN reference — there is not one literal colour, size or radius,
+  and that is what makes one design system survive two applications (CLAUDE.md §1.8, ADR-0022).
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--text-body-line-height);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-ui);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: var(--text-page-title);
+}
+
+h2 {
+  font-size: var(--text-section-title);
+}
+
+code,
+pre {
+  font-family: var(--font-code);
+}
+
+pre {
+  padding: var(--space-16);
+  border-radius: var(--radius-medium);
+  border: 1px solid var(--color-border);
+  background: var(--color-code-background);
+  color: var(--color-code-text);
+  /* Code does not wrap. A wrapped line changes what the code MEANS — an indentation level appears where
+     there is none, and a long string looks like two. It scrolls, which is the only honest option. */
+  overflow-x: auto;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+/*
+  The focus ring is never removed. `09` is explicit, and it is the one style rule that decides whether the
+  site is usable without a mouse at all.
+*/
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/*
+  Somebody who told their operating system they get motion sick has already answered this question, and an
+  app that lets its own animations override that answer is an app that makes them ill.
+
+  biome-ignore-start lint/complexity/noImportantStyles: this is the one place `!important` is correct. The
+  rule exists to stop a component from winning a specificity fight it should have lost — but here the whole
+  point is to beat EVERY animation, including one a component sets inline. Losing this fight has a
+  vestibular cost.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+/* biome-ignore-end lint/complexity/noImportantStyles: see above */

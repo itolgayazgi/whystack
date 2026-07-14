@@ -1,0 +1,89 @@
+/* Every value is a token. Not one literal (CLAUDE.md §1.8). */
+
+.page {
+  /* The reading measure is in CHARACTERS, so it stays correct when the type size changes. Extra space on a
+     wide monitor becomes gutter — never a longer line. A 120-character line is what makes long reading
+     tiring, and no amount of good typography rescues it. */
+  max-width: 72ch;
+  margin: 0 auto;
+  padding: var(--space-32) var(--space-24) var(--space-48);
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-16);
+  padding: var(--space-48) 0 var(--space-32);
+}
+
+.hero h1 {
+  margin: 0;
+}
+
+.lede {
+  max-width: 52ch;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  justify-content: center;
+  margin-top: var(--space-8);
+}
+
+/* 44px minimum. A target a finger misses is a target that does not exist, and that does not stop being true
+   because the surface is a web page. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-24);
+  border-radius: var(--radius-medium);
+  border: 1px solid var(--color-border-interactive);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-weight: 600;
+}
+
+.primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  /* The background colour ON the gold. This pair is one of the audited contrast tests in packages/theme —
+     measured, not chosen. */
+  color: var(--color-background);
+}
+
+.pillars {
+  display: grid;
+  gap: var(--space-24);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  padding: var(--space-32) 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pillars h2 {
+  margin: 0 0 var(--space-8);
+  font-size: 1.05rem;
+}
+
+.pillars p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.sample {
+  padding: var(--space-32) 0;
+}
+
+.turn {
+  padding-left: var(--space-16);
+  border-left: 3px solid var(--color-accent);
+  font-size: 1.15rem;
+}

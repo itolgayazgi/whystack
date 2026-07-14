@@ -1,0 +1,103 @@
+.card {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  padding: var(--space-32);
+  border-radius: var(--radius-large);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.card h2 {
+  margin: 0;
+}
+
+.intro {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field label {
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.field input {
+  min-height: 44px;
+  padding: 0 var(--space-12);
+  border-radius: var(--radius-small);
+  /* borderInteractive, NOT borderStrong. borderStrong reaches only 1.45:1 against the page — an input
+     drawn with it is a box a low-vision user cannot find, and WCAG 1.4.11 requires 3:1 for a boundary
+     that identifies a control. */
+  border: 1px solid var(--color-border-interactive);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--color-error);
+  border-width: 2px;
+}
+
+/* aria-invalid AND a message. Never a red border alone — `09` Forbidden Pattern 06: state must not be
+   carried by colour by itself. A colour-blind reader and a screen-reader user both need to be told, and
+   neither is told by a border. */
+.error {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 0.85rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.submit {
+  min-height: 48px;
+  border: none;
+  border-radius: var(--radius-medium);
+  background: var(--color-accent);
+  color: var(--color-background);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  font-size: 0.9rem;
+}
+
+.notice {
+  padding: var(--space-12);
+  border-radius: var(--radius-small);
+  border-left: 4px solid var(--color-error);
+  background: var(--color-surface-muted);
+  font-size: 0.9rem;
+}
+
+.notice.ok {
+  border-left-color: var(--color-success);
+}

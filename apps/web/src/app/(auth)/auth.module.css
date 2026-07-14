@@ -1,0 +1,48 @@
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: var(--space-48);
+  min-height: 100dvh;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--space-32) var(--space-24);
+}
+
+.promise {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.promise h1 {
+  margin: var(--space-16) 0 0;
+}
+
+.promise p {
+  margin: 0;
+  max-width: 44ch;
+  color: var(--color-text-secondary);
+}
+
+.panel {
+  display: flex;
+  justify-content: center;
+}
+
+/*
+  Below 900px the promise does not render at all — `display: none`, not a narrower column.
+
+  It is hidden from the ACCESSIBILITY TREE too, which is the part that matters: a heading a sighted user
+  cannot see but a screen-reader user still hears is a heading that describes a layout nobody is in.
+*/
+@media (max-width: 900px) {
+  .split {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .promise {
+    display: none;
+  }
+}

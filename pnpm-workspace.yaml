@@ -1,5 +1,6 @@
 packages:
   - "apps/client"
+  - "apps/web"
   - "apps/site"
   - "packages/*"
 

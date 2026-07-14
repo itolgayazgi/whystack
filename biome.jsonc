@@ -25,6 +25,7 @@
       "**",
       "!**/node_modules",
       "!**/dist",
+      "!**/.next",
       "!**/.expo",
       "!**/bin",
       "!**/obj",

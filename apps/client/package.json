@@ -17,6 +17,7 @@
     "@expo-google-fonts/inter": "^0.4.1",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@expo-google-fonts/literata": "^0.4.1",
+    "@whystack/api-client": "workspace:*",
     "@whystack/localization": "workspace:*",
     "@whystack/markdown-renderer": "workspace:*",
     "@whystack/theme": "workspace:*",
