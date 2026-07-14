@@ -107,59 +107,51 @@ Write-Host "  Wrote apps/client/.env" -ForegroundColor Green
 # User secrets, not appsettings: these are one developer's private network address, and they have no
 # business in a tracked file.
 $apiProject = Join-Path $repoRoot 'apps\api\src\WhyStack.Api'
-$clientBaseUrl = "http://${lanIp}:8081"
 
 # 1. WHERE THE EMAIL LINKS POINT.
 #
-# The confirmation and reset emails contain a URL, and a human clicks it — on the phone that received
-# the email. The default is http://localhost:8081, which that phone cannot reach: it resolves localhost
-# to ITSELF, finds nothing, and the link is dead.
-#
-# Metro serves the web build at this address, so the link opens the web app in the phone's browser,
-# which confirms the account against the API. Opening the NATIVE app directly needs Universal Links —
-# a verification file on a real domain, plus an Apple team — which we do not have yet.
-# The email links point at the WEBSITE (ADR-0022), not at Metro.
-#
-# /confirm-email and /reset-password live in apps/web. The mobile app has no deep-link handler, and a
-# confirmation link is clicked from a mail client — often on a laptop, where Metro is not even running.
+# The confirmation and reset emails contain a URL, and a human clicks it — usually in a mail client, often
+# on a laptop. /confirm-email and /reset-password live in the WEBSITE (ADR-0022). The mobile app has no
+# deep-link handler, and opening the native app from a link needs Universal Links — a verification file on
+# a real domain, plus an Apple team — which we do not have yet.
 dotnet user-secrets set 'App:ClientBaseUrl' 'http://localhost:3000' --project $apiProject | Out-Null
 
-# 2. CORS — AND THIS ONE COST AN EVENING.
+# 2. CORS — WHICH THIS SCRIPT NO LONGER TOUCHES, AND THAT IS THE FIX.
 #
-# That browser page is a DIFFERENT ORIGIN. http://192.168.1.101:8081 is not http://localhost:8081, and
-# the API's CORS policy names origins exactly — it has to, because a browser refuses a wildcard origin
-# alongside credentials. (That refusal is a feature: without it, any site on the internet could make
-# authenticated calls to this API on a logged-in user's behalf.)
+# CORS is a BROWSER mechanism. The app on the phone is not a browser: React Native goes through OkHttp and
+# NSURLSession, which send no Origin header and make no preflight. It reaches the API whether or not it is
+# in any list. NOTHING ABOUT THE PHONE BELONGS IN THE CORS CONFIGURATION — and an earlier version of this
+# script, which believed otherwise, is what cost an evening:
 #
-# Without this, the browser blocks the request BEFORE IT LEAVES THE PHONE. The app cannot tell that
-# apart from a dead network, so it says "Cannot reach WhyStack" — an honest message about a cause it
-# has no way of seeing. Which is precisely what happened, and what this script now prevents.
+#   It wrote Cors:AllowedOrigins:0 = Metro. Configuration arrays MERGE BY INDEX across providers, and user
+#   secrets sit above appsettings.json — where index 0 was the WEBSITE. The website's origin was silently
+#   deleted, the browser stopped receiving Access-Control-Allow-Origin, and the sign-in page said "cannot
+#   reach the server": true, and pointing nowhere near the cause.
 #
-# EVERY origin is written, every time — and that is not belt-and-braces, it is a bug fix.
-#
-# .NET configuration providers do not REPLACE an array. They MERGE IT BY INDEX. user-secrets sits above
-# appsettings.json, so writing `Cors:AllowedOrigins:0` overwrites element 0 of whatever appsettings.json
-# declared — and element 2 survives untouched, which makes the result look like a merge and behave like a
-# partial overwrite.
-#
-# An earlier version of this script wrote only indices 0 and 1. appsettings.json had the WEBSITE at index 0.
-# The website's origin was silently deleted, the browser stopped getting Access-Control-Allow-Origin, and
-# the sign-in page said "cannot reach the server" — which was true, and pointed nowhere near the cause.
-#
-# So this list is the WHOLE list. If a surface needs an origin, it is here.
-$origins = @(
-    'http://localhost:3000',        # the website, on this machine
-    "http://${lanIp}:3000",         # the website, from the phone's browser
-    'http://localhost:8081',        # Metro, on this machine
-    $clientBaseUrl                  # Metro, from the phone
-)
+# So the old keys are REMOVED, not corrected. They are still sitting in the secrets of every machine that
+# ever ran this script, and they will keep overwriting index 0 until something deletes them.
+$stale = dotnet user-secrets list --project $apiProject |
+    Select-String -Pattern '^(Cors:AllowedOrigins:\d+)' |
+    ForEach-Object { $_.Matches[0].Groups[1].Value }
 
-for ($i = 0; $i -lt $origins.Count; $i++) {
-    dotnet user-secrets set "Cors:AllowedOrigins:$i" $origins[$i] --project $apiProject | Out-Null
+foreach ($key in $stale) {
+    dotnet user-secrets remove $key --project $apiProject | Out-Null
 }
 
-Write-Host "  Email links point at   $clientBaseUrl" -ForegroundColor Green
-Write-Host "  CORS allows            $($origins -join ', ')" -ForegroundColor Green
+# The one browser on the phone that DOES need an origin: its own, if you open the website over Wi-Fi.
+#
+# A single string, not an array element — a scalar cannot be index-merged, so this can no longer erase
+# anything shipped in appsettings.json. The trap is now impossible to write, not merely avoided.
+$lanWebsite = "http://${lanIp}:3000"
+dotnet user-secrets set 'Cors:AdditionalOrigins' $lanWebsite --project $apiProject | Out-Null
+
+Write-Host ''
+if ($stale.Count -gt 0) {
+    Write-Host "  Removed $($stale.Count) stale CORS secret(s) that were overwriting the website's origin." -ForegroundColor Yellow
+}
+Write-Host "  Email links point at   http://localhost:3000" -ForegroundColor Green
+Write-Host "  CORS also allows       $lanWebsite  (the website, from the phone's browser)" -ForegroundColor Green
+Write-Host "  The app itself needs no CORS entry - it is not a browser." -ForegroundColor DarkGray
 
 # ── The firewall ───────────────────────────────────────────────────────────────────────────────────
 #

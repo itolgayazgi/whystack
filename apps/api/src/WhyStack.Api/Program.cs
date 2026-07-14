@@ -4,6 +4,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using WhyStack.Api.Common;
 using WhyStack.Api.Endpoints;
 using WhyStack.Infrastructure;
 using WhyStack.Infrastructure.Identity;
@@ -67,8 +68,9 @@ builder.Services.AddAuthorization(options =>
         policy => policy.RequireRole(WhyStack.Api.Endpoints.EditorRoles.All));
 });
 
-// The web client runs on a different origin than the API (8081 vs 5207 in development), so the browser
-// will not let it call us at all without this.
+// The WEBSITE runs on a different origin than the API (3000 vs 5207 in development), so the browser will
+// not let it call us at all without this. The mobile app is not a browser and is not affected — see
+// CorsOrigins, which owns the list and the reasons.
 //
 // AllowCredentials is what makes the refresh COOKIE work: a cross-origin request only carries cookies
 // when the caller sends `credentials: 'include'` AND the server answers with
@@ -78,12 +80,15 @@ builder.Services.AddAuthorization(options =>
 // website on the internet make authenticated calls to this API on a logged-in user's behalf.
 //
 // The list is configuration, because it differs per environment and a wrong entry here is a security
-// bug rather than a typo.
+// bug rather than a typo. Resolve() throws on a malformed origin, here, at startup — not in a browser
+// console on a machine nobody is watching.
 const string WebClientCorsPolicy = "web-client";
+
+var corsOrigins = CorsOrigins.Resolve(builder.Configuration);
 
 builder.Services.AddCors(options =>
     options.AddPolicy(WebClientCorsPolicy, policy => policy
-        .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+        .WithOrigins(corsOrigins)
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials()));
