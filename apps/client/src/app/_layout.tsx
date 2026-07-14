@@ -11,6 +11,7 @@ import { SessionGate } from '../components/session-gate';
 import { fontAssets } from '../config/fonts';
 import { AuthProvider } from '../state/auth';
 import { LanguageProvider } from '../state/language';
+import { OnboardingProvider } from '../state/onboarding';
 import { PreferencesProvider } from '../state/preferences';
 import { ThemeProvider, useTheme } from '../state/theme';
 import { TopicsProvider } from '../state/topics';
@@ -29,7 +30,12 @@ function Shell() {
   // No product navigation on an authentication screen. A sign-in page that shows the tab bar is a
   // sign-in page offering to take you somewhere you are not allowed to go — and every one of those
   // destinations would immediately bounce you back here.
-  const onAuthScreen = useSegments()[0] === '(auth)';
+  const segment = useSegments()[0];
+
+  // No product navigation on an authentication screen OR during onboarding. A tab bar on a screen that is
+  // asking someone what they want to learn is a tab bar offering to take them somewhere they have not
+  // arrived at yet.
+  const onAuthScreen = segment === '(auth)' || segment === 'onboarding';
 
   return (
     <>
@@ -80,17 +86,19 @@ export default function RootLayout() {
                   Language (it writes into them). The direction is deliberate: those two render the
                   sign-in screen, which has to exist before anyone knows who is looking at it, so they
                   start from the device — and the server's answer replaces that the moment it lands. */}
-              <PreferencesProvider>
-                {/* TopicsProvider is BELOW PreferencesProvider because the list is fetched in the
+              <OnboardingProvider>
+                <PreferencesProvider>
+                  {/* TopicsProvider is BELOW PreferencesProvider because the list is fetched in the
                     reader's CONTENT language — and that language is a preference. Above it, the first
                     request would go out in English and the Turkish reader would see the wrong titles
                     for as long as it took the preferences to land. */}
-                <TopicsProvider>
-                  <SessionGate>
-                    <Shell />
-                  </SessionGate>
-                </TopicsProvider>
-              </PreferencesProvider>
+                  <TopicsProvider>
+                    <SessionGate>
+                      <Shell />
+                    </SessionGate>
+                  </TopicsProvider>
+                </PreferencesProvider>
+              </OnboardingProvider>
             </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>

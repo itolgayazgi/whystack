@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { testId } from '../config/test-ids';
 import { useAuth } from '../state/auth';
 import { useLanguage } from '../state/language';
+import { useOnboarding } from '../state/onboarding';
 import { useTheme } from '../state/theme';
 
 /**
@@ -27,6 +28,7 @@ import { useTheme } from '../state/theme';
  */
 export function SessionGate({ children }: { children: ReactNode }) {
   const { status, retry } = useAuth();
+  const { state: onboarding } = useOnboarding();
   const { t } = useLanguage();
   const { color, textStyle } = useTheme();
 
@@ -40,6 +42,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
   // laptop you are on (issue #9). The segments themselves are just strings.
   const segments: string[] = useSegments();
   const onAuthScreen = segments[0] === '(auth)';
+  const onOnboarding = segments[0] === 'onboarding';
 
   // The two screens an EMAIL LINK lands on, and the reason they are called out by name.
   //
@@ -107,8 +110,25 @@ export function SessionGate({ children }: { children: ReactNode }) {
     );
   }
 
-  if (status === 'signed-out' && !onAuthScreen) {
+  // Onboarding is still being read from storage. Not the same as "they have not done it" — sending a
+  // returning reader through it again because a disk read had not finished would be the app forgetting them.
+  if (onboarding === undefined) return null;
+
+  // A signed-out reader who has never seen the promise gets the promise, not a sign-in form. Asking someone
+  // to create an account before you have told them what the product is for is asking for a decision they
+  // have no basis to make.
+  if (status === 'signed-out' && !onboarding.completed && !onOnboarding && !onAuthScreen) {
+    return <Redirect href="/onboarding" />;
+  }
+
+  if (status === 'signed-out' && !onAuthScreen && !onOnboarding) {
     return <Redirect href="/sign-in" />;
+  }
+
+  // A signed-in reader has no business back in onboarding: their ecosystem and level are preferences on the
+  // server now, and the local copy is a fossil.
+  if (status === 'signed-in' && onOnboarding) {
+    return <Redirect href="/" />;
   }
 
   // Signed in, but standing on the sign-in screen — which is what happens the instant a sign-in

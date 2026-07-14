@@ -4,8 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SessionGate } from '../src/components/session-gate';
 import { AuthProvider } from '../src/state/auth';
 import { LanguageProvider } from '../src/state/language';
+import { OnboardingProvider } from '../src/state/onboarding';
 import { ThemeProvider } from '../src/state/theme';
 import { routerState, setViewportWidth, VIEWPORT } from './helpers';
+import { secureStore } from './setup';
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -14,17 +16,32 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-function renderGate() {
+/**
+ * Onboarding is COMPLETED in every case below except where a test says otherwise.
+ *
+ * The gate now has two questions to answer, not one — "who are you" and "have you seen the promise" — and
+ * these tests are about the first. Leaving onboarding unset would send every signed-out case to the
+ * onboarding screen and quietly stop testing the thing they were written for.
+ */
+function renderGate(onboarded = true) {
   setViewportWidth(VIEWPORT.compact);
+
+  if (onboarded) {
+    secureStore.set('whystack.onboarding', JSON.stringify({ completed: true }));
+  } else {
+    secureStore.delete('whystack.onboarding');
+  }
 
   return render(
     <ThemeProvider>
       <LanguageProvider>
-        <AuthProvider>
-          <SessionGate>
-            <Text>the app</Text>
-          </SessionGate>
-        </AuthProvider>
+        <OnboardingProvider>
+          <AuthProvider>
+            <SessionGate>
+              <Text>the app</Text>
+            </SessionGate>
+          </AuthProvider>
+        </OnboardingProvider>
       </LanguageProvider>
     </ThemeProvider>,
   );

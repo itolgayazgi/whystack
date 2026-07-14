@@ -7,6 +7,27 @@ import { routerState } from './router-state';
 // second is a mock that arrives after the component already loaded the real module. That bug looks
 // like a parse error in a dependency, which is a long way from where it actually is.
 
+// expo-secure-store is a NATIVE module. Importing it in jsdom pulls in expo-modules-core, which reaches
+// for React Native's `__DEV__` global and throws before a single line of our code runs — an error that
+// reads like a parse failure in a dependency and points nowhere near the cause.
+//
+// Mocked to an in-memory map rather than stubbed to nothing: the onboarding provider READS what it wrote,
+// and a store that forgets everything would make "the reader's choice was remembered" untestable — which is
+// most of what the provider is for.
+export const secureStore = new Map<string, string>();
+
+vi.mock('expo-secure-store', () => ({
+  getItemAsync: (key: string) => Promise.resolve(secureStore.get(key) ?? null),
+  setItemAsync: (key: string, value: string) => {
+    secureStore.set(key, value);
+    return Promise.resolve();
+  },
+  deleteItemAsync: (key: string) => {
+    secureStore.delete(key);
+    return Promise.resolve();
+  },
+}));
+
 vi.mock('expo-router', () => ({
   // `asChild` hands the link's behaviour to its child. Navigation itself is not what these tests
   // assert — which item is marked current, and what renders, is.

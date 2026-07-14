@@ -2,7 +2,7 @@ import { radius, space } from '@whystack/theme';
 import { Text, View } from 'react-native';
 import { useTheme } from '../state/theme';
 
-type NoticeTone = 'info' | 'success' | 'error';
+type NoticeTone = 'info' | 'success' | 'warning' | 'error';
 
 interface NoticeProps {
   testID?: string;
@@ -32,7 +32,14 @@ interface NoticeProps {
 export function Notice({ testID, tone, title, body }: NoticeProps) {
   const { color, textStyle } = useTheme();
 
-  const toneColor = tone === 'error' ? color.error : tone === 'success' ? color.success : color.info;
+  const toneColor =
+    tone === 'error'
+      ? color.error
+      : tone === 'success'
+        ? color.success
+        : tone === 'warning'
+          ? color.warning
+          : color.info;
 
   return (
     <View

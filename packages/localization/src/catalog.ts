@@ -61,6 +61,25 @@ export interface Messages {
   'settings.conflict.body': string;
   'settings.unreachable': string;
 
+  'onboarding.promise': string;
+  'onboarding.promise.body': string;
+  'onboarding.start': string;
+  'onboarding.comingSoon': string;
+  'onboarding.ecosystem.title': string;
+  'onboarding.ecosystem.hint': string;
+  'onboarding.level.title': string;
+  'onboarding.level.hint': string;
+  'onboarding.roadmap.title': string;
+  'onboarding.roadmap.hint': string;
+  'onboarding.roadmap.warning.title': string;
+  'onboarding.roadmap.warning.body': string;
+  'onboarding.roadmap.empty.title': string;
+  'onboarding.roadmap.empty.body': string;
+  'onboarding.roadmap.keep': string;
+  'onboarding.roadmap.later': string;
+  'common.back': string;
+  'common.continue': string;
+
   'topic.implementation': string;
   'topic.readingTime': string;
   'topic.lastReviewed': string;
@@ -271,6 +290,28 @@ const en: Messages = {
     'These settings were changed somewhere else while this screen was open. What you see now is what is actually saved. Apply your change again if you still want it.',
   'settings.unreachable': 'Cannot reach the server. Your settings were not saved.',
 
+  'onboarding.promise': 'Why before how.',
+  'onboarding.promise.body': 'Learn technologies by the reasons they exist.',
+  'onboarding.start': 'Start',
+  'onboarding.comingSoon': 'SOON',
+  'onboarding.ecosystem.title': 'Which ecosystem?',
+  'onboarding.ecosystem.hint':
+    'Backend implementations come from this ecosystem. The reasoning does not — it is the same everywhere.',
+  'onboarding.level.title': 'Where are you now?',
+  'onboarding.level.hint': 'This changes the depth, never the truth. You can move it later.',
+  'onboarding.roadmap.title': 'Your roadmap',
+  'onboarding.roadmap.hint': 'Where a {level} engineer starts, and what each step is for.',
+  'onboarding.roadmap.warning.title': 'This roadmap lives on this phone',
+  'onboarding.roadmap.warning.body':
+    'Reinstall the app, or open it on a laptop, and it is gone. Create an account and it follows you — along with what you have read and where you stopped.',
+  'onboarding.roadmap.empty.title': 'Nothing published yet',
+  'onboarding.roadmap.empty.body':
+    'Topics are written and reviewed before they are published. Yours will appear here as they land — a made-up roadmap would be the first thing this product lied to you about.',
+  'onboarding.roadmap.keep': 'Create an account and keep it',
+  'onboarding.roadmap.later': 'Later',
+  'common.back': 'Back',
+  'common.continue': 'Continue',
+
   'topic.implementation': 'Implementation',
   'topic.readingTime': '{minutes} min read',
   'topic.lastReviewed': 'Last reviewed {date}',
@@ -475,6 +516,29 @@ const tr: Messages = {
   'settings.conflict.body':
     'Bu ekran açıkken ayarlar başka bir yerde değiştirildi. Şu an gördüğün, gerçekten kayıtlı olan. Değişikliğini hâlâ istiyorsan tekrar uygula.',
   'settings.unreachable': 'Sunucuya ulaşılamıyor. Ayarların kaydedilmedi.',
+
+  'onboarding.promise': "Nasıl'dan önce, neden.",
+  'onboarding.promise.body': 'Teknolojileri var olma sebepleriyle öğren.',
+  'onboarding.start': 'Başla',
+  'onboarding.comingSoon': 'YAKINDA',
+  'onboarding.ecosystem.title': 'Ekosistemin hangisi?',
+  'onboarding.ecosystem.hint':
+    'Backend implementasyonları bu ekosistemden gelir. Gerekçe gelmez — o her yerde aynıdır.',
+  'onboarding.level.title': 'Şu an neredesin?',
+  'onboarding.level.hint':
+    'Bu, anlatımın derinliğini değiştirir; doğruluğunu asla. Sonra da değiştirebilirsin.',
+  'onboarding.roadmap.title': 'Yol haritan',
+  'onboarding.roadmap.hint': 'Bir {level} mühendisin nereden başladığı, ve her adımın ne işe yaradığı.',
+  'onboarding.roadmap.warning.title': 'Bu yol haritası bu telefonda duruyor',
+  'onboarding.roadmap.warning.body':
+    'Uygulamayı yeniden kurarsan ya da dizüstünde açarsan kaybolur. Hesap oluşturursan seninle gelir — okuduklarınla ve nerede kaldığınla birlikte.',
+  'onboarding.roadmap.empty.title': 'Henüz yayınlanmış konu yok',
+  'onboarding.roadmap.empty.body':
+    'Konular yayınlanmadan önce yazılıp inceleniyor. Yayınlandıkça burada belirecekler — uydurma bir yol haritası, bu ürünün sana söylediği ilk yalan olurdu.',
+  'onboarding.roadmap.keep': 'Hesap oluştur ve sakla',
+  'onboarding.roadmap.later': 'Sonra',
+  'common.back': 'Geri',
+  'common.continue': 'Devam',
 
   'topic.implementation': 'İmplementasyon',
   'topic.readingTime': '{minutes} dk okuma',
