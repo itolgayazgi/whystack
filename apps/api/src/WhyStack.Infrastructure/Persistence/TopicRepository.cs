@@ -258,7 +258,11 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
             .Select(topic => new TopicOption(topic.Id, topic.StableKey, topic.DefaultTitle))
             .ToListAsync(cancellationToken);
 
-        return new AuthoringCatalog(domains, subAreas, ecosystems, sections, topics);
+        // From the enum, not a query and not a hardcoded list — the one source, so the dropdown cannot drift
+        // from what the save will accept.
+        var categories = Enum.GetNames<TopicCategory>();
+
+        return new AuthoringCatalog(domains, subAreas, categories, ecosystems, sections, topics);
     }
 
     public async Task<IReadOnlyCollection<TerminologyEntry>> TerminologyAsync(CancellationToken cancellationToken)

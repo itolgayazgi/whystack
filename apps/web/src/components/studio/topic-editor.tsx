@@ -519,12 +519,19 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
 
               <label className={styles.field}>
                 <span className={styles.label}>Kategori</span>
-                <input
-                  className={styles.input}
+                {/* A dropdown, not a textbox. Category is a closed enum (unlike the theme); a typed
+                    "Perfromance" would only fail at save. The list is the server's, so it never drifts. */}
+                <select
+                  className={styles.select}
                   value={form.category}
                   onChange={(event) => update({ category: event.target.value })}
-                  placeholder="Performance"
-                />
+                >
+                  {catalog.categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className={styles.field}>

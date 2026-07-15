@@ -53,6 +53,32 @@ public sealed class SubAreaAuthoringTests(DatabaseFixture fixture)
         Assert.Equal(SeededTheme, editable!.SubAreaKey);
     }
 
+    /// <summary>
+    /// An unparseable category is a clean 422, not a 500 — the studio dropdown's guarantee, made true for
+    /// raw callers too.
+    /// </summary>
+    /// <remarks>
+    /// Category is a closed enum. The editor picks it from a dropdown, so a bad value only arrives from curl.
+    /// Before this guard, it reached <c>Enum.Parse</c> and threw — a 500 that blamed the server for the
+    /// caller's typo. If this ever surfaces the exception again, the guard has been removed.
+    /// </remarks>
+    [Fact]
+    public async Task Save_with_an_unknown_category_is_refused_on_the_category_field()
+    {
+        await using var context = fixture.NewContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var repository = new ContentAuthoringRepository(context, TimeProvider.System);
+
+        var command = Topic("badcat", subAreaKey: null) with { Category = "Perfromance" };
+
+        var outcome = await repository.SaveAsync(command, Guid.CreateVersion7(), default);
+
+        Assert.NotNull(outcome.Error);
+        Assert.Equal("category", outcome.ErrorField);
+        Assert.Equal(Guid.Empty, outcome.Id);
+    }
+
     /// <summary>A topic with no theme is normal — null is a fact, not an omission.</summary>
     [Fact]
     public async Task Save_with_no_theme_is_fine()

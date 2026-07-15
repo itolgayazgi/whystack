@@ -46,6 +46,24 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             subAreaId = subArea.Id;
         }
 
+        // Category and level are CLOSED enums, and the studio offers them as dropdowns — so from the UI these
+        // always parse. But the client is a program anybody can replace with curl, and an unparseable value
+        // reaching Enum.Parse is a 500 that blames the server for the caller's typo. Parse once, here, and
+        // turn a bad value into the 422 it is.
+        if (!Enum.TryParse<TopicCategory>(command.Category, out var category))
+        {
+            return new SaveOutcome(
+                Guid.Empty, string.Empty, string.Empty, false,
+                $"No category \"{command.Category}\".", "category");
+        }
+
+        if (!Enum.TryParse<SkillLevel>(command.Level, out var level))
+        {
+            return new SaveOutcome(
+                Guid.Empty, string.Empty, string.Empty, false,
+                $"No level \"{command.Level}\".", "level");
+        }
+
         var topic = command.Id is null
             ? null
             : await context.Topics
@@ -73,8 +91,8 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 Slug = command.Slug,
                 DomainId = domain.Id,
                 SubAreaId = subAreaId,
-                Category = Enum.Parse<TopicCategory>(command.Category),
-                DefaultLevel = Enum.Parse<SkillLevel>(command.Level),
+                Category = category,
+                DefaultLevel = level,
                 DefaultTitle = command.Translations.First(translation => translation.LanguageCode == "en").Title,
                 CreatedAtUtc = now,
             };
@@ -117,8 +135,8 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             topic.Slug = command.Slug;
             topic.DomainId = domain.Id;
             topic.SubAreaId = subAreaId;
-            topic.Category = Enum.Parse<TopicCategory>(command.Category);
-            topic.DefaultLevel = Enum.Parse<SkillLevel>(command.Level);
+            topic.Category = category;
+            topic.DefaultLevel = level;
             topic.DefaultTitle = command.Translations.First(translation => translation.LanguageCode == "en").Title;
             topic.UpdatedAtUtc = now;
 

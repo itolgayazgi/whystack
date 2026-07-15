@@ -81,6 +81,17 @@ public sealed record TopicQuery(
 public sealed record AuthoringCatalog(
     IReadOnlyList<DomainOption> Domains,
     IReadOnlyList<SubAreaOption> SubAreas,
+
+    /// <summary>
+    /// The category names, straight from the <c>TopicCategory</c> enum.
+    /// </summary>
+    /// <remarks>
+    /// A CLOSED classification (unlike SubArea), so the studio must offer these as a dropdown — a free
+    /// textbox lets an editor type "Perfromance" and turns a typo into a failed save. The list comes from the
+    /// enum rather than a hardcoded copy in the client, so adding a member cannot leave the two out of step.
+    /// </remarks>
+    IReadOnlyList<string> Categories,
+
     IReadOnlyList<EcosystemOption> Ecosystems,
     IReadOnlyList<SectionTypeOption> SectionTypes,
     IReadOnlyList<TopicOption> Topics);

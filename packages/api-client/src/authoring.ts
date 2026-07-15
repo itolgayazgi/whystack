@@ -68,6 +68,10 @@ export interface TopicOption {
 export interface AuthoringCatalog {
   domains: DomainOption[];
   subAreas: SubAreaOption[];
+
+  /** Category names from the TopicCategory enum. A closed set — the studio picks, never types (see topic-editor). */
+  categories: string[];
+
   ecosystems: EcosystemOption[];
   sectionTypes: SectionTypeOption[];
   topics: TopicOption[];
