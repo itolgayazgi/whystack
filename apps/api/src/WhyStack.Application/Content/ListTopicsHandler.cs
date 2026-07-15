@@ -62,6 +62,8 @@ public sealed class ListTopicsHandler(ITopicRepository repository)
             summary,
             topic.DomainKey,
             topic.DomainName,
+            topic.SubAreaKey,
+            topic.SubAreaName,
             topic.Category,
             topic.Level,
             topic.SupportedVersions,

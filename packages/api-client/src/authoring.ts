@@ -28,6 +28,12 @@ export interface DomainOption {
   name: string;
 }
 
+/** A theme a topic may be tagged with (ADR-0023). Curated in the studio. */
+export interface SubAreaOption {
+  key: string;
+  name: string;
+}
+
 export interface LanguageOption {
   key: string;
   name: string;
@@ -61,6 +67,7 @@ export interface TopicOption {
 
 export interface AuthoringCatalog {
   domains: DomainOption[];
+  subAreas: SubAreaOption[];
   ecosystems: EcosystemOption[];
   sectionTypes: SectionTypeOption[];
   topics: TopicOption[];
@@ -73,6 +80,10 @@ export interface StudioTopic {
   slug: string;
   title: string;
   domainName: string;
+
+  /** The theme's name, or null. A topic with no thread shows a dash — omission would read as "fine". */
+  subAreaName: string | null;
+
   level: SkillLevel;
   status: ContentStatus;
   updatedAtUtc: string | null;
@@ -112,6 +123,10 @@ export interface EditableTopic {
   stableKey: string;
   slug: string;
   domainKey: string;
+
+  /** The theme key, or null (ADR-0023). Picked from the catalog's subAreas. */
+  subAreaKey: string | null;
+
   category: string;
   level: SkillLevel;
   status: ContentStatus;
@@ -140,6 +155,10 @@ export interface SaveTopicRequest {
   stableKey: string;
   slug: string;
   domainKey: string;
+
+  /** The theme key, or null for a topic with no thread (ADR-0023). */
+  subAreaKey: string | null;
+
   category: string;
   level: SkillLevel;
   estimatedReadingMinutes: number;
@@ -178,6 +197,14 @@ export interface EditableTerm {
    */
   forbiddenTranslations: string[];
   explanations: { languageCode: string; text: string }[];
+}
+
+/** A theme as the studio manages it (ADR-0023). `topicCount` is why a delete may be refused. */
+export interface EditableSubArea {
+  id: string;
+  key: string;
+  name: string;
+  topicCount: number;
 }
 
 interface Single<T> {
@@ -222,6 +249,16 @@ export const authoringApi = {
 
   deleteTerm: (client: ApiClient, id: string) =>
     client.request<void>(`${BASE}/terms/${id}`, { method: 'DELETE' }),
+
+  subAreas: (client: ApiClient) => client.request<Single<EditableSubArea[]>>(`${BASE}/subareas`),
+
+  /** The key is set on create and ignored on edit — it is the identity the roadmap slice groups on. */
+  saveSubArea: (client: ApiClient, subArea: { id?: string | null; key: string; name: string }) =>
+    client.request<Single<{ id: string }>>(`${BASE}/subareas`, { method: 'POST', body: subArea }),
+
+  /** Rejected with a 409 (ApiError) if any topic still uses the theme — retag those first. */
+  deleteSubArea: (client: ApiClient, id: string) =>
+    client.request<void>(`${BASE}/subareas/${id}`, { method: 'DELETE' }),
 };
 
 /**

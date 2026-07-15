@@ -17,6 +17,7 @@ export type {
   EditableImplementation,
   EditableRelationship,
   EditableSection,
+  EditableSubArea,
   EditableTerm,
   EditableTopic,
   EditableTranslation,
@@ -26,6 +27,7 @@ export type {
   SectionScope,
   SectionTypeOption,
   StudioTopic,
+  SubAreaOption,
   TopicOption,
 } from './authoring';
 export { authoringApi, canAuthor, EDITOR_ROLES } from './authoring';

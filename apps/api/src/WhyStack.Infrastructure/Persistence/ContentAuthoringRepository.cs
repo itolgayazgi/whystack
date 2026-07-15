@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WhyStack.Application.Common;
 using WhyStack.Application.Content.Authoring;
 using WhyStack.Application.Content.Validation;
@@ -22,7 +22,28 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
 
         if (domain is null)
         {
-            return new SaveOutcome(Guid.Empty, string.Empty, string.Empty, false, $"No domain \"{command.DomainKey}\".");
+            return new SaveOutcome(
+                Guid.Empty, string.Empty, string.Empty, false, $"No domain \"{command.DomainKey}\".", "domainKey");
+        }
+
+        // A theme is OPTIONAL (null is fine), but a non-null one must exist. This is the gate: the studio
+        // populates the dropdown from the catalog, so a bad key only arrives from a raw API call — and the
+        // foreign key would reject it anyway. Resolving it here turns that into a clear 422 instead of a 500.
+        Guid? subAreaId = null;
+
+        if (!string.IsNullOrWhiteSpace(command.SubAreaKey))
+        {
+            var subArea = await context.SubAreas
+                .SingleOrDefaultAsync(candidate => candidate.Key == command.SubAreaKey, cancellationToken);
+
+            if (subArea is null)
+            {
+                return new SaveOutcome(
+                    Guid.Empty, string.Empty, string.Empty, false,
+                    $"No theme \"{command.SubAreaKey}\". Themes are managed in the studio.", "subAreaKey");
+            }
+
+            subAreaId = subArea.Id;
         }
 
         var topic = command.Id is null
@@ -51,6 +72,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 StableKey = command.StableKey,
                 Slug = command.Slug,
                 DomainId = domain.Id,
+                SubAreaId = subAreaId,
                 Category = Enum.Parse<TopicCategory>(command.Category),
                 DefaultLevel = Enum.Parse<SkillLevel>(command.Level),
                 DefaultTitle = command.Translations.First(translation => translation.LanguageCode == "en").Title,
@@ -94,6 +116,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
 
             topic.Slug = command.Slug;
             topic.DomainId = domain.Id;
+            topic.SubAreaId = subAreaId;
             topic.Category = Enum.Parse<TopicCategory>(command.Category);
             topic.DefaultLevel = Enum.Parse<SkillLevel>(command.Level);
             topic.DefaultTitle = command.Translations.First(translation => translation.LanguageCode == "en").Title;
@@ -397,6 +420,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 topic.Slug,
                 topic.DefaultTitle,
                 DomainName = topic.Domain!.Name,
+                SubAreaName = topic.SubArea == null ? null : topic.SubArea.Name,
                 topic.DefaultLevel,
                 topic.UpdatedAtUtc,
 
@@ -422,6 +446,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 row.Slug,
                 row.DefaultTitle,
                 row.DomainName,
+                row.SubAreaName,
                 row.DefaultLevel.ToString(),
                 row.Version.Status.ToString(),
                 row.UpdatedAtUtc,
@@ -441,6 +466,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
         var topic = await context.Topics
             .AsNoTracking()
             .Include(candidate => candidate.Domain)
+            .Include(candidate => candidate.SubArea)
             .Include(candidate => candidate.OutgoingRelationships).ThenInclude(edge => edge.ToTopic)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Sections)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Translations)
@@ -462,6 +488,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             topic.StableKey,
             topic.Slug,
             topic.Domain!.Key,
+            topic.SubArea?.Key,
             topic.Category.ToString(),
             topic.DefaultLevel.ToString(),
             version.Status.ToString(),
@@ -573,6 +600,79 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             .ExecuteDeleteAsync(cancellationToken);
 
         return deleted > 0;
+    }
+
+    public async Task<IReadOnlyList<EditableSubArea>> SubAreasAsync(CancellationToken cancellationToken)
+    {
+        // The topic count travels with the theme, so the studio can say "used by 7 topics" — the number that
+        // turns a refused delete into an explanation the editor can act on.
+        var rows = await context.SubAreas
+            .AsNoTracking()
+            .OrderBy(subArea => subArea.SortOrder)
+            .ThenBy(subArea => subArea.Name)
+            .Select(subArea => new EditableSubArea(
+                subArea.Id,
+                subArea.Key,
+                subArea.Name,
+                context.Topics.Count(topic => topic.SubAreaId == subArea.Id)))
+            .ToListAsync(cancellationToken);
+
+        return rows;
+    }
+
+    public async Task<Guid> SaveSubAreaAsync(SaveSubAreaCommand command, CancellationToken cancellationToken)
+    {
+        var subArea = command.Id is null
+            ? null
+            : await context.SubAreas.SingleOrDefaultAsync(candidate => candidate.Id == command.Id, cancellationToken);
+
+        if (subArea is null)
+        {
+            // SortOrder after the current last, so a new theme lands at the end rather than fighting for an
+            // existing slot. Themes are ordered for the dropdown, not ranked.
+            var nextOrder = await context.SubAreas
+                .Select(existing => (int?)existing.SortOrder)
+                .MaxAsync(cancellationToken) ?? 0;
+
+            subArea = new SubArea
+            {
+                Id = Guid.CreateVersion7(),
+                Key = command.Key,
+                Name = command.Name,
+                SortOrder = nextOrder + 1,
+            };
+
+            context.SubAreas.Add(subArea);
+        }
+        else
+        {
+            // The KEY is deliberately NOT updated on an edit. Tagged topics and future roadmap slices resolve
+            // through it; renaming the key would orphan them exactly as renaming a topic's stable key would.
+            // The display name is free to change.
+            subArea.Name = command.Name;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return subArea.Id;
+    }
+
+    public async Task<DeleteSubAreaOutcome> DeleteSubAreaAsync(Guid subAreaId, CancellationToken cancellationToken)
+    {
+        // Counted BEFORE the delete, not caught as an FK violation after. A refused delete with a number is an
+        // instruction ("retag these 7 first"); a caught database exception is a 500 that tells nobody anything.
+        var inUse = await context.Topics.CountAsync(topic => topic.SubAreaId == subAreaId, cancellationToken);
+
+        if (inUse > 0)
+        {
+            return new DeleteSubAreaOutcome(Deleted: false, InUseCount: inUse);
+        }
+
+        var deleted = await context.SubAreas
+            .Where(subArea => subArea.Id == subAreaId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        return new DeleteSubAreaOutcome(Deleted: deleted > 0, InUseCount: 0);
     }
 
     private static IReadOnlyList<string> Split(string value) =>

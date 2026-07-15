@@ -12,6 +12,7 @@ import {
   type SaveTopicRequest,
   type SkillLevel,
 } from '@whystack/api-client';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from '@/app/studio/studio.module.css';
@@ -71,6 +72,10 @@ interface Form {
   stableKey: string;
   slug: string;
   domainKey: string;
+
+  /** '' means "no theme". Kept as a string so the <select> is controlled; mapped to null in the payload. */
+  subAreaKey: string;
+
   category: string;
   level: SkillLevel;
   estimatedReadingMinutes: number;
@@ -103,6 +108,7 @@ const EMPTY: Form = {
   stableKey: '',
   slug: '',
   domainKey: '',
+  subAreaKey: '',
   category: 'Concept',
   level: 'MidLevel',
   estimatedReadingMinutes: 8,
@@ -165,6 +171,7 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
             stableKey: topic.stableKey,
             slug: topic.slug,
             domainKey: topic.domainKey,
+            subAreaKey: topic.subAreaKey ?? '',
             category: topic.category,
             level: topic.level,
             estimatedReadingMinutes: topic.estimatedReadingMinutes,
@@ -243,6 +250,7 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
       stableKey: form.stableKey.trim(),
       slug: form.slug.trim(),
       domainKey: form.domainKey,
+      subAreaKey: form.subAreaKey || null,
       category: form.category.trim(),
       level: form.level,
       estimatedReadingMinutes: form.estimatedReadingMinutes,
@@ -485,6 +493,28 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
                     </option>
                   ))}
                 </select>
+              </label>
+
+              <label className={styles.field}>
+                <span className={styles.label}>Tema</span>
+                <select
+                  className={styles.select}
+                  value={form.subAreaKey}
+                  onChange={(event) => update({ subAreaKey: event.target.value })}
+                >
+                  {/* Optional, and the empty option says so. A theme threads a topic across levels — async,
+                      bellek yönetimi — but "Transaction nedir?" belongs to none, and that is normal (ADR-0023). */}
+                  <option value="">— tema yok —</option>
+                  {catalog.subAreas.map((subArea) => (
+                    <option key={subArea.key} value={subArea.key}>
+                      {subArea.name}
+                    </option>
+                  ))}
+                </select>
+                <span className={styles.hint}>
+                  Seviyeler boyunca ilerleyen iplik. Seviye ve kategoriden bağımsız.{' '}
+                  <Link href="/studio/subareas">Temaları yönet</Link>
+                </span>
               </label>
 
               <label className={styles.field}>

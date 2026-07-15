@@ -54,6 +54,8 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
                 topic.Slug,
                 DomainKey = topic.Domain!.Key,
                 DomainName = topic.Domain.Name,
+                SubAreaKey = topic.SubArea == null ? null : topic.SubArea.Key,
+                SubAreaName = topic.SubArea == null ? null : topic.SubArea.Name,
                 topic.Category,
                 topic.DefaultLevel,
                 topic.DefaultTitle,
@@ -88,6 +90,8 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
                 topic.Slug,
                 topic.DomainKey,
                 topic.DomainName,
+                topic.SubAreaKey,
+                topic.SubAreaName,
                 topic.Category.ToString(),
                 topic.DefaultLevel.ToString(),
                 topic.Version.Status.ToString(),
@@ -118,6 +122,7 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
     {
         var topic = await Readable(includeDrafts)
             .Include(candidate => candidate.Domain)
+            .Include(candidate => candidate.SubArea)
             .Include(candidate => candidate.OutgoingRelationships)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Sections)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Translations)
@@ -140,6 +145,8 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
             topic.Slug,
             topic.Domain!.Key,
             topic.Domain.Name,
+            topic.SubArea?.Key,
+            topic.SubArea?.Name,
             topic.Category.ToString(),
             topic.DefaultLevel.ToString(),
             version.Status.ToString(),
@@ -215,6 +222,13 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
             .Select(domain => new DomainOption(domain.Key, domain.Name))
             .ToListAsync(cancellationToken);
 
+        var subAreas = await context.SubAreas
+            .AsNoTracking()
+            .OrderBy(subArea => subArea.SortOrder)
+            .ThenBy(subArea => subArea.Name)
+            .Select(subArea => new SubAreaOption(subArea.Key, subArea.Name))
+            .ToListAsync(cancellationToken);
+
         var ecosystems = await context.Ecosystems
             .AsNoTracking()
             .OrderBy(ecosystem => ecosystem.SortOrder)
@@ -244,7 +258,7 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
             .Select(topic => new TopicOption(topic.Id, topic.StableKey, topic.DefaultTitle))
             .ToListAsync(cancellationToken);
 
-        return new AuthoringCatalog(domains, ecosystems, sections, topics);
+        return new AuthoringCatalog(domains, subAreas, ecosystems, sections, topics);
     }
 
     public async Task<IReadOnlyCollection<TerminologyEntry>> TerminologyAsync(CancellationToken cancellationToken)

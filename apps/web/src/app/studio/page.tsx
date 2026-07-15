@@ -112,6 +112,7 @@ export default function StudioTopicsPage() {
             <tr>
               <th>Konu</th>
               <th>Alan</th>
+              <th>Tema</th>
               <th>Seviye</th>
               <th>Diller</th>
               <th>Ekosistem</th>
@@ -128,6 +129,15 @@ export default function StudioTopicsPage() {
                   <code className={styles.rowKey}>{topic.stableKey}</code>
                 </td>
                 <td>{topic.domainName}</td>
+                <td>
+                  {/* A dash, not a blank. Empty is normal — a topic with no thread (ADR-0023) — but a blank
+                      cell reads as missing data. */}
+                  {topic.subAreaName ? (
+                    <span className={styles.chip}>{topic.subAreaName}</span>
+                  ) : (
+                    <span className={styles.hint}>—</span>
+                  )}
+                </td>
                 <td>{topic.level}</td>
                 <td>
                   <div className={styles.chips}>

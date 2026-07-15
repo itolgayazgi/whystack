@@ -77,3 +77,29 @@ public class KnowledgeDomain
 
     public int SortOrder { get; set; }
 }
+
+/// <summary>
+/// A THEME a topic optionally belongs to: async, memory-management, error-handling (ADR-0023).
+/// </summary>
+/// <remarks>
+/// Orthogonal to Domain, Category and Level. `async/await` is "usage" at Junior, "deadlocks" at Mid,
+/// "ValueTask/Channels" at Senior — one thread getting deeper, scattered across level buckets until a field
+/// held it together. This is that field.
+///
+/// A controlled vocabulary, not free text, because its entire purpose is grouping: "show async from Junior to
+/// Expert" needs a stable key, and `async` vs `asenkron` vs `asynchrony` would split the thread in silence.
+/// Curated in the studio — themes are data that grows with the corpus, not code — the same way the
+/// terminology dictionary is.
+/// </remarks>
+public class SubArea
+{
+    public Guid Id { get; init; }
+
+    /// <summary>Stable. Every tagged topic and every future roadmap slice groups on this: "async", "linq".</summary>
+    public required string Key { get; init; }
+
+    /// <summary>What an editor and a reader see: "Async / Await", "Bellek Yönetimi".</summary>
+    public required string Name { get; set; }
+
+    public int SortOrder { get; set; }
+}

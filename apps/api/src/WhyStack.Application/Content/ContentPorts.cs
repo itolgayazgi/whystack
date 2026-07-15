@@ -35,6 +35,8 @@ public sealed record TopicRecord(
     string Slug,
     string DomainKey,
     string DomainName,
+    string? SubAreaKey,
+    string? SubAreaName,
     string Category,
     string Level,
     string Status,
@@ -78,11 +80,15 @@ public sealed record TopicQuery(
 /// <summary>The lists the authoring form is built from. All of them are reference data; none is user input.</summary>
 public sealed record AuthoringCatalog(
     IReadOnlyList<DomainOption> Domains,
+    IReadOnlyList<SubAreaOption> SubAreas,
     IReadOnlyList<EcosystemOption> Ecosystems,
     IReadOnlyList<SectionTypeOption> SectionTypes,
     IReadOnlyList<TopicOption> Topics);
 
 public sealed record DomainOption(string Key, string Name);
+
+/// <summary>A theme a topic may be tagged with (ADR-0023). Curated in the studio.</summary>
+public sealed record SubAreaOption(string Key, string Name);
 
 public sealed record EcosystemOption(
     string Key,

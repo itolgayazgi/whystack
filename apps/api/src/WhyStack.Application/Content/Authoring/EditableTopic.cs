@@ -17,6 +17,10 @@ public sealed record EditableTopic(
     string StableKey,
     string Slug,
     string DomainKey,
+
+    /// <summary>The theme key, or null (ADR-0023). The editor picks it from the catalog's SubArea list.</summary>
+    string? SubAreaKey,
+
     string Category,
     string Level,
     string Status,
@@ -68,6 +72,10 @@ public sealed record StudioTopic(
     string Slug,
     string Title,
     string DomainName,
+
+    /// <summary>The theme's name, or null. A topic with no thread shows a dash, not a blank.</summary>
+    string? SubAreaName,
+
     string Level,
     string Status,
     DateTime? UpdatedAtUtc,
@@ -94,3 +102,18 @@ public sealed record SaveTermCommand(
     IReadOnlyList<string> Aliases,
     IReadOnlyList<string> ForbiddenTranslations,
     IReadOnlyList<TermExplanationModel> Explanations);
+
+/// <summary>A theme, as the studio manages it (ADR-0023). One row: a stable key and a display name.</summary>
+public sealed record EditableSubArea(Guid Id, string Key, string Name, int TopicCount);
+
+public sealed record SaveSubAreaCommand(Guid? Id, string Key, string Name);
+
+/// <summary>
+/// The result of trying to delete a theme.
+/// </summary>
+/// <remarks>
+/// A theme in use cannot be deleted (ADR-0023): the foreign key is Restrict, because deleting it would
+/// silently untag every topic that carried it. <c>InUseCount</c> is how the editor is told what stands in
+/// the way — a number, so the message can say "used by 7 topics" rather than "cannot delete".
+/// </remarks>
+public sealed record DeleteSubAreaOutcome(bool Deleted, int InUseCount);

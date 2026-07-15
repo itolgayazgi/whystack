@@ -47,6 +47,39 @@ public class KnowledgeDomainConfiguration : IEntityTypeConfiguration<KnowledgeDo
     };
 }
 
+public class SubAreaConfiguration : IEntityTypeConfiguration<SubArea>
+{
+    public void Configure(EntityTypeBuilder<SubArea> builder)
+    {
+        builder.ToTable("SubAreas");
+        builder.HasKey(subArea => subArea.Id);
+
+        builder.Property(subArea => subArea.Key).HasMaxLength(64).IsRequired();
+        builder.Property(subArea => subArea.Name).HasMaxLength(128).IsRequired();
+
+        builder.HasIndex(subArea => subArea.Key).IsUnique().HasDatabaseName("UX_SubAreas_Key");
+
+        // A STARTER set, not the vocabulary. Themes are curated in the studio (ADR-0023) — these are here so
+        // the first author is not staring at an empty dropdown, and every one of them is editable and
+        // deletable from the studio like any theme created there.
+        builder.HasData(
+            Seed("async", "Async / Await", 1),
+            Seed("memory-management", "Bellek Yönetimi", 2),
+            Seed("collections", "Koleksiyonlar", 3),
+            Seed("error-handling", "Hata Yönetimi", 4),
+            Seed("dependency-injection", "Dependency Injection", 5),
+            Seed("concurrency", "Eşzamanlılık", 6));
+    }
+
+    private static SubArea Seed(string key, string name, int order) => new()
+    {
+        Id = DeterministicId.For($"subarea:{key}"),
+        Key = key,
+        Name = name,
+        SortOrder = order,
+    };
+}
+
 public class EcosystemConfiguration : IEntityTypeConfiguration<Ecosystem>
 {
     public void Configure(EntityTypeBuilder<Ecosystem> builder)
@@ -152,11 +185,27 @@ public class TopicConfiguration : IEntityTypeConfiguration<Topic>
             .HasForeignKey(topic => topic.DomainId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Nullable, and Restrict (ADR-0023). Null is a topic with no theme — normal. Restrict, not SetNull,
+        // because deleting a theme that still tags topics would silently UNTAG them: a data loss dressed as a
+        // tidy-up. The delete fails, the editor is told how many topics use it, and retags them first.
+        builder
+            .HasOne(topic => topic.SubArea)
+            .WithMany()
+            .HasForeignKey(topic => topic.SubAreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // "Every published Backend topic for a Junior" is the query behind the roadmap and the topic list,
         // and it is the first one that will be slow.
         builder
             .HasIndex(topic => new { topic.DomainId, topic.DefaultLevel })
             .HasDatabaseName("IX_Topics_DomainId_DefaultLevel");
+
+        // The theme cross-section — "async from Junior to Expert" (ADR-0023, Sprint 5). Filtered so the index
+        // holds only tagged topics; the many nulls stay out of it.
+        builder
+            .HasIndex(topic => new { topic.SubAreaId, topic.DefaultLevel })
+            .HasFilter("[SubAreaId] IS NOT NULL")
+            .HasDatabaseName("IX_Topics_SubAreaId_DefaultLevel");
     }
 }
 

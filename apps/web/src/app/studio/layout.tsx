@@ -78,6 +78,12 @@ export default function StudioLayout({ children }: { children: ReactNode }) {
         >
           Terim sözlüğü
         </Link>
+        <Link
+          href="/studio/subareas"
+          className={`${styles.railLink} ${pathname.startsWith('/studio/subareas') ? styles.railLinkActive : ''}`}
+        >
+          Temalar
+        </Link>
 
         <div className={styles.railFoot}>
           <Link href="/" className={styles.railBack}>

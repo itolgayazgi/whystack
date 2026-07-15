@@ -26,6 +26,10 @@ export interface TopicSummary {
   domainKey: string;
   domainName: string;
 
+  /** The theme this topic threads through, or null (ADR-0023). What the roadmap slice groups on. */
+  subAreaKey: string | null;
+  subAreaName: string | null;
+
   category: string;
   level: SkillLevel;
   supportedVersions: string[];

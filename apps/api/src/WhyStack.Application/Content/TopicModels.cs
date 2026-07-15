@@ -32,6 +32,11 @@ public sealed record TopicSummary(
     string? Summary,
     string DomainKey,
     string DomainName,
+
+    /// <summary>The theme this topic threads through, or null (ADR-0023). What the roadmap slice groups on.</summary>
+    string? SubAreaKey,
+    string? SubAreaName,
+
     string Category,
     string Level,
     IReadOnlyList<string> SupportedVersions,

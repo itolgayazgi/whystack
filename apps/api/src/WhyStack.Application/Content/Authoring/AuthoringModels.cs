@@ -21,6 +21,10 @@ public sealed record SaveTopicCommand(
     string StableKey,
     string Slug,
     string DomainKey,
+
+    /// <summary>The theme key, or null (ADR-0023). Null is a topic with no thread — normal, not incomplete.</summary>
+    string? SubAreaKey,
+
     string Category,
     string Level,
     int EstimatedReadingMinutes,

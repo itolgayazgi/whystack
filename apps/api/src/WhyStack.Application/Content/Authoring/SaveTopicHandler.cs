@@ -30,9 +30,25 @@ public interface IContentAuthoringRepository
 
     /// <summary>False when the term does not exist. Deleting one that is not there is not an error.</summary>
     Task<bool> DeleteTermAsync(Guid termId, CancellationToken cancellationToken);
+
+    /// <summary>The themes, each with a count of how many topics use it (ADR-0023).</summary>
+    Task<IReadOnlyList<EditableSubArea>> SubAreasAsync(CancellationToken cancellationToken);
+
+    Task<Guid> SaveSubAreaAsync(SaveSubAreaCommand command, CancellationToken cancellationToken);
+
+    /// <summary>Refuses to delete a theme that still tags topics — it would silently untag them (ADR-0023).</summary>
+    Task<DeleteSubAreaOutcome> DeleteSubAreaAsync(Guid subAreaId, CancellationToken cancellationToken);
 }
 
-public sealed record SaveOutcome(Guid Id, string Status, string RowVersion, bool Conflict, string? Error);
+public sealed record SaveOutcome(
+    Guid Id,
+    string Status,
+    string RowVersion,
+    bool Conflict,
+    string? Error,
+
+    /// <summary>Which field the error is about, so it lands on the right input rather than always on stableKey.</summary>
+    string? ErrorField = null);
 
 public sealed record TransitionOutcome(string Status);
 
@@ -97,7 +113,7 @@ public sealed class SaveTopicHandler(
 
         if (outcome.Error is not null)
         {
-            return Error.Validation("stableKey", outcome.Error);
+            return Error.Validation(outcome.ErrorField ?? "stableKey", outcome.Error);
         }
 
         // The content problems come back WITH the saved topic, not instead of it. A draft is allowed to have

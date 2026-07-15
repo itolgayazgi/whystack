@@ -15,6 +15,7 @@ public sealed record SaveTopicRequest(
     string? StableKey,
     string? Slug,
     string? DomainKey,
+    string? SubAreaKey,
     string? Category,
     string? Level,
     int? EstimatedReadingMinutes,
@@ -36,6 +37,8 @@ public sealed record SaveTermRequest(
     IReadOnlyList<string>? Aliases,
     IReadOnlyList<string>? ForbiddenTranslations,
     IReadOnlyList<TermExplanationModel>? Explanations);
+
+public sealed record SaveSubAreaRequest(Guid? Id, string? Key, string? Name);
 
 public static class AuthoringEndpoints
 {
@@ -107,6 +110,25 @@ public static class AuthoringEndpoints
         authoring.MapDelete("/terms/{id:guid}", DeleteTermAsync)
             .WithName("DeleteTerm")
             .WithSummary("Remove a term from the dictionary.");
+
+        authoring.MapGet("/subareas", SubAreasAsync)
+            .WithName("ListSubAreas")
+            .WithSummary("The themes a topic may be tagged with (ADR-0023).")
+            .WithDescription("Each carries a topicCount — how many topics use it, which is why a delete may be refused.");
+
+        authoring.MapPost("/subareas", SaveSubAreaAsync)
+            .WithName("SaveSubArea")
+            .WithSummary("Create or rename a theme.")
+            .WithDescription(
+                "The key is set once and never changes — tagged topics and roadmap slices resolve through it. "
+                + "An edit changes only the display name.");
+
+        authoring.MapDelete("/subareas/{id:guid}", DeleteSubAreaAsync)
+            .WithName("DeleteSubArea")
+            .WithSummary("Remove a theme — refused if any topic still uses it.")
+            .WithDescription(
+                "Deleting a theme in use would silently untag its topics, so it is refused with a 409 naming "
+                + "the count. Retag those topics first.");
 
         authoring.MapPost("/topics", SaveAsync)
             .WithName("SaveTopic")
@@ -249,12 +271,86 @@ public static class AuthoringEndpoints
         return deleted ? Results.NoContent() : Results.NoContent();
     }
 
+    private static async Task<IResult> SubAreasAsync(
+        IContentAuthoringRepository repository,
+        HttpContext http,
+        CancellationToken cancellationToken) =>
+        Results.Ok(new
+        {
+            data = await repository.SubAreasAsync(cancellationToken),
+            metadata = Metadata(http),
+        });
+
+    private static async Task<IResult> SaveSubAreaAsync(
+        SaveSubAreaRequest request,
+        IContentAuthoringRepository repository,
+        HttpContext http,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status422UnprocessableEntity,
+                title: "Validation failed",
+                detail: "A theme needs a display name.");
+        }
+
+        // The key is required on create and IGNORED on edit (the repository does not touch it). A new theme
+        // with no key would be a theme nothing could resolve.
+        if (request.Id is null && !IsKey(request.Key))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status422UnprocessableEntity,
+                title: "Validation failed",
+                detail: "A theme key is lowercase letters, digits and hyphens — for example \"async\". It is "
+                    + "set once and never changes.");
+        }
+
+        var id = await repository.SaveSubAreaAsync(
+            new SaveSubAreaCommand(request.Id, (request.Key ?? string.Empty).Trim(), request.Name.Trim()),
+            cancellationToken);
+
+        return Results.Ok(new { data = new { id }, metadata = Metadata(http) });
+    }
+
+    private static async Task<IResult> DeleteSubAreaAsync(
+        Guid id,
+        IContentAuthoringRepository repository,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await repository.DeleteSubAreaAsync(id, cancellationToken);
+
+        if (!outcome.Deleted && outcome.InUseCount > 0)
+        {
+            // 409, not 204. A theme in use is not gone, and pretending it is would leave the editor thinking
+            // they had cleaned up while every tagged topic still pointed at it.
+            return Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Theme is in use",
+                detail: $"This theme is used by {outcome.InUseCount} "
+                    + $"topic{(outcome.InUseCount == 1 ? "" : "s")}. Retag them before deleting it — otherwise "
+                    + "they would be silently untagged.");
+        }
+
+        // Deleted, or was not there. Either way the caller's intent — "it should be gone" — holds.
+        return Results.NoContent();
+    }
+
+    private static bool IsKey(string? key) =>
+        !string.IsNullOrWhiteSpace(key)
+        && key.All(character => char.IsAsciiLetterLower(character) || char.IsAsciiDigit(character) || character == '-');
+
     /// <summary>The request shape, mapped to the command. One place, so the two endpoints cannot drift.</summary>
     private static SaveTopicCommand ToCommand(SaveTopicRequest request) => new(
         request.Id,
         request.StableKey ?? string.Empty,
         request.Slug ?? string.Empty,
         request.DomainKey ?? string.Empty,
+
+        // Trimmed to null: an empty string from a "— no theme —" dropdown selection means "no theme", not a
+        // theme whose key is the empty string.
+        string.IsNullOrWhiteSpace(request.SubAreaKey) ? null : request.SubAreaKey.Trim(),
+
         request.Category ?? "Concept",
         request.Level ?? string.Empty,
         request.EstimatedReadingMinutes ?? 0,
