@@ -239,6 +239,14 @@ export const topicsApi = {
 
       /** The server caps this. It exists so a caller can ask for fewer — never for "all". */
       pageSize?: number;
+
+      /**
+       * Free text over titles and summaries, in every translation.
+       *
+       * Whitespace means "no search" — the server normalises it, so a caller does not have to remember to.
+       * It never widens what you may see: a draft stays invisible to a reader who searches for it by name.
+       */
+      q?: string;
     },
   ) => {
     const parameters = new URLSearchParams({ language: query.language });
@@ -247,6 +255,7 @@ export const topicsApi = {
     if (query.level) parameters.set('level', query.level);
     if (query.pageNumber) parameters.set('pageNumber', String(query.pageNumber));
     if (query.pageSize) parameters.set('pageSize', String(query.pageSize));
+    if (query.q?.trim()) parameters.set('q', query.q.trim());
 
     return client.request<Collection<TopicSummary>>(`/api/v1/topics?${parameters}`);
   },

@@ -135,6 +135,50 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
     }
 
     [Fact]
+    public async Task Search_finds_a_topic_by_its_title_and_leaves_the_others_out()
+    {
+        var slug = await SeedAsync(ContentStatus.Published, title: "Garbage Collector Neden Duraklatır?");
+        await SeedAsync(ContentStatus.Published, title: "Bir Şey Hakkında Tamamen Başka");
+
+        var found = await factory.CreateClient()
+            .GetFromJsonAsync<JsonElement>("/api/v1/topics?language=tr&q=Garbage");
+
+        var slugs = found.GetProperty("data").EnumerateArray()
+            .Select(topic => topic.GetProperty("slug").GetString())
+            .ToList();
+
+        Assert.Contains(slug, slugs);
+        Assert.DoesNotContain("Tamamen Başka", string.Join(" ", slugs));
+    }
+
+    [Fact]
+    public async Task A_blank_search_means_no_search_rather_than_no_results()
+    {
+        await SeedAsync(ContentStatus.Published);
+
+        var response = await factory.CreateClient()
+            .GetFromJsonAsync<JsonElement>("/api/v1/topics?language=tr&q=%20%20");
+
+        // Whitespace is a caller sending nothing — an empty box, a stray keystroke. Passed through it becomes
+        // LIKE '%  %', which matches almost nothing and looks exactly like a working search that found
+        // nothing: same 200, same empty list, and no way for anybody to tell the difference.
+        Assert.True(response.GetProperty("pagination").GetProperty("totalCount").GetInt32() > 0);
+    }
+
+    [Fact]
+    public async Task Search_does_not_hand_a_draft_to_a_reader_who_went_looking_for_it()
+    {
+        await SeedAsync(ContentStatus.AiDraft, title: "Gizli Taslak Konusu");
+
+        var response = await factory.CreateClient()
+            .GetFromJsonAsync<JsonElement>("/api/v1/topics?language=tr&q=Gizli%20Taslak");
+
+        // Search is a second door onto the same corpus, and a door that skips the review gate is worse than
+        // the front one: it is how you find exactly the unreviewed thing you were told does not exist yet.
+        Assert.Equal(0, response.GetProperty("pagination").GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
     public async Task An_unknown_slug_is_a_problem_details_404()
     {
         var response = await factory.CreateClient().GetAsync("/api/v1/topics/no-such-topic-anywhere");
@@ -184,7 +228,10 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
     }
 
     /// <summary>Seeds one topic with a unique identity — these tests share a database with everything else.</summary>
-    private async Task<string> SeedAsync(ContentStatus status, bool withImplementation = false)
+    private async Task<string> SeedAsync(
+        ContentStatus status,
+        bool withImplementation = false,
+        string? title = null)
     {
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<WhyStackDbContext>();
@@ -203,7 +250,7 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
 
             Category = TopicCategory.Concept,
             DefaultLevel = SkillLevel.Junior,
-            DefaultTitle = "What is X?",
+            DefaultTitle = title ?? "What is X?",
             CreatedAtUtc = DateTime.UtcNow,
         };
 
@@ -224,7 +271,7 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
             Id = Guid.CreateVersion7(),
             TopicVersionId = version.Id,
             LanguageCode = "en",
-            Title = "What is X?",
+            Title = title ?? "What is X?",
             Status = TranslationStatus.HumanDraft,
             CreatedAtUtc = DateTime.UtcNow,
         });

@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { MetroMap } from '@/components/learn/metro-map';
+import { TopicSearch } from '@/components/learn/topic-search';
 import { useSession } from '@/lib/session';
 import styles from './learn.module.css';
 
@@ -106,12 +107,7 @@ function Home() {
             🔥 {streak} gün
           </span>
 
-          <input
-            className={styles.search}
-            type="search"
-            placeholder="Konu veya kavram ara…"
-            aria-label="Konu veya kavram ara"
-          />
+          <TopicSearch language={CONTENT_LANGUAGE} />
         </div>
       </div>
 

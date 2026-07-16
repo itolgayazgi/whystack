@@ -12,7 +12,6 @@ interface Single<T> {
   data: T;
 }
 
-
 export interface StreakView {
   current: number;
   longest: number;

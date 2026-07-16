@@ -12,7 +12,6 @@ interface Single<T> {
   data: T;
 }
 
-
 /**
  * Where the reader stands on a station.
  *

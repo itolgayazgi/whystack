@@ -243,26 +243,6 @@
   color: var(--color-text-muted);
 }
 
-.search {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 8px 14px;
-  font-size: 13px;
-  color: var(--color-text-primary);
-  width: 240px;
-  font-family: var(--font-ui);
-}
-
-.search::placeholder {
-  color: var(--color-text-muted);
-}
-
-.search:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 1px;
-}
-
 /* ── ecosystem tabs ──────────────────────────────────────────────────────────────────────────── */
 
 .ecoTabs {
@@ -809,9 +789,5 @@
   .topbar {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .search {
-    width: 100%;
   }
 }

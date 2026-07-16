@@ -93,7 +93,10 @@ public sealed record TopicQuery(
     string? Level,
     int PageNumber,
     int PageSize,
-    bool IncludeDrafts);
+    bool IncludeDrafts,
+
+    /// <summary>Free text over titles and summaries. Null or blank means "no search", not "match nothing".</summary>
+    string? Search = null);
 
 /// <summary>The lists the authoring form is built from. All of them are reference data; none is user input.</summary>
 public sealed record AuthoringCatalog(

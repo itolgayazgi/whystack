@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using WhyStack.Api.Common;
 using WhyStack.Application.Content;
 using WhyStack.Domain.Identity;
@@ -38,11 +38,12 @@ public static class TopicsEndpoints
 
         topics.MapGet("/", ListAsync)
             .WithName("ListTopics")
-            .WithSummary("Published topics, filtered and paged.")
+            .WithSummary("Published topics, filtered, searched and paged.")
             .WithDescription(
                 "Drafts are included only for an Editor, Reviewer or Administrator. The language of every "
                 + "row is stated in its `language` object — a row served in English to a Turkish reader "
-                + "says so.");
+                + "says so. `q` searches titles and summaries across every translation, so a Turkish term "
+                + "finds a topic whose canonical title is English.");
 
         topics.MapGet("/{slug}", GetAsync)
             .WithName("GetTopic")
@@ -64,7 +65,8 @@ public static class TopicsEndpoints
         string? level = null,
         string? language = null,
         int? pageNumber = null,
-        int? pageSize = null)
+        int? pageSize = null,
+        string? q = null)
     {
         var result = await handler.HandleAsync(
             domain,
@@ -73,6 +75,7 @@ public static class TopicsEndpoints
             pageNumber,
             pageSize,
             MayReadDraftsAs(principal),
+            q,
             cancellationToken);
 
         return result.IsSuccess

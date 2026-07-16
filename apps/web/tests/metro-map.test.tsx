@@ -1,5 +1,5 @@
-import type { Station } from '@whystack/api-client';
 import { render, screen } from '@testing-library/react';
+import type { Station } from '@whystack/api-client';
 import { describe, expect, it, vi } from 'vitest';
 import { MetroMap } from '@/components/learn/metro-map';
 
@@ -92,6 +92,8 @@ describe('the line map', () => {
 
     // The truncation in the SVG label is a drawing constraint, not a content decision — the whole title
     // still has to reach a screen reader, and the map's meaning ("buradasın") has to be a word, not a ring.
-    expect(screen.getByRole('link', { name: /Bağımlılık Enjeksiyonu — buradasın, 10 dakika/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Bağımlılık Enjeksiyonu — buradasın, 10 dakika/ }),
+    ).toBeInTheDocument();
   });
 });

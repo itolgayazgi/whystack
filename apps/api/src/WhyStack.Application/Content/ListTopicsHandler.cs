@@ -1,4 +1,4 @@
-using WhyStack.Application.Common;
+﻿using WhyStack.Application.Common;
 
 namespace WhyStack.Application.Content;
 
@@ -16,6 +16,7 @@ public sealed class ListTopicsHandler(ITopicRepository repository)
         int? pageNumber,
         int? pageSize,
         bool mayReadDrafts,
+        string? search,
         CancellationToken cancellationToken)
     {
         // Clamped, not rejected. `pageSize=10000` is far more often a client bug than an attack, and a 422
@@ -24,8 +25,17 @@ public sealed class ListTopicsHandler(ITopicRepository repository)
         var page = Math.Max(1, pageNumber ?? 1);
         var size = Math.Clamp(pageSize ?? DefaultPageSize, 1, MaxPageSize);
 
+        // "  " is a caller sending nothing — an empty box, a stray keystroke — and it must mean what sending
+        // nothing means. Passed through it becomes LIKE '%  %': matches almost nothing, returns 200 with an
+        // empty list, and is indistinguishable from a search that honestly found no results.
+        //
+        // The repository refuses a blank term too. That is not redundancy to tidy away: this normalises what
+        // the HTTP layer handed us (" Garbage " is a search for "Garbage"), and the repository refuses to
+        // build a nonsense LIKE no matter which caller assembled the query.
+        var term = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+
         var results = await repository.ListAsync(
-            new TopicQuery(domain, level, page, size, mayReadDrafts),
+            new TopicQuery(domain, level, page, size, mayReadDrafts, term),
             cancellationToken);
 
         var summaries = results.Items.Select(topic => ToSummary(topic, requestedLanguage)).ToList();

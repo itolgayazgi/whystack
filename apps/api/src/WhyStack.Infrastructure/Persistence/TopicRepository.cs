@@ -33,6 +33,23 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
             topics = topics.Where(topic => topic.DefaultLevel == level);
         }
 
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            // Title and summary, across the canonical text AND every translation — a Turkish reader typing
+            // "bellek" has to find a topic whose canonical title is English.
+            //
+            // A LIKE '%term%' scan, and honestly so: it cannot use an index, and at a few hundred topics it
+            // does not need to. The moment the corpus makes this slow, the answer is full-text search, not a
+            // cleverer LIKE — and the fix belongs here, in one query, rather than in six callers.
+            topics = topics.Where(topic =>
+                EF.Functions.Like(topic.DefaultTitle, $"%{query.Search}%")
+                || topic.Versions.Any(version =>
+                    version.Translations.Any(translation =>
+                        EF.Functions.Like(translation.Title, $"%{query.Search}%")
+                        || (translation.Summary != null
+                            && EF.Functions.Like(translation.Summary, $"%{query.Search}%")))));
+        }
+
         // COUNT before Skip/Take. After, it would count the page — and the pagination metadata would tell
         // every client there is exactly one page, forever.
         var total = await topics.CountAsync(cancellationToken);
@@ -44,7 +61,7 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
         // column, and "SELECT *" on a content table is how a list screen becomes the slowest page in the app.
         var page = await topics
             .OrderBy(topic => topic.Domain!.SortOrder)
-            .ThenBy(topic => topic.DefaultLevel)
+            .ThenByLevel()
             .ThenBy(topic => topic.DefaultTitle)
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
