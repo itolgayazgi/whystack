@@ -43,6 +43,12 @@ public class TopicVersion
 
     public Topic? Topic { get; init; }
     public ICollection<TopicTranslation> Translations { get; init; } = [];
+
+    /// <summary>The topic's body as an ordered block flow (ADR-0024). Replaces sections and implementations.</summary>
+    public ICollection<TopicBlock> Blocks { get; init; } = [];
+
+    // Retired by ADR-0024 (blocks replace sections), kept until the content migration lands so the schema and
+    // the existing rows still map. Removed once every topic is blocks.
     public ICollection<TopicSection> Sections { get; init; } = [];
     public ICollection<TopicImplementation> Implementations { get; init; } = [];
     public ICollection<TopicSupportedVersion> SupportedVersions { get; init; } = [];

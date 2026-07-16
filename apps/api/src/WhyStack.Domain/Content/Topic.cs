@@ -33,6 +33,13 @@ public class Topic
     public required TopicCategory Category { get; set; }
 
     /// <summary>
+    /// The SHAPE of the explanation (ADR-0024): Mechanism, Comparison, Incident… It decides which blocks the
+    /// editor's skeleton starts with. Orthogonal to <see cref="Category"/> — that is the subject, this is the
+    /// form. Defaulted so existing rows have a value; the authoring flow sets it deliberately.
+    /// </summary>
+    public Archetype Archetype { get; set; } = Archetype.Concept;
+
+    /// <summary>
     /// The theme this topic belongs to, or null (ADR-0023). Orthogonal to <see cref="Category"/> and
     /// <see cref="DefaultLevel"/>: Category is what KIND of topic it is, this is which recurring THREAD it
     /// deepens. Null is normal — a standalone topic belongs to no thread, and that is a fact, not a gap.
