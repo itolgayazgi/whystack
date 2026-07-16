@@ -1,101 +1,92 @@
 /**
- * The wordmark. <b>The letters stand ON the steps.</b>
+ * The wordmark: <b>the word itself climbs a step.</b>
  *
- * That is the whole mark, and getting it wrong is what made two earlier attempts read as "a flat line with a
- * notch in it" — the owner's words, and exactly right. Both letters were on one baseline with a decorative
- * staircase drawn underneath. The staircase is not decoration: it IS the baseline.
+ * "why" stands on the ground in cream — the question. "Stack" stands one step up in gold — the thing you
+ * were after. The dot at the foot of the riser is the reader's own stop: the same "buradasın" marker the map
+ * draws. The logo tells the product's story with nothing but its own letters.
  *
- *        ┌───────────
- *      S │              ← the S stands on the upper tread
- *    ────┘
- *   W                   ← the W stands on the lower tread
- *   ──────
+ *                    ┌──── Stack       ← gold, one step up
+ *          why ──●───┘                 ← cream, on the ground; the dot is where you are
  *
- * A learner does not climb smoothly. They sit at one level until something clicks, and then they are
- * somewhere else. The two letters are on the two levels, and the riser between them is the click.
+ * Variant 01 of the owner's anchor-logo study
+ * (docs/design-system/mockups/whystack-anchor-logo-4-varyant.html). It replaces the W/S staircase that stood
+ * here: that mark was an engineer's reconstruction of a brand, and this one is the designer's.
  *
- * Inline SVG rather than a file: it inherits the theme's tokens, so it is correct in light and dark without
- * a second asset, and it costs no request. When the brand SVG lands it replaces this — a mark should be the
- * designer's, not an engineer's reconstruction of one.
+ * <b>The geometry is the design's, scaled — not re-derived.</b> Every coordinate below is lifted from the
+ * study's own sidebar SVG, and the whole thing scales through the viewBox rather than through arithmetic —
+ * so there is no float drift and no chance of the step landing a pixel off the word.
  *
- * <b>The DISPLAY face, not the UI one.</b> Every mockup draws the logo in Chakra Petch; this was reaching
- * for `--font-ui` (Inter), so the mark was set in the body face while the design's own `.logo` rule was not.
- * It is the kind of wrong that reads as "slightly off" and never as "wrong font" — which is why it survived
- * this long.
+ * It leans on real font metrics: the riser starts where "why" ends, and that x is a Chakra Petch
+ * measurement. If the display face fails to load, the fallback's wider letters run under the step. That is a
+ * degradation rather than a broken mark — and it is why `--font-display` here is not garnish.
  */
+
+/** The font size the study's coordinates were drawn at. Everything scales from it. */
+const BASE_FONT = 27;
+
+/** The study's own sidebar artboard, kept as the viewBox so the SVG does the scaling. */
+const VIEW_WIDTH = 168;
+const VIEW_HEIGHT = 58;
+
 export function Wordmark({
-  size = 56,
+  size = BASE_FONT,
   decorative = false,
 }: {
+  /** The letters' font size. The mark scales around it, keeping the study's proportions exactly. */
   size?: number;
 
   /**
-   * Hide the mark from assistive tech, for when the word "whystack" is already written beside it.
+   * Hide the mark from assistive tech, for when the word is already written beside it.
    *
-   * Without this the rail announces "WhyStack" twice — once for the mark's label and once for the text — and
-   * a screen reader user hears a stutter where a sighted one sees one lockup.
+   * Rarely right now: this mark CONTAINS the word, so anything writing "whystack" next to it is saying it
+   * twice — to the eye as much as to a screen reader.
    */
   decorative?: boolean;
 }) {
-  const rule = Math.max(2, Math.round(size * 0.06));
-  const rise = Math.round(size * 0.42);
-
-  const lowerRun = Math.round(size * 1.0);
-  const upperRun = Math.round(size * 1.25);
-
-  const lowerBaseline = Math.round(size * 1.55);
-  const upperBaseline = lowerBaseline - rise;
-
-  const width = lowerRun + rule + upperRun;
-  const height = lowerBaseline + rule + Math.round(size * 0.1);
+  const scale = size / BASE_FONT;
 
   return (
     <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
+      width={Math.round(VIEW_WIDTH * scale)}
+      height={Math.round(VIEW_HEIGHT * scale)}
+      viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
       role={decorative ? undefined : 'img'}
       aria-hidden={decorative || undefined}
       aria-label={decorative ? undefined : 'WhyStack'}
       style={{ display: 'block' }}
     >
-      {/* The W, sitting on the lower tread. */}
+      {/* The question, on the ground. */}
       <text
         x={0}
-        y={lowerBaseline - rule}
-        fontSize={size}
-        fontWeight={700}
+        y={44}
         fontFamily="var(--font-display)"
+        fontWeight={700}
+        fontSize={BASE_FONT}
+        letterSpacing={0.5}
         fill="var(--color-text-primary)"
       >
-        W
+        why
       </text>
 
-      {/* Its baseline. */}
-      <rect x={0} y={lowerBaseline} width={lowerRun} height={rule} fill="var(--color-text-secondary)" />
+      {/* The step. It runs out from the word, rises, and arrives exactly where "Stack" begins — which is why
+          the mark reads as one movement instead of two words with a line between them. */}
+      <path d="M55 36 h14 v-19 h11" fill="none" stroke="var(--color-accent)" strokeWidth={3.5} />
 
-      {/* The riser — the only thing joining the two levels. */}
-      <rect
-        x={lowerRun}
-        y={upperBaseline}
-        width={rule}
-        height={rise + rule}
-        fill="var(--color-text-secondary)"
-      />
+      {/* The reader's own stop, at the foot of the riser. The map draws this same dot. */}
+      <circle cx={62} cy={36} r={3.5} fill="var(--color-text-primary)" />
 
-      {/* The S, sitting on the upper tread — lifted by exactly the rise. */}
+      {/* What you were after, one step up. */}
       <text
-        x={lowerRun + rule + Math.round(size * 0.12)}
-        y={upperBaseline - rule}
-        fontSize={size}
-        fontWeight={700}
+        x={80}
+        y={24}
         fontFamily="var(--font-display)"
+        fontWeight={700}
+        fontSize={BASE_FONT}
+        letterSpacing={0.5}
         fill="var(--color-accent)"
       >
-        S
+        Stack
       </text>
-
-      <rect x={lowerRun + rule} y={upperBaseline} width={upperRun} height={rule} fill="var(--color-accent)" />
     </svg>
   );
 }

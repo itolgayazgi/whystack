@@ -62,7 +62,7 @@ export default function StudioLayout({ children }: { children: ReactNode }) {
     <div className={styles.shell}>
       <nav className={styles.rail}>
         <div className={styles.railBrand}>
-          <Wordmark size={22} />
+          <Wordmark size={20} />
           <span className={styles.railBrandLabel}>Studio</span>
         </div>
 

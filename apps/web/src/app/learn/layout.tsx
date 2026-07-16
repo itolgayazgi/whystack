@@ -148,14 +148,14 @@ function Rail() {
   return (
     <aside className={styles.side}>
       {/*
-        The mark, and the word under it — the mockup's own lockup, centred.
+        The mark carries the word now (anchor-logo variant 01), so the separate "whystack" caption that used
+        to sit under it is gone — it was saying the name twice, to the eye and to a screen reader alike.
 
-        The mark is aria-hidden because the word beside it already says the name; two labels for one lockup
-        makes a screen reader stutter where the eye sees one thing.
+        27 is the size the study drew the sidebar mark at. Rendering it at anything else would be second-
+        guessing the one measurement he actually fitted to this column.
       */}
       <Link href="/learn" className={styles.brand}>
-        <Wordmark size={20} decorative />
-        <span className={styles.brandWord}>whystack</span>
+        <Wordmark size={27} />
       </Link>
 
       <nav aria-label="Alanlar">
