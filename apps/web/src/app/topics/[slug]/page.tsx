@@ -41,7 +41,7 @@ export default function TopicPage() {
 
   // The scrollspy already knows which block the reader is in — that is what the map on the left follows.
   // This is the same fact, sent to the server, so "kaldığın yer" on the home means something.
-  useProgress(slug, ecosystem, current);
+  const { markComplete } = useProgress(slug, ecosystem, current);
 
   const fetchTopic = useCallback(async () => {
     setLoad('loading');
@@ -202,7 +202,7 @@ export default function TopicPage() {
             <p>Bu konunun içeriği henüz yazılmadı.</p>
           </div>
         ) : (
-          <BlockFlow blocks={topic.blocks} />
+          <BlockFlow blocks={topic.blocks} onAllCheckpointsPassed={markComplete} />
         )}
       </main>
 

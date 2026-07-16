@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 // Tests render the WEB target, and that is deliberate.
@@ -17,9 +18,23 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   resolve: {
-    alias: {
-      'react-native': 'react-native-web',
-    },
+    alias: [
+      // EXACT match, not a prefix.
+      //
+      // The object form of `alias` matches the START of a specifier, so `'react-native': 'react-native-web'`
+      // silently rewrote `react-native-svg` to `react-native-websvg`. Nothing imported it from a test, so
+      // nothing ever noticed — until block-flow.tsx (which renders diagrams) was first pulled into one, and
+      // the failure arrived as `SyntaxError: Unexpected token 'typeof'`, pointing nowhere near the cause.
+      { find: /^react-native$/, replacement: 'react-native-web' },
+
+      // Stubbed. See tests/stubs/react-native-svg.tsx: the real package reaches into React Native's own
+      // Flow-typed source, which Metro transpiles on a device and this runner does not. That is the same
+      // boundary this file already draws below — native rendering is a human's job, on Expo Go.
+      {
+        find: /^react-native-svg$/,
+        replacement: path.resolve(__dirname, './tests/stubs/react-native-svg.tsx'),
+      },
+    ],
   },
   esbuild: {
     jsx: 'automatic',

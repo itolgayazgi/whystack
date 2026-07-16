@@ -461,3 +461,50 @@
 .transfer b {
   color: var(--color-success);
 }
+
+/*
+  The wrong-answer panel.
+
+  Deliberately NOT drawn in the error colour. This is not a failure — it is a person thinking, and the
+  product's answer to thinking is not a red box. The accent border says "you are still here"; the error
+  palette would say "you did something wrong", which is exactly the message the owner asked us not to send.
+*/
+.retry {
+  margin-top: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-elevated);
+}
+
+.retryLead {
+  font-size: 13.5px;
+  color: var(--color-text-primary);
+  line-height: 1.55;
+  margin: 0 0 var(--space-12);
+}
+
+.retryButton {
+  background: var(--color-accent);
+  color: var(--color-background);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-small);
+  padding: var(--space-8) var(--space-16);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.retryButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.retryHint {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  margin: var(--space-8) 0 0;
+  line-height: 1.5;
+}

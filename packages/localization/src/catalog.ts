@@ -40,6 +40,11 @@ export interface Messages {
   'home.transfer': string;
   'home.empty.line': string;
 
+  'checkpoint.correct': string;
+  'checkpoint.tryAgain.lead': string;
+  'checkpoint.tryAgain.button': string;
+  'checkpoint.tryAgain.hint': string;
+
   'explore.title': string;
   'explore.placeholder': string;
   'explore.hint': string;
@@ -289,6 +294,11 @@ const en: Messages = {
   'home.transfer': 'Transfer: this stop meets “{topic}” on the {domain} line.',
   'home.empty.line': 'No published stops on this line yet.',
 
+  'checkpoint.correct': 'That is it.',
+  'checkpoint.tryAgain.lead': 'Nice try — I am sure you will find it next time.',
+  'checkpoint.tryAgain.button': 'Answer again',
+  'checkpoint.tryAgain.hint': 'I want to be sure you are ready for the next topic.',
+
   'explore.title': 'Explore',
   'explore.placeholder': 'Search a topic or concept…',
   'explore.hint': 'Type at least three letters.',
@@ -527,6 +537,11 @@ const tr: Messages = {
   'home.station.ahead': 'İleride',
   'home.transfer': 'Aktarma: Bu durak, {domain} hattındaki “{topic}” ile kesişiyor.',
   'home.empty.line': 'Bu hatta henüz yayınlanmış durak yok.',
+
+  'checkpoint.correct': 'Doğru.',
+  'checkpoint.tryAgain.lead': 'Güzel denemeydi, bir sonraki sefere doğru cevabını bulacağından eminim.',
+  'checkpoint.tryAgain.button': 'Tekrar cevapla',
+  'checkpoint.tryAgain.hint': 'Bir sonraki konuya hazır olduğundan emin olmalıyım.',
 
   'explore.title': 'Keşfet',
   'explore.placeholder': 'Konu veya kavram ara…',

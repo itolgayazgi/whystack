@@ -1,7 +1,7 @@
 'use client';
 
 import { progressApi } from '@whystack/api-client';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useSession } from '@/lib/session';
 
 /** How long the reader has to settle on a block before it counts as "where they are". */
@@ -59,4 +59,29 @@ export function useProgress(slug: string | null, ecosystem: string | undefined, 
 
     return () => clearTimeout(timer);
   }, [client, status, slug, ecosystem, blockOrder]);
+
+  /**
+   * The reader's claim that they are done here.
+   *
+   * Called from the block flow when every checkpoint has been answered correctly — the owner's decision,
+   * and the only thing in this file that ever sets `completed`. Nothing infers it from a scroll.
+   */
+  const markComplete = useCallback(() => {
+    if (status !== 'signed-in' || slug === null) return;
+
+    progressApi
+      .record(client, {
+        slug,
+        ecosystemKey: ecosystem ?? null,
+        lastBlockOrder: blockOrder ?? 0,
+        completed: true,
+      })
+      .catch(() => {
+        // Silent for the same reason the position is: the reader has just got a checkpoint right, and a red
+        // banner is a poor thing to answer that with. The claim is lost, not the understanding — and they
+        // can make it again by opening the topic.
+      });
+  }, [client, status, slug, ecosystem, blockOrder]);
+
+  return { markComplete };
 }

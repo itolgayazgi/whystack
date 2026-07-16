@@ -40,7 +40,7 @@ export function TopicScreen({ slug }: { slug: string }) {
 
   // Above the early returns. A hook that only runs once the topic has loaded is a hook that runs a
   // different number of times per render, and React ends the app over it.
-  const { current, onScroll, onBlockLayout } = useReadingPosition(slug, undefined);
+  const { current, onScroll, onBlockLayout, markComplete } = useReadingPosition(slug, undefined);
 
   if (status === 'loading') {
     return (
@@ -108,6 +108,7 @@ export function TopicScreen({ slug }: { slug: string }) {
         <BlockFlow
           blocks={topic.blocks}
           onBlockLayout={onBlockLayout}
+          onAllCheckpointsPassed={markComplete}
           onTopicPress={(target) => router.push({ pathname: '/topics/[slug]', params: { slug: target } })}
         />
       ) : (

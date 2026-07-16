@@ -2,9 +2,10 @@ import type { TopicBlock } from '@whystack/api-client';
 import { parse } from '@whystack/markdown-renderer';
 import { MarkdownView } from '@whystack/markdown-renderer/native';
 import { fontFamily } from '@whystack/theme';
-import { Component, type ReactNode, useMemo, useState } from 'react';
+import { Component, type ReactNode, useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
+import { useLanguage } from '../state/language';
 import { useTheme } from '../state/theme';
 
 /**
@@ -35,11 +36,32 @@ export function BlockFlow({
   blocks,
   onTopicPress,
   onBlockLayout,
+  onAllCheckpointsPassed,
 }: {
   blocks: TopicBlock[];
   onTopicPress?: (slug: string) => void;
   onBlockLayout?: (order: number, y: number) => void;
+
+  /**
+   * EVERY checkpoint, not the first. The message under a wrong answer promises "bir sonraki konuya hazır
+   * olduğundan emin olmalıyım", and we cannot be sure of that while one of them is still wrong.
+   */
+  onAllCheckpointsPassed?: () => void;
 }) {
+  const total = blocks.filter((block) => block.type === 'Checkpoint').length;
+
+  // A ref, not state: nothing on screen depends on WHICH ones are passed, only on the moment the last one
+  // is. State would re-render every block in the flow on each correct answer.
+  const passed = useRef<Set<number>>(new Set());
+
+  const onCorrect = useCallback(
+    (order: number) => {
+      passed.current.add(order);
+      if (passed.current.size === total) onAllCheckpointsPassed?.();
+    },
+    [total, onAllCheckpointsPassed],
+  );
+
   return (
     <>
       {blocks.map((block) => (
@@ -48,7 +70,7 @@ export function BlockFlow({
           onLayout={(event) => onBlockLayout?.(block.order, event.nativeEvent.layout.y)}
         >
           <BlockTag label={LABEL[block.type]} />
-          <BlockBody block={block} onTopicPress={onTopicPress} />
+          <BlockBody block={block} onTopicPress={onTopicPress} onCorrect={onCorrect} />
         </View>
       ))}
     </>
@@ -68,7 +90,15 @@ function BlockTag({ label }: { label: string }) {
   );
 }
 
-function BlockBody({ block, onTopicPress }: { block: TopicBlock; onTopicPress?: (slug: string) => void }) {
+function BlockBody({
+  block,
+  onTopicPress,
+  onCorrect,
+}: {
+  block: TopicBlock;
+  onTopicPress?: (slug: string) => void;
+  onCorrect: (order: number) => void;
+}) {
   const { color } = useTheme();
 
   switch (block.type) {
@@ -120,7 +150,7 @@ function BlockBody({ block, onTopicPress }: { block: TopicBlock; onTopicPress?: 
       );
 
     case 'Checkpoint':
-      return <Checkpoint data={block.data} />;
+      return <Checkpoint data={block.data} onCorrect={() => onCorrect(block.order)} />;
 
     case 'Term':
       return (
@@ -267,11 +297,27 @@ function CodeBlock({ data }: { data: Extract<TopicBlock, { type: 'Code' }>['data
  * A checkpoint that only scores teaches nothing; the explanation IS the block, which is why the schema makes
  * it mandatory and why it appears either way.
  */
-function Checkpoint({ data }: { data: Extract<TopicBlock, { type: 'Checkpoint' }>['data'] }) {
+/**
+ * The checkpoint — the block that breaks passive reading, and the one that says a topic is finished.
+ *
+ * The same rules as the website, for the same reasons (see apps/web block-flow): a wrong answer does not
+ * reveal the correct option, the retry is unlimited and kindly worded, and the explanation is held back
+ * until the reader gets there. Two platforms, one behaviour — because it is one product decision, not a
+ * per-platform detail.
+ */
+function Checkpoint({
+  data,
+  onCorrect,
+}: {
+  data: Extract<TopicBlock, { type: 'Checkpoint' }>['data'];
+  onCorrect: () => void;
+}) {
   const { color } = useTheme();
+  const { t } = useLanguage();
   const [chosen, setChosen] = useState<number | null>(null);
 
   const answered = chosen !== null;
+  const correct = chosen === data.correctIndex;
 
   return (
     <View
@@ -286,20 +332,28 @@ function Checkpoint({ data }: { data: Extract<TopicBlock, { type: 'Checkpoint' }
       <Text style={[styles.checkpointQuestion, { color: color.textPrimary }]}>{data.question}</Text>
 
       {data.options.map((option, index) => {
-        const isCorrect = index === data.correctIndex;
+        // The correct one is marked ONLY once they have found it. Marking it on a wrong answer would put the
+        // answer on screen and make the retry below theatre.
         const border = !answered
           ? color.border
-          : isCorrect
+          : correct && index === data.correctIndex
             ? color.success
             : index === chosen
-              ? color.error
+              ? color.accent
               : color.border;
 
         return (
           <Pressable
             key={option}
-            disabled={answered}
-            onPress={() => setChosen(index)}
+            testID={`option-${index}`}
+            accessibilityRole="button"
+            // Locked once they are right; left live while they are wrong, because the next thing they should
+            // be able to do is think again.
+            disabled={correct}
+            onPress={() => {
+              setChosen(index);
+              if (index === data.correctIndex) onCorrect();
+            }}
             style={[styles.option, { borderColor: border }]}
           >
             <Text style={[styles.optionKey, { color: color.textMuted, fontFamily: fontFamily.code }]}>
@@ -310,12 +364,34 @@ function Checkpoint({ data }: { data: Extract<TopicBlock, { type: 'Checkpoint' }
         );
       })}
 
-      {answered ? (
+      {answered && correct ? (
         <View style={[styles.why, { borderLeftColor: color.success }]}>
-          <Text style={[styles.whyLead, { color: color.success }]}>
-            {chosen === data.correctIndex ? 'Doğru. ' : 'Değil. '}
-          </Text>
+          <Text style={[styles.whyLead, { color: color.success }]}>{t('checkpoint.correct')} </Text>
           <Text style={[styles.whyText, { color: color.textSecondary }]}>{data.explanation}</Text>
+        </View>
+      ) : null}
+
+      {answered && !correct ? (
+        /*
+          Deliberately NOT the error colour. This is not a failure — it is a person thinking, and a red box
+          is a poor answer to thinking. The accent says "you are still here"; the error palette would say
+          "you did something wrong", which is the message the owner asked us not to send.
+        */
+        <View testID="checkpoint-retry" role="status" style={[styles.why, { borderLeftColor: color.accent }]}>
+          <Text style={[styles.whyText, { color: color.textPrimary }]}>{t('checkpoint.tryAgain.lead')}</Text>
+
+          <Pressable
+            testID="checkpoint-retry-button"
+            accessibilityRole="button"
+            onPress={() => setChosen(null)}
+            style={[styles.retryButton, { backgroundColor: color.accent }]}
+          >
+            <Text style={[styles.retryButtonText, { color: color.background }]}>
+              {t('checkpoint.tryAgain.button')}
+            </Text>
+          </Pressable>
+
+          <Text style={[styles.retryHint, { color: color.textMuted }]}>{t('checkpoint.tryAgain.hint')}</Text>
         </View>
       ) : null}
     </View>
@@ -323,6 +399,17 @@ function Checkpoint({ data }: { data: Extract<TopicBlock, { type: 'Checkpoint' }
 }
 
 const styles = StyleSheet.create({
+  retryButton: {
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 6,
+    marginTop: 12,
+    paddingHorizontal: 16,
+  },
+  retryButtonText: { fontSize: 13, fontWeight: '700' },
+  retryHint: { fontSize: 11.5, marginTop: 8, lineHeight: 16 },
+
   tagRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 18 },
   tagRule: { width: 18, height: 1 },
   tagText: { fontSize: 9.5, letterSpacing: 1.4 },

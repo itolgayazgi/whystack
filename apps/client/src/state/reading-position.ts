@@ -87,5 +87,30 @@ export function useReadingPosition(slug: string | null, ecosystem: string | unde
     return () => clearTimeout(timer);
   }, [client, status, slug, ecosystem, current]);
 
-  return { current, onScroll, onBlockLayout };
+  /**
+   * The reader's claim that they are done here.
+   *
+   * Called when every checkpoint has been answered correctly (the owner's decision) — the only thing in this
+   * file that ever sets `completed`. Nothing infers it from a scroll.
+   */
+  const markComplete = useCallback(() => {
+    if (status !== 'signed-in' || slug === null) return;
+
+    progressApi
+      .record(client, {
+        slug,
+        ecosystemKey: ecosystem ?? null,
+        lastBlockOrder: current ?? 0,
+        completed: true,
+      })
+      .catch((error: unknown) => {
+        // Silent for the same reason the position is: the reader has just got a checkpoint right, and a red
+        // banner is a poor thing to answer that with.
+        if (error instanceof ApiError || error instanceof NetworkError) return;
+
+        throw error;
+      });
+  }, [client, status, slug, ecosystem, current]);
+
+  return { current, onScroll, onBlockLayout, markComplete };
 }

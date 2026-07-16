@@ -4,7 +4,7 @@ import type { TopicBlock } from '@whystack/api-client';
 import { parse } from '@whystack/markdown-renderer';
 import { Markdown } from '@whystack/markdown-renderer/web';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import styles from './blocks.module.css';
 
 /**
@@ -56,13 +56,43 @@ export function codeOf(block: TopicBlock) {
   return CODE[block.type];
 }
 
-export function BlockFlow({ blocks }: { blocks: TopicBlock[] }) {
+/**
+ * The block flow, and the one place that knows when a reader has finished a topic.
+ *
+ * <b>EVERY checkpoint, not the first.</b> The message under a wrong answer promises "bir sonraki konuya
+ * hazır olduğundan emin olmalıyım", and we cannot be sure of that while one of them is still wrong. A
+ * topic with one checkpoint behaves identically; a topic with three now means what it says.
+ */
+export function BlockFlow({
+  blocks,
+  onAllCheckpointsPassed,
+}: {
+  blocks: TopicBlock[];
+  onAllCheckpointsPassed?: () => void;
+}) {
+  const total = blocks.filter((block) => block.type === 'Checkpoint').length;
+
+  // A ref, not state: nothing on screen depends on WHICH ones are passed, only on the moment the last one
+  // is. Holding it in state would re-render every block in the flow on each correct answer.
+  const passed = useRef<Set<number>>(new Set());
+
+  const onCorrect = useCallback(
+    (order: number) => {
+      passed.current.add(order);
+
+      // Fires once, on the transition. Not `>=`: a re-answer of an already-passed checkpoint cannot happen
+      // (the options lock), but a guard that only holds because of a detail somewhere else is not a guard.
+      if (passed.current.size === total) onAllCheckpointsPassed?.();
+    },
+    [total, onAllCheckpointsPassed],
+  );
+
   return (
     <>
       {blocks.map((block) => (
         <section key={`${block.order}-${block.type}`} className={styles.blk} id={anchorOf(block)}>
           <p className={styles.blkTag}>{LABEL[block.type]}</p>
-          <BlockBody block={block} />
+          <BlockBody block={block} onCorrect={onCorrect} />
         </section>
       ))}
     </>
@@ -77,7 +107,7 @@ export function labelOf(block: TopicBlock) {
   return LABEL[block.type];
 }
 
-function BlockBody({ block }: { block: TopicBlock }) {
+function BlockBody({ block, onCorrect }: { block: TopicBlock; onCorrect: (order: number) => void }) {
   switch (block.type) {
     case 'Hook':
       return (
@@ -161,7 +191,7 @@ function BlockBody({ block }: { block: TopicBlock }) {
       );
 
     case 'Checkpoint':
-      return <Checkpoint data={block.data} />;
+      return <Checkpoint data={block.data} onCorrect={() => onCorrect(block.order)} />;
 
     case 'Term':
       return (
@@ -262,16 +292,29 @@ function CodeBlock({ data }: { data: Extract<TopicBlock, { type: 'Code' }>['data
 }
 
 /**
- * The checkpoint — the block that breaks passive reading.
+ * The checkpoint — the block that breaks passive reading, and the one that says a topic is finished.
  *
- * The answer is revealed only after a choice, and the EXPLANATION always comes with it, right or wrong. A
- * checkpoint that only scores teaches nothing; the explanation is the point, which is why the schema makes
- * it mandatory.
+ * A correct answer is what completes a topic (the owner's call, ADR-0025's "reader's claim"). So the
+ * behaviour on a WRONG answer is a product decision, not a detail:
+ *
+ * - The correct option is NOT revealed. Revealing it would make "Tekrar cevapla" a button that re-enters an
+ *   answer already on screen — a ritual, not a second attempt.
+ * - The message is kind and the retry is unlimited. This is not an exam; the reader is here to understand,
+ *   and a platform whose promise is "neden" cannot answer a wrong guess by locking the door.
+ * - The explanation is held back until they get there. It is the reward for the thought, and handing it over
+ *   on a wrong guess is the same as handing over the answer.
  */
-function Checkpoint({ data }: { data: Extract<TopicBlock, { type: 'Checkpoint' }>['data'] }) {
+function Checkpoint({
+  data,
+  onCorrect,
+}: {
+  data: Extract<TopicBlock, { type: 'Checkpoint' }>['data'];
+  onCorrect: () => void;
+}) {
   const [chosen, setChosen] = useState<number | null>(null);
 
   const answered = chosen !== null;
+  const correct = chosen === data.correctIndex;
 
   return (
     <div className={styles.checkpoint}>
@@ -280,10 +323,11 @@ function Checkpoint({ data }: { data: Extract<TopicBlock, { type: 'Checkpoint' }
       <p className={styles.checkpointQuestion}>{data.question}</p>
 
       {data.options.map((option, index) => {
-        const isCorrect = index === data.correctIndex;
+        // The correct one lights up ONLY once they have found it. Marking it on a wrong answer would give
+        // the game away and make the retry below theatre.
         const state = !answered
           ? ''
-          : isCorrect
+          : correct && index === data.correctIndex
             ? styles.optionCorrect
             : index === chosen
               ? styles.optionWrong
@@ -294,8 +338,13 @@ function Checkpoint({ data }: { data: Extract<TopicBlock, { type: 'Checkpoint' }
             key={option}
             type="button"
             className={`${styles.option} ${state}`}
-            disabled={answered}
-            onClick={() => setChosen(index)}
+            // Locked once they are right — the answer is settled. Left open while they are wrong, because
+            // the next thing they should be able to do is think again.
+            disabled={correct}
+            onClick={() => {
+              setChosen(index);
+              if (index === data.correctIndex) onCorrect();
+            }}
           >
             <span className={styles.optionKey}>[{String.fromCharCode(97 + index)}]</span>
             {option}
@@ -303,11 +352,25 @@ function Checkpoint({ data }: { data: Extract<TopicBlock, { type: 'Checkpoint' }
         );
       })}
 
-      {answered ? (
+      {answered && correct ? (
         <p className={styles.why} role="status">
-          <span className={styles.whyLead}>{chosen === data.correctIndex ? 'Doğru. ' : 'Değil. '}</span>
+          <span className={styles.whyLead}>Doğru. </span>
           {data.explanation}
         </p>
+      ) : null}
+
+      {answered && !correct ? (
+        <div className={styles.retry} role="status">
+          <p className={styles.retryLead}>
+            Güzel denemeydi, bir sonraki sefere doğru cevabını bulacağından eminim.
+          </p>
+
+          <button type="button" className={styles.retryButton} onClick={() => setChosen(null)}>
+            Tekrar cevapla
+          </button>
+
+          <p className={styles.retryHint}>Bir sonraki konuya hazır olduğundan emin olmalıyım.</p>
+        </div>
       ) : null}
     </div>
   );
