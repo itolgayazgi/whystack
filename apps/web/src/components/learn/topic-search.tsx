@@ -17,6 +17,15 @@ import styles from './topic-search.module.css';
 const DEBOUNCE_MS = 250;
 const MAX_RESULTS = 6;
 
+/**
+ * Below this, it is a keystroke on the way to a word — not a question.
+ *
+ * The search is a LIKE '%term%' scan (TopicRepository). Two letters match a large slice of the corpus, so
+ * the reader pays a full scan to be handed a list they have to search themselves — and every one of those
+ * fires while they are still typing.
+ */
+const MIN_QUERY = 3;
+
 export function TopicSearch({ language }: { language: string }) {
   const { client, status } = useSession();
   const [term, setTerm] = useState('');
@@ -56,7 +65,7 @@ export function TopicSearch({ language }: { language: string }) {
   useEffect(() => {
     const query = term.trim();
 
-    if (status !== 'signed-in' || query.length < 2) {
+    if (status !== 'signed-in' || query.length < MIN_QUERY) {
       // The updater form, not `setResults([])`.
       //
       // A fresh `[]` is a new reference every time, so React re-renders, the effect re-runs (it depends on
@@ -119,7 +128,7 @@ export function TopicSearch({ language }: { language: string }) {
         onFocus={() => setOpen(true)}
       />
 
-      {open && term.trim().length >= 2 ? (
+      {open && term.trim().length >= MIN_QUERY ? (
         <div className={styles.results} id={listId} role="listbox">
           {state === 'searching' ? (
             <p className={styles.hint} role="status">

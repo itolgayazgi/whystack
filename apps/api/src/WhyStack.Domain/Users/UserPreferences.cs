@@ -1,4 +1,4 @@
-namespace WhyStack.Domain.Users;
+﻿namespace WhyStack.Domain.Users;
 
 /// <summary>
 /// How the product behaves for one learner (`07` — User Preferences Domain).
@@ -56,10 +56,21 @@ public enum ThemeMode
     Dark = 3,
 }
 
+/// <summary>
+/// The basamak. Junior → MidLevel → Senior → Expert, and the order IS the meaning (ADR-0026).
+/// </summary>
+/// <remarks>
+/// <b>Spaced by ten, and stored as the number.</b> These values are in every row, so they may never be
+/// renumbered — only inserted between. A rung between Senior and Expert is <c>Staff = 35</c>; appending
+/// <c>Staff = 45</c> would put it above Expert, which is why the gaps are here and why they look arbitrary.
+///
+/// The wire is unaffected: <c>JsonStringEnumConverter</c> serialises by NAME, so the API says "Senior" and
+/// never 30. `08` forbids the number leaving the database, and it does not.
+/// </remarks>
 public enum SkillLevel
 {
-    Junior = 1,
-    MidLevel = 2,
-    Senior = 3,
-    Expert = 4,
+    Junior = 10,
+    MidLevel = 20,
+    Senior = 30,
+    Expert = 40,
 }

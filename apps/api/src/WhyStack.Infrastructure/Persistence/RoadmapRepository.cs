@@ -81,7 +81,7 @@ public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepos
             // `Next` edges: those edges are sparse today, and a topological sort over a sparse graph produces
             // a confident-looking order that changes whenever an editor adds one edge. A wrong-but-stable
             // line is honest; a line that reshuffles under the reader is not.
-            .OrderByLevel()
+            .OrderBy(topic => topic.DefaultLevel)
             .ThenBy(topic => topic.SubArea!.SortOrder)
             .ThenBy(topic => topic.DefaultTitle)
             .Select(topic => new

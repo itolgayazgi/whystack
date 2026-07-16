@@ -204,7 +204,7 @@ public sealed class ProgressRepository(WhyStackDbContext context, TimeProvider c
 
         var next = await Readable()
             .Where(topic => !started.Contains(topic.Id))
-            .OrderByLevel()
+            .OrderBy(topic => topic.DefaultLevel)
             .ThenBy(topic => topic.DefaultTitle)
             .Take(5)
             .Select(topic => new

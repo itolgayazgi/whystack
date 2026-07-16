@@ -87,13 +87,13 @@ describe('the search box', () => {
     render(<TopicSearch language="tr" />);
     const box = screen.getByRole('combobox');
 
-    await userEvent.type(box, 'ef');
+    await userEvent.type(box, 'efc');
 
-    // Wait for "ef" to actually LEAVE. Typing straight through would let the debounce swallow it, no request
+    // Wait for the first search to actually LEAVE. Typing straight through would let the debounce swallow it, no request
     // would ever be in flight, and the test would pass while proving only that the debounce debounces.
     await waitFor(() => expect(list).toHaveBeenCalledTimes(1));
 
-    await userEvent.type(box, ' core');
+    await userEvent.type(box, 'ore');
 
     await screen.findByText('EF Core Tracking');
 
@@ -125,14 +125,26 @@ describe('the search box', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/Arama yapılamadı/);
   });
 
-  it('does not fire a request on a single character', async () => {
+  it('does not go to the server before there is a word to search for', async () => {
     render(<TopicSearch language="tr" />);
-    await userEvent.type(screen.getByRole('combobox'), 'a');
+    await userEvent.type(screen.getByRole('combobox'), 'ef');
 
     await new Promise((resolve) => setTimeout(resolve, 400));
 
-    // One letter matches most of the corpus. It is a keystroke on the way to a word, not a question.
+    // Two letters are a keystroke on the way to a word, not a question — and the search is a LIKE scan, so
+    // "ef" costs a full pass over the corpus to return a list the reader then has to search by eye.
     expect(list).not.toHaveBeenCalled();
+  });
+
+  it('searches once there is a word', async () => {
+    list.mockResolvedValue({ data: [topic()] });
+
+    render(<TopicSearch language="tr" />);
+    await userEvent.type(screen.getByRole('combobox'), 'gar');
+
+    // The other side of the threshold. Without this, raising MIN_QUERY to 20 would still pass every test in
+    // this file — the guard would be proven, and the feature would be gone.
+    await waitFor(() => expect(list).toHaveBeenCalled());
   });
 
   it('tells a Turkish reader when a result is not in Turkish', async () => {

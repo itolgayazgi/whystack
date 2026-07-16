@@ -61,7 +61,7 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
         // column, and "SELECT *" on a content table is how a list screen becomes the slowest page in the app.
         var page = await topics
             .OrderBy(topic => topic.Domain!.SortOrder)
-            .ThenByLevel()
+            .ThenBy(topic => topic.DefaultLevel)
             .ThenBy(topic => topic.DefaultTitle)
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)

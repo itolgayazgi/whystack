@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using WhyStack.Domain.Content;
 using WhyStack.Domain.Identity;
@@ -175,7 +175,17 @@ public class TopicConfiguration : IEntityTypeConfiguration<Topic>
 
         builder.Property(topic => topic.DefaultTitle).HasMaxLength(256).IsRequired();
         builder.Property(topic => topic.Category).HasConversion<string>().HasMaxLength(32).IsRequired();
-        builder.Property(topic => topic.DefaultLevel).HasConversion<string>().HasMaxLength(16).IsRequired();
+        // The NUMBER, not the name (ADR-0026): the basamak is ordinal, and ORDER BY on the text sorted
+        // Expert before Junior in three separate queries before a test caught it.
+        //
+        // The CHECK is what buys back the one thing string storage gave for free. `Archetype` was stored as
+        // an int by accident once and the column held 0 — a value the enum does not define — and nothing
+        // complained. An int column will take any int; this one will not.
+        builder.Property(topic => topic.DefaultLevel).IsRequired();
+
+        builder.ToTable(table => table.HasCheckConstraint(
+            "CK_Topics_DefaultLevel",
+            "[DefaultLevel] IN (10, 20, 30, 40)"));
 
         // A STRING, like every other enum here. Stored as an int it was worse than ugly: the column already
         // held 0 — a value Archetype does not define — so the wire was serving "0" as a topic's type.

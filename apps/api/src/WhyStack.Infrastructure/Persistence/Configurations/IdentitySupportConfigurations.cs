@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using WhyStack.Domain.Identity;
 using WhyStack.Domain.Users;
@@ -135,7 +135,14 @@ public class UserPreferencesConfiguration : IEntityTypeConfiguration<UserPrefere
         builder.Property(preferences => preferences.ContentLanguageCode).HasMaxLength(8).IsRequired();
 
         builder.Property(preferences => preferences.ThemeMode).HasConversion<string>().HasMaxLength(16);
-        builder.Property(preferences => preferences.PreferredSkillLevel).HasConversion<string>().HasMaxLength(16);
+        // ADR-0026: the number. NULL is a real answer — a reader who has not told us — so the CHECK has to
+        // permit it explicitly. `IN (...)` alone is UNKNOWN for NULL, which SQL Server treats as passing,
+        // but writing it out means the next person does not have to remember that.
+        builder.Property(preferences => preferences.PreferredSkillLevel);
+
+        builder.ToTable(table => table.HasCheckConstraint(
+            "CK_UserPreferences_PreferredSkillLevel",
+            "[PreferredSkillLevel] IS NULL OR [PreferredSkillLevel] IN (10, 20, 30, 40)"));
 
         builder.Property(preferences => preferences.RowVersion).IsRowVersion();
 
