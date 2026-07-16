@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WhyStack.Domain.Content;
 using WhyStack.Domain.Identity;
@@ -17,6 +17,8 @@ public class WhyStackDbContext(DbContextOptions<WhyStackDbContext> options) : Db
     public DbSet<EmailConfirmationToken> EmailConfirmationTokens => Set<EmailConfirmationToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
+    public DbSet<UserTopicProgress> UserTopicProgress => Set<UserTopicProgress>();
+    public DbSet<UserStreak> UserStreaks => Set<UserStreak>();
 
     public DbSet<KnowledgeDomain> KnowledgeDomains => Set<KnowledgeDomain>();
     public DbSet<SubArea> SubAreas => Set<SubArea>();

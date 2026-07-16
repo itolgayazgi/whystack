@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WhyStack.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using WhyStack.Infrastructure.Persistence;
 namespace WhyStack.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(WhyStackDbContext))]
-    partial class WhyStackDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260716111135_Schema_Progress_And_Streak")]
+    partial class Schema_Progress_And_Streak
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
