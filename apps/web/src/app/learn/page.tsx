@@ -1,153 +1,357 @@
 'use client';
 
-import { NetworkError, type TopicSummary, topicsApi } from '@whystack/api-client';
+import {
+  type HomeSnapshot,
+  type LineOption,
+  NetworkError,
+  progressApi,
+  type Roadmap,
+  roadmapApi,
+} from '@whystack/api-client';
+import { lineColor } from '@whystack/theme';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
-import { CatalogSidebar } from '@/components/catalog-sidebar';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { MetroMap } from '@/components/learn/metro-map';
 import { useSession } from '@/lib/session';
 import styles from './learn.module.css';
 
 /** The interface is Turkish; the content language is a separate axis (`08`) and the API resolves it. */
 const CONTENT_LANGUAGE = 'tr';
 
-/**
- * The server's own maximum (ListTopicsHandler.MaxPageSize), and asking for more is not "asking for more".
- *
- * `pageSize` is CLAMPED, not rejected — ask for 100 and you silently get 50, with a 200 and no complaint.
- * The sidebar would then be missing topics and look complete, which is the worst kind of wrong: nobody has
- * any reason to doubt it. So we ask for exactly what the server gives, and page until it says there is no
- * more.
- */
-const PAGE_SIZE = 50;
-
-/** A ceiling, because "loop until the server stops" is a request the server can make infinite. */
-const MAX_PAGES = 10;
+const LEVEL_LABEL: Record<string, string> = {
+  Junior: 'JUNIOR',
+  MidLevel: 'MID',
+  Senior: 'SENIOR',
+  Expert: 'EXPERT',
+};
 
 export default function LearnHome() {
-  const { client, status: session, user } = useSession();
+  // useSearchParams() suspends. The boundary is here rather than around the whole app so the rail still
+  // paints while this resolves.
+  return (
+    <Suspense fallback={<main className={styles.main} aria-busy="true" />}>
+      <Home />
+    </Suspense>
+  );
+}
 
-  const [topics, setTopics] = useState<TopicSummary[]>([]);
-  const [truncated, setTruncated] = useState(false);
+function Home() {
+  const { client, status: session } = useSession();
+  const search = useSearchParams();
+
+  const domain = search.get('domain') ?? 'backend';
+  const ecosystem = search.get('eco') ?? 'dotnet';
+
+  const [home, setHome] = useState<HomeSnapshot | null>(null);
+  const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
+  const [lines, setLines] = useState<LineOption[]>([]);
   const [load, setLoad] = useState<'loading' | 'ready' | 'unreachable' | 'failed'>('loading');
 
-  const fetchTopics = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     setLoad('loading');
 
     try {
-      const collected: TopicSummary[] = [];
-      let page = 1;
-      let more = true;
+      // In parallel. They are three independent facts and the screen shows all three at once — sequencing
+      // them would add two round trips of latency to the screen a reader opens first, every time.
+      const [homeResponse, linesResponse, roadmapResponse] = await Promise.all([
+        progressApi.home(client, { ecosystem, language: CONTENT_LANGUAGE }),
+        roadmapApi.lines(client),
 
-      while (more && page <= MAX_PAGES) {
-        const { data, pagination } = await topicsApi.list(client, {
-          language: CONTENT_LANGUAGE,
-          pageNumber: page,
-          pageSize: PAGE_SIZE,
-        });
+        // A 404 here is expected and survivable: a domain with no line yet is a real state, and it must not
+        // take the streak and the continue card down with it.
+        roadmapApi.get(client, { ecosystem, domain, language: CONTENT_LANGUAGE }).catch(() => null),
+      ]);
 
-        collected.push(...data);
-        more = pagination.hasNextPage;
-        page += 1;
-      }
-
-      setTopics(collected);
-
-      // If we stopped because we hit OUR ceiling rather than the end of the corpus, the reader is told. A
-      // list that silently ends is a list that lies about what exists.
-      setTruncated(more);
+      setHome(homeResponse.data);
+      setLines(linesResponse.data);
+      setRoadmap(roadmapResponse?.data ?? null);
       setLoad('ready');
     } catch (error) {
       setLoad(error instanceof NetworkError ? 'unreachable' : 'failed');
     }
-  }, [client]);
+  }, [client, domain, ecosystem]);
 
   useEffect(() => {
-    if (session === 'signed-in') void fetchTopics();
-  }, [session, fetchTopics]);
+    if (session === 'signed-in') void fetchAll();
+  }, [session, fetchAll]);
 
-  const firstName = (user?.displayName || user?.email || '').split(/[\s@]/)[0] ?? '';
+  const streak = home?.streak.current ?? 0;
+  const current = home?.levels.find((level) => level.completed < level.total);
+  const remaining = current ? current.total - current.completed : 0;
+  const nextStation = roadmap?.stations.find((station) => station.state === 'Next');
 
   return (
-    <div className={styles.body}>
-      <CatalogSidebar topics={topics} />
-
-      <main className={styles.main}>
-        <h1 className={styles.greeting}>{firstName ? `Merhaba, ${firstName}.` : 'Merhaba.'}</h1>
-        <p className={styles.lede}>
-          Soldaki katalog senin. Sıra dayatmıyoruz — merak ettiğin yerden başla. Her konu neden var olduğunu
-          anlatarak açılır, nasıl yapıldığını sonra gösterir.
+    <main className={styles.main}>
+      <div className={styles.topbar}>
+        <p className={styles.crumbs}>
+          {roadmap ? (
+            <>
+              {roadmap.domainName} / <b>{roadmap.ecosystemName} Ekosistemi</b>
+              {current ? ` / ${LEVEL_LABEL[current.level] ?? current.level} Basamağı` : ''}
+            </>
+          ) : (
+            'Yol haritan'
+          )}
         </p>
 
-        {/*
-          The roadmap's slot, held open and labelled as empty.
+        <div className={styles.topRight}>
+          {/*
+            The streak (ADR-0025 — the owner's call, and a deliberate override of `09`'s gamification ban).
 
-          A 0% progress bar here would be a lie in the one place a learner is meant to trust, and `09` warns
-          against gamification in the same breath as dashboards. The Roadmap Engine is Sprint 5 and reading
-          progress is Sprint 4 (`04`); when they land, they land HERE, and the layout does not move.
-        */}
-        <section className={styles.roadmapSlot}>
-          <strong>Yol haritan burada olacak.</strong>
-          <br />
-          Kaldığın yer, hangi adımda olduğun ve sıradaki konu — hepsi bu sütunda. Henüz yok: ilerleme takibi
-          ve yol haritası motoru kendi sprint&apos;lerinde geliyor. Sahte bir yüzde göstermektense yerini boş
-          tutuyoruz.
-        </section>
+            It states a fact and stops. No "don't break it!", no flame growing as the number does, nothing
+            that fires when it resets. The moment it nags, it is the thing `09` was right to ban.
+          */}
+          <span className={`${styles.streakPill} ${streak === 0 ? styles.streakPillCold : ''}`}>
+            🔥 {streak} gün
+          </span>
 
-        {load === 'loading' ? <p className={styles.lede}>Yükleniyor…</p> : null}
+          <input
+            className={styles.search}
+            type="search"
+            placeholder="Konu veya kavram ara…"
+            aria-label="Konu veya kavram ara"
+          />
+        </div>
+      </div>
 
-        {load === 'unreachable' ? (
-          <div className={styles.notice} role="alert">
-            Sunucuya ulaşılamıyor. Oturumun kapanmadı.{' '}
-            <button type="button" onClick={() => void fetchTopics()}>
-              Tekrar dene
-            </button>
-          </div>
-        ) : null}
+      <div className={styles.ecoTabs} role="tablist" aria-label="Ekosistemler">
+        {lines.map((line) => {
+          const active = line.key === ecosystem;
+          const query = new URLSearchParams({ domain, eco: line.key });
 
-        {load === 'failed' ? (
-          <div className={styles.notice} role="alert">
-            Konular alınamadı.{' '}
-            <button type="button" onClick={() => void fetchTopics()}>
-              Tekrar dene
-            </button>
-          </div>
-        ) : null}
+          // An ecosystem the product has not written yet is a real tab that says so — not a hidden one, and
+          // not a disabled one either: `disabled` drops it out of the tab order and gives a keyboard user
+          // no way to find out WHY it does nothing.
+          if (!line.isAvailable) {
+            return (
+              <span
+                key={line.key}
+                className={`${styles.eco} ${styles.ecoSoon}`}
+                title="Bu hat henüz yazılmadı"
+              >
+                <i className={styles.ldot} style={{ background: lineColor(line.key), opacity: 0.5 }} />
+                {line.name}
+                <span className={styles.soon}>YAKINDA</span>
+              </span>
+            );
+          }
 
-        {load === 'ready' && topics.length === 0 ? (
-          <div className={styles.empty}>
-            <p>Henüz yayınlanmış konu yok.</p>
-            <p>
-              Yazılmış taslaklar olabilir — ama bir konu, incelemeden geçip yayınlanana kadar buraya gelmez.
-            </p>
-          </div>
-        ) : null}
+          return (
+            <Link
+              key={line.key}
+              href={`/learn?${query}`}
+              role="tab"
+              aria-selected={active}
+              className={`${styles.eco} ${active ? styles.ecoActive : ''}`}
+            >
+              <i className={styles.ldot} style={{ background: lineColor(line.key) }} />
+              {line.name}
+            </Link>
+          );
+        })}
+      </div>
 
-        {truncated ? (
-          <div className={styles.notice} role="status">
-            Katalog {topics.length} konuda kesildi — daha fazlası var. Arama kutusu şu an sadece yüklenenler
-            içinde arıyor.
-          </div>
-        ) : null}
+      {load === 'unreachable' ? (
+        <div className={styles.notice} role="alert">
+          Sunucuya ulaşılamıyor. Oturumun kapanmadı — bu bir bağlantı sorunu.{' '}
+          <button type="button" onClick={() => void fetchAll()}>
+            Tekrar dene
+          </button>
+        </div>
+      ) : null}
 
-        {load === 'ready' && topics.length > 0 ? (
-          <>
-            <p className={styles.blockTitle}>Buradan başla</p>
+      {load === 'failed' ? (
+        <div className={styles.notice} role="alert">
+          Anasayfa alınamadı.{' '}
+          <button type="button" onClick={() => void fetchAll()}>
+            Tekrar dene
+          </button>
+        </div>
+      ) : null}
 
-            {topics.slice(0, 5).map((topic) => (
-              <Link key={topic.id} href={`/topics/${topic.slug}`} className={styles.card}>
-                <p className={styles.cardTitle}>{topic.title}</p>
-                {topic.summary ? <p className={styles.cardSummary}>{topic.summary}</p> : null}
-                <p className={styles.cardMeta}>
-                  {topic.domainName} · {topic.level} · ~{topic.estimatedReadingMinutes} dk
-                  {topic.language.fallbackUsed
-                    ? ` · ${topic.language.returned.toUpperCase()} (Türkçesi henüz yok)`
-                    : ''}
+      {load === 'loading' ? (
+        <>
+          <div className={`${styles.skeleton} ${styles.skeletonHero}`} aria-hidden="true" />
+          <div className={`${styles.skeleton} ${styles.skeletonMap}`} aria-hidden="true" />
+          <p className={styles.lede} role="status">
+            Yükleniyor…
+          </p>
+        </>
+      ) : null}
+
+      {load === 'ready' && home ? (
+        <>
+          <div className={styles.heroRow}>
+            {home.continue ? (
+              <section className={styles.continue}>
+                <p className={styles.kicker}>Kaldığın yerden devam et</p>
+                <h1 className={styles.continueTitle}>{home.continue.title}</h1>
+                <p className={styles.continueBody}>
+                  {home.continue.totalBlocks > 0
+                    ? `${home.continue.totalBlocks} bloğun ${home.continue.lastBlockOrder}'inci bloğundasın.`
+                    : 'Bu konuya başladın.'}{' '}
+                  Kaldığın blok açılışta seni bekliyor.
                 </p>
-              </Link>
-            ))}
-          </>
-        ) : null}
-      </main>
-    </div>
+                <Link href={`/topics/${home.continue.slug}`} className={styles.btn}>
+                  Devam et — ~{home.continue.estimatedReadingMinutes} dk
+                </Link>
+                <Link
+                  href={`/learn?domain=${domain}&eco=${ecosystem}#harita`}
+                  className={`${styles.btn} ${styles.btnGhost}`}
+                >
+                  Konuyu değiştir
+                </Link>
+              </section>
+            ) : (
+              /*
+                The FIRST screen a new account ever sees, and it gets the same card rather than a hole.
+
+                A "0% · devam et" card pointing at nothing would be the product's opening line being a lie.
+                Sıra dayatmıyoruz, so this suggests rather than instructs.
+              */
+              <section className={styles.continue}>
+                <p className={styles.kicker}>Hoş geldin</p>
+                <h1 className={styles.continueTitle}>Henüz bir konuya başlamadın.</h1>
+                <p className={styles.continueBody}>
+                  Sıra dayatmıyoruz — merak ettiğin duraktan başla. Her konu neden var olduğunu anlatarak
+                  açılır, nasıl yapıldığını sonra gösterir.
+                </p>
+                {home.next[0] ? (
+                  <Link href={`/topics/${home.next[0].slug}`} className={styles.btn}>
+                    {home.next[0].title} ile başla
+                  </Link>
+                ) : null}
+              </section>
+            )}
+
+            <section className={styles.basamakCard}>
+              <h2>Basamağın</h2>
+
+              <ol className={styles.steps}>
+                {home.levels.map((level, index) => {
+                  const done = level.total > 0 && level.completed === level.total;
+                  const percent = level.total === 0 ? 0 : Math.round((level.completed / level.total) * 100);
+                  const isCurrent = level.level === current?.level;
+
+                  return (
+                    <li
+                      key={level.level}
+                      className={`${styles.step} ${done ? styles.stepDone : ''} ${isCurrent ? styles.stepCurrent : ''}`}
+                      /* The ladder's rungs rise. The height is the METAPHOR, not the data — the percentage
+                         is the data, and it is written above each rung where it can be read. */
+                      style={{ height: `${40 + index * 20}%` }}
+                    >
+                      {done || isCurrent ? <span className={styles.pct}>%{percent}</span> : null}
+                      {LEVEL_LABEL[level.level] ?? level.level}
+                    </li>
+                  );
+                })}
+              </ol>
+
+              <p className={styles.basamakMeta}>
+                {current ? (
+                  <>
+                    {LEVEL_LABEL[current.level] ?? current.level} basamağını bitirmene{' '}
+                    <b>{remaining} durak</b> kaldı.
+                  </>
+                ) : home.levels.length === 0 ? (
+                  'Henüz yayınlanmış konu yok — basamak dolacak.'
+                ) : (
+                  'Yayındaki her durağı tamamladın.'
+                )}
+              </p>
+            </section>
+          </div>
+
+          <section className={styles.mapPanel} id="harita">
+            <div className={styles.mapHead}>
+              <h2>Yol Haritan — {roadmap?.domainName ?? 'Hat'} Hattı</h2>
+              <p className={styles.mapSub}>Her hat bir ekosistem, her durak bir konu. Durağa tıklayıp git.</p>
+            </div>
+
+            <ul className={styles.legend}>
+              {lines.map((line) => (
+                <li key={line.key} className={line.key === ecosystem ? '' : styles.legendOff}>
+                  <i style={{ background: lineColor(line.key) }} />
+                  {line.name}
+                  {line.key === ecosystem ? ' Hattı' : ''}
+                </li>
+              ))}
+            </ul>
+
+            <ol className={styles.zoneLabels}>
+              {(['Junior', 'MidLevel', 'Senior', 'Expert'] as const).map((level) => (
+                <li key={level} className={level === current?.level ? styles.zoneCurrent : ''}>
+                  {LEVEL_LABEL[level]}
+                  {level === current?.level ? ' · BURADASIN' : ''}
+                </li>
+              ))}
+            </ol>
+
+            <div className={styles.mapBox}>
+              {roadmap ? (
+                <MetroMap
+                  stations={roadmap.stations}
+                  ecosystemKey={roadmap.ecosystemKey}
+                  ecosystemName={roadmap.ecosystemName}
+                />
+              ) : (
+                <p className={styles.lede} style={{ padding: 32, textAlign: 'center' }}>
+                  Bu alan ve ekosistem için bir hat bulunamadı.
+                </p>
+              )}
+            </div>
+
+            {nextStation ? (
+              <div className={styles.stationTip}>
+                <div>
+                  <b>Sıradaki durak: {nextStation.title}</b>
+                  <span className={styles.stationTipDetail}>
+                    {roadmap?.ecosystemName} Hattı · {LEVEL_LABEL[nextStation.level] ?? nextStation.level}{' '}
+                    basamağı · tahmini {nextStation.estimatedReadingMinutes} dk
+                    {nextStation.transfer
+                      ? ` · ${nextStation.transfer.domainName} hattıyla aktarma noktası ⇄`
+                      : ''}
+                  </span>
+                </div>
+                <Link href={`/topics/${nextStation.slug}`} className={styles.btn}>
+                  Durağa git →
+                </Link>
+              </div>
+            ) : null}
+          </section>
+
+          {home.next.length > 0 ? (
+            <>
+              <div className={styles.sectionTitle}>
+                <h2>Sıradaki Duraklar</h2>
+              </div>
+
+              <div className={styles.bottomRow}>
+                {home.next.slice(0, 3).map((topic) => (
+                  <Link key={topic.slug} href={`/topics/${topic.slug}`} className={styles.topic}>
+                    <span className={styles.tag}>
+                      {LEVEL_LABEL[topic.level] ?? topic.level} · {topic.domainName}
+                    </span>
+                    <h3>{topic.title}</h3>
+                    <p className={styles.topicBody}>Neden var olduğundan başlayarak.</p>
+                    <div className={styles.topicFoot}>
+                      <span>Başlamadın</span>
+                      <span>{topic.estimatedReadingMinutes} dk</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className={styles.empty}>
+              <strong>Yayınlanmış başka konu yok.</strong>
+              Yazılmış taslaklar olabilir — ama bir konu, incelemeden geçip yayınlanana kadar buraya gelmez.
+            </div>
+          )}
+        </>
+      ) : null}
+    </main>
   );
 }

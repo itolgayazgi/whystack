@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using WhyStack.Api.Common;
 using WhyStack.Application.Roadmap;
 
@@ -23,6 +23,10 @@ public static class RoadmapEndpoints
         roadmap.MapGet("/lines", LinesAsync)
             .WithName("GetLines")
             .WithSummary("The ecosystem tabs, including the ones with no content yet.");
+
+        roadmap.MapGet("/domains", DomainsAsync)
+            .WithName("GetDomains")
+            .WithSummary("The sidebar's domain rail: Backend, Frontend, Database, DevOps.");
 
         return app;
     }
@@ -54,6 +58,12 @@ public static class RoadmapEndpoints
 
     private static async Task<IResult> LinesAsync(
         GetLinesHandler handler,
+        HttpContext http,
+        CancellationToken cancellationToken) =>
+        Results.Ok(new { data = await handler.HandleAsync(cancellationToken), metadata = Metadata(http) });
+
+    private static async Task<IResult> DomainsAsync(
+        GetDomainsHandler handler,
         HttpContext http,
         CancellationToken cancellationToken) =>
         Results.Ok(new { data = await handler.HandleAsync(cancellationToken), metadata = Metadata(http) });

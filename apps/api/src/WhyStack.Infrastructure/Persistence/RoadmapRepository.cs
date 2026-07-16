@@ -29,6 +29,21 @@ public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepos
                         .Any(implementation => implementation.Ecosystem!.Key == ecosystem.Key))))
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<DomainOption>> DomainsAsync(CancellationToken cancellationToken) =>
+        await context.KnowledgeDomains
+            .AsNoTracking()
+            .OrderBy(domain => domain.SortOrder)
+            .Select(domain => new DomainOption(
+                domain.Key,
+                domain.Name,
+                context.Topics.Count(topic =>
+                    topic.DomainId == domain.Id
+                    && topic.Versions
+                        .OrderByDescending(version => version.VersionNumber)
+                        .Select(version => version.Status)
+                        .First() == ContentStatus.Published)))
+            .ToListAsync(cancellationToken);
+
     public async Task<RoadmapView?> GetAsync(
         Guid userId,
         string ecosystemKey,

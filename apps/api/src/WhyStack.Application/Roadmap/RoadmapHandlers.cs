@@ -1,4 +1,4 @@
-using WhyStack.Application.Common;
+﻿using WhyStack.Application.Common;
 
 namespace WhyStack.Application.Roadmap;
 
@@ -25,4 +25,11 @@ public sealed class GetLinesHandler(IRoadmapRepository repository)
 {
     public Task<IReadOnlyList<LineOption>> HandleAsync(CancellationToken cancellationToken) =>
         repository.LinesAsync(cancellationToken);
+}
+
+/// <summary>The sidebar's domain rail.</summary>
+public sealed class GetDomainsHandler(IRoadmapRepository repository)
+{
+    public Task<IReadOnlyList<DomainOption>> HandleAsync(CancellationToken cancellationToken) =>
+        repository.DomainsAsync(cancellationToken);
 }

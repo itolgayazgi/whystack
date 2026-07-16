@@ -1,4 +1,4 @@
-namespace WhyStack.Application.Roadmap;
+﻿namespace WhyStack.Application.Roadmap;
 
 /// <summary>The line map: one ecosystem's topics, in order, with this reader's state on each.</summary>
 public interface IRoadmapRepository
@@ -13,6 +13,9 @@ public interface IRoadmapRepository
 
     /// <summary>The tabs: every ecosystem, including the ones with nothing on them yet.</summary>
     Task<IReadOnlyList<LineOption>> LinesAsync(CancellationToken cancellationToken);
+
+    /// <summary>The sidebar's "Alanlar": Backend, Frontend, Database, DevOps.</summary>
+    Task<IReadOnlyList<DomainOption>> DomainsAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -24,6 +27,16 @@ public interface IRoadmapRepository
 /// product look like it thinks .NET is all there is.
 /// </remarks>
 public sealed record LineOption(string Key, string Name, bool IsAvailable, int TopicCount);
+
+/// <summary>
+/// One entry in the sidebar's domain rail.
+/// </summary>
+/// <remarks>
+/// The count is here so the UI never has to guess. A domain with nothing published in it still appears —
+/// hiding it would make the rail's shape depend on the content pipeline, and a reader would watch "Frontend"
+/// blink into existence one day for no reason they can see.
+/// </remarks>
+public sealed record DomainOption(string Key, string Name, int TopicCount);
 
 public sealed record RoadmapView(
     string EcosystemKey,

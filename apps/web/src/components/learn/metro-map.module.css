@@ -1,0 +1,33 @@
+.metro {
+  width: 100%;
+  height: auto;
+  display: block;
+
+  /* The map is the widest thing on the page. Below ~700px the labels would overlap no matter how the
+     geometry is derived, so it scrolls inside its own box rather than stretching the page's body — the
+     panel around it sets overflow-x. */
+  min-width: 700px;
+}
+
+.station {
+  cursor: pointer;
+}
+
+.station:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.station:hover text {
+  fill: var(--color-text-primary);
+}
+
+.emptyLine {
+  color: var(--color-text-secondary);
+  font-size: 13.5px;
+  line-height: 1.6;
+  padding: 32px 24px;
+  text-align: center;
+  margin: 0;
+}

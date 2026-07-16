@@ -3,6 +3,16 @@ import type { SkillLevel } from './preferences';
 
 /** Reading progress and the streak (ADR-0025), as `08` puts it on the wire. */
 
+/**
+ * `08`'s envelope. The API answers `{ data, metadata }`, and ApiClient hands the body back untouched — so
+ * every module names the wrapper rather than pretending the payload arrives bare. Modelling it away here
+ * would make `response.streak` compile and be undefined at runtime.
+ */
+interface Single<T> {
+  data: T;
+}
+
+
 export interface StreakView {
   current: number;
   longest: number;
@@ -79,7 +89,7 @@ export const progressApi = {
 
     const suffix = query.size > 0 ? `?${query}` : '';
 
-    return client.request<HomeSnapshot>(`/api/v1/home${suffix}`);
+    return client.request<Single<HomeSnapshot>>(`/api/v1/home${suffix}`);
   },
 
   /**
@@ -93,7 +103,7 @@ export const progressApi = {
    * bottom is evidence of scrolling.
    */
   record: (client: ApiClient, request: RecordProgressRequest) =>
-    client.request<RecordProgressResult>('/api/v1/progress', {
+    client.request<Single<RecordProgressResult>>('/api/v1/progress', {
       method: 'POST',
       body: request,
     }),

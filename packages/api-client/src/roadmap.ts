@@ -4,6 +4,16 @@ import type { SkillLevel } from './preferences';
 /** The line map (ADR-0024 / the "Yol Haritan" panel), as `08` puts it on the wire. */
 
 /**
+ * `08`'s envelope. The API answers `{ data, metadata }`, and ApiClient hands the body back untouched — so
+ * every module names the wrapper rather than pretending the payload arrives bare. Modelling it away here
+ * would make `response.streak` compile and be undefined at runtime.
+ */
+interface Single<T> {
+  data: T;
+}
+
+
+/**
  * Where the reader stands on a station.
  *
  * `Ahead` is DIMMED, not locked. We impose no order — the state is a suggestion, and every station is one
@@ -48,13 +58,22 @@ export interface LineOption {
   topicCount: number;
 }
 
+/** One entry in the sidebar's "Alanlar" rail. Shown even at zero — its shape must not follow the pipeline. */
+export interface DomainOption {
+  key: string;
+  name: string;
+  topicCount: number;
+}
+
 export const roadmapApi = {
   get: (client: ApiClient, options: { ecosystem: string; domain: string; language?: string }) => {
     const query = new URLSearchParams({ ecosystem: options.ecosystem, domain: options.domain });
     if (options.language) query.set('language', options.language);
 
-    return client.request<Roadmap>(`/api/v1/roadmap?${query}`);
+    return client.request<Single<Roadmap>>(`/api/v1/roadmap?${query}`);
   },
 
-  lines: (client: ApiClient) => client.request<LineOption[]>('/api/v1/lines'),
+  lines: (client: ApiClient) => client.request<Single<LineOption[]>>('/api/v1/lines'),
+
+  domains: (client: ApiClient) => client.request<Single<DomainOption[]>>('/api/v1/domains'),
 };

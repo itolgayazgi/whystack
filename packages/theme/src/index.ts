@@ -8,6 +8,7 @@ export {
   worstCaseSurface,
 } from './colors';
 export { AA, contrastRatio, meetsAA, relativeLuminance } from './contrast';
+export { type LineKey, lineColor, lineColors } from './lines';
 
 export {
   breakpoint,

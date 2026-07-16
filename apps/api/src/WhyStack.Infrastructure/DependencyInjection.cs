@@ -217,6 +217,7 @@ public static class DependencyInjection
         services.AddScoped<GetHomeHandler>();
         services.AddScoped<GetRoadmapHandler>();
         services.AddScoped<GetLinesHandler>();
+        services.AddScoped<GetDomainsHandler>();
         services.AddScoped<TransitionTopicHandler>();
         services.AddScoped<ValidateTopicHandler>();
     }
