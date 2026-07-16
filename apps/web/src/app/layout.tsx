@@ -43,6 +43,24 @@ export const metadata: Metadata = {
   description:
     'An engineering learning platform that teaches why technologies exist, which problem they actually ' +
     'solve, and what they cost you. Version-aware, bilingual, offline-capable.',
+
+  /*
+    The designer's icons, declared rather than left to convention.
+
+    Next will serve an app/favicon.ico by file convention, but ours lives in public/ alongside the rest of
+    the brand — and a convention nobody wrote down is a convention the next person breaks by tidying.
+
+    Two formats on purpose: the .ico is what a browser tab asks for and what old ones understand; the SVG is
+    what a modern tab and an installed shortcut prefer, and it stays crisp at any size. `sizes: 'any'` is
+    what tells the browser the SVG is scalable rather than one more 32x32.
+  */
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/brand/app-icon.svg', type: 'image/svg+xml', sizes: 'any' },
+    ],
+    apple: '/brand/app-icon.svg',
+  },
   openGraph: {
     type: 'website',
     siteName: 'WhyStack',

@@ -103,6 +103,28 @@ export function BlockEditor({ blocks, blockTypes, ecosystems, language, onChange
   }
 
   /**
+   * Copy a block, landing the copy directly beneath the original.
+   *
+   * Everything at or below the insertion point shifts down — including the OTHER language's blocks and the
+   * ecosystem-tagged ones, which share this order space. Renumbering only this language's flow would leave a
+   * Turkish block sitting on an order an English block already owns, and the unique index would refuse the
+   * save with an error pointing at neither of them.
+   */
+  function duplicate(order: number) {
+    const source = blocks.find((block) => block.languageCode === language && block.order === order);
+
+    if (!source) return;
+
+    onChange([
+      ...blocks.map((block) => (block.order > order ? { ...block, order: block.order + 1 } : block)),
+
+      // A structuredClone of the data, not a shared reference: the copy is a new block, and an editor who
+      // edits it must not watch the original change with it.
+      { ...source, order: order + 1, dataJson: source.dataJson },
+    ]);
+  }
+
+  /**
    * Reorder by SWAPPING the two blocks' order values.
    *
    * Not by reindexing the list: the order space is shared with the other language's blocks and with the
@@ -123,6 +145,10 @@ export function BlockEditor({ blocks, blockTypes, ecosystems, language, onChange
       }),
     );
   }
+
+  // From the SERVER, not a list here. A fifth mandatory beat added server-side locks its block with no
+  // frontend change; a hardcoded set would drift and let an editor delete something the save then refuses.
+  const mandatory = new Set(blockTypes.filter((type) => type.isMandatory).map((type) => type.key));
 
   return (
     <section className={styles.panel}>
@@ -146,7 +172,14 @@ export function BlockEditor({ blocks, blockTypes, ecosystems, language, onChange
           ecosystems={ecosystems}
           isFirst={index === 0}
           isLast={index === mine.length - 1}
+          // The LAST one of a mandatory type cannot go. The rule is the server's — the catalog carries
+          // BlockSkeletons.Mandatory — and the save refuses it anyway; this is the editor finding out before
+          // they delete their only checkpoint rather than after.
+          isLocked={
+            mandatory.has(block.type) && mine.filter((other) => other.type === block.type).length === 1
+          }
           onMove={(direction) => move(block.order, direction)}
+          onDuplicate={() => duplicate(block.order)}
           onRemove={() => remove(block.order)}
           onEcosystem={(key) => replace(block.order, { ecosystemKey: key })}
           onData={(patch) => setData(block.order, patch)}
@@ -178,7 +211,9 @@ function BlockCard({
   ecosystems,
   isFirst,
   isLast,
+  isLocked,
   onMove,
+  onDuplicate,
   onRemove,
   onEcosystem,
   onData,
@@ -188,7 +223,12 @@ function BlockCard({
   ecosystems: EcosystemOption[];
   isFirst: boolean;
   isLast: boolean;
+
+  /** The last block of a mandatory type. Deletable only once a second one exists. */
+  isLocked: boolean;
+
   onMove: (direction: -1 | 1) => void;
+  onDuplicate: () => void;
   onRemove: () => void;
   onEcosystem: (key: string | null) => void;
   onData: (patch: Record<string, unknown>) => void;
@@ -233,7 +273,29 @@ function BlockCard({
           <button type="button" className={styles.ghost} disabled={isLast} onClick={() => onMove(1)}>
             ↓
           </button>
-          <button type="button" className={styles.ghost} onClick={onRemove}>
+          <button
+            type="button"
+            className={styles.ghost}
+            title="Bu bloğun bir kopyasını hemen altına ekle"
+            onClick={onDuplicate}
+          >
+            ⧉
+          </button>
+
+          {/*
+            Disabled with the reason ON it, not hidden.
+
+            A control that vanishes teaches nothing — the editor wonders where it went and tries the API. A
+            greyed one that says why teaches the rule: ADR-0024 makes this beat mandatory, and the topic
+            cannot go to review without it. Add a second checkpoint and this unlocks by itself.
+          */}
+          <button
+            type="button"
+            className={styles.ghost}
+            disabled={isLocked}
+            title={isLocked ? `${label} zorunlu — tek kalanı silinemez` : undefined}
+            onClick={onRemove}
+          >
             Kaldır
           </button>
         </div>
