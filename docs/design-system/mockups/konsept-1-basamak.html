@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhyStack — Konsept 1: Basamak</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0E2016; --surface:#12281C; --surface2:#1A3626; --line:#274736;
+  --cream:#EFE9D9; --cream-dim:#B8C4B4; --gold:#C9A227; --gold-soft:rgba(201,162,39,.14);
+  --ok:#7FB069;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#081209;color:var(--cream);font-family:'Inter',sans-serif;padding:40px 24px}
+.concept-tag{max-width:1240px;margin:0 auto 20px;display:flex;align-items:center;gap:12px;color:var(--cream-dim);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.concept-tag b{color:var(--gold);font-family:'Chakra Petch';font-size:15px;letter-spacing:.06em}
+.concept-tag span.rule{flex:1;height:1px;background:var(--line)}
+h1.display{font-family:'Chakra Petch';font-weight:700}
+
+/* ============ WEB FRAME ============ */
+.browser{max-width:1240px;margin:0 auto 64px;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.browser-bar{background:#0A1810;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.dot{width:11px;height:11px;border-radius:50%;background:#274736}
+.urlbox{margin-left:12px;background:#122A1C;border:1px solid var(--line);border-radius:7px;padding:5px 14px;font-size:12px;color:var(--cream-dim);flex:0 0 340px}
+.app{display:grid;grid-template-columns:232px 1fr;background:var(--bg);min-height:760px}
+
+/* sidebar */
+.side{background:#0B1B12;border-right:1px solid var(--line);padding:22px 0;display:flex;flex-direction:column}
+.logo{font-family:'Chakra Petch';font-weight:700;font-size:20px;padding:0 22px 22px;letter-spacing:.02em}
+.logo .w{color:var(--cream)}.logo .s{color:var(--gold);position:relative;top:-4px}
+.side-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#5E7566;padding:10px 22px 8px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 22px;font-size:14px;color:var(--cream-dim);cursor:pointer;border-left:3px solid transparent}
+.nav-item svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
+.nav-item.active{color:var(--cream);background:var(--gold-soft);border-left-color:var(--gold)}
+.nav-item:hover{color:var(--cream)}
+.side-foot{margin-top:auto;padding:16px 22px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);color:#0E2016;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.side-foot .who{font-size:13px;font-weight:600}.side-foot .lvl{font-size:11px;color:var(--cream-dim)}
+
+/* main */
+.main{padding:28px 36px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px}
+.crumbs{font-size:13px;color:var(--cream-dim)}
+.crumbs b{color:var(--cream)}
+.search{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:13px;color:#5E7566;width:260px}
+.eco-tabs{display:flex;gap:8px;margin-bottom:28px;border-bottom:1px solid var(--line);padding-bottom:0}
+.eco{font-family:'Chakra Petch';font-size:13.5px;font-weight:600;letter-spacing:.04em;padding:9px 18px;color:var(--cream-dim);cursor:pointer;border-bottom:2px solid transparent;position:relative;top:1px}
+.eco.active{color:var(--gold);border-bottom-color:var(--gold)}
+.eco .soon{font-size:9px;background:var(--surface2);color:#5E7566;border-radius:4px;padding:2px 5px;margin-left:6px;letter-spacing:.06em;font-family:'Inter'}
+
+.hero-row{display:grid;grid-template-columns:1fr 300px;gap:24px;margin-bottom:30px}
+.continue{background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--line);border-radius:14px;padding:24px 26px;position:relative;overflow:hidden}
+.continue::after{content:"";position:absolute;right:-30px;bottom:-30px;width:180px;height:180px;background:
+  linear-gradient(to top right, transparent 49.5%, var(--gold-soft) 50%);opacity:.7}
+.kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+.continue h2{font-family:'Chakra Petch';font-size:24px;font-weight:600;margin-bottom:8px}
+.continue p{font-size:14px;color:var(--cream-dim);max-width:420px;line-height:1.55;margin-bottom:18px}
+.btn{display:inline-block;background:var(--gold);color:#0E2016;font-weight:700;font-size:13.5px;border-radius:8px;padding:10px 20px;cursor:pointer}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--cream);margin-left:10px;font-weight:500}
+
+/* basamak signature */
+.basamak-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.basamak-card h3{font-family:'Chakra Petch';font-size:14px;letter-spacing:.05em;margin-bottom:16px;color:var(--cream-dim);text-transform:uppercase}
+.steps{display:flex;align-items:flex-end;gap:6px;height:120px;margin-bottom:12px}
+.step{flex:1;border-radius:6px 6px 0 0;background:var(--surface2);border:1px solid var(--line);position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font-family:'Chakra Petch';font-size:10.5px;letter-spacing:.06em;color:#5E7566}
+.step.done{background:var(--gold);border-color:var(--gold);color:#0E2016;font-weight:700}
+.step.cur{background:var(--gold-soft);border-color:var(--gold);color:var(--gold);font-weight:700}
+.step:nth-child(1){height:40%}.step:nth-child(2){height:60%}.step:nth-child(3){height:80%}.step:nth-child(4){height:100%}
+.step .pct{position:absolute;top:-22px;font-size:11px;color:var(--cream-dim);font-family:'Inter'}
+.basamak-card .meta{font-size:12.5px;color:var(--cream-dim)}
+.basamak-card .meta b{color:var(--gold)}
+
+.section-title{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 16px}
+.section-title h3{font-family:'Chakra Petch';font-size:17px;font-weight:600}
+.section-title a{font-size:13px;color:var(--gold);text-decoration:none}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;cursor:pointer;transition:border-color .15s}
+.topic:hover{border-color:var(--gold)}
+.topic .tag{display:inline-block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;border-radius:5px;padding:3px 8px;margin-bottom:12px;font-weight:600}
+.tag.mid{background:var(--gold-soft);color:var(--gold)}
+.tag.jr{background:rgba(127,176,105,.15);color:var(--ok)}
+.topic h4{font-size:15px;font-weight:600;line-height:1.4;margin-bottom:8px}
+.topic p{font-size:12.5px;color:var(--cream-dim);line-height:1.5;margin-bottom:14px}
+.bar{height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-bottom:8px}
+.bar i{display:block;height:100%;background:var(--gold)}
+.topic .foot{display:flex;justify-content:space-between;font-size:11.5px;color:#5E7566}
+
+/* ============ MOBILE ============ */
+.mobile-wrap{display:flex;gap:48px;justify-content:center;align-items:flex-start;max-width:1240px;margin:0 auto;flex-wrap:wrap}
+.phone{width:375px;border-radius:44px;border:10px solid #050B06;background:var(--bg);overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.notch{height:34px;display:flex;justify-content:center;align-items:flex-start}
+.notch i{width:120px;height:24px;background:#050B06;border-radius:0 0 16px 16px}
+.m-body{padding:8px 20px 0;min-height:700px;display:flex;flex-direction:column}
+.m-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.m-head .hi{font-size:13px;color:var(--cream-dim)}
+.m-head .name{font-family:'Chakra Petch';font-size:19px;font-weight:600}
+.streak{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:12.5px;color:var(--gold);font-weight:600}
+.m-continue{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--gold);border-radius:16px;padding:18px;margin-bottom:22px}
+.m-continue .kicker{margin-bottom:6px}
+.m-continue h3{font-family:'Chakra Petch';font-size:17px;margin-bottom:4px}
+.m-continue p{font-size:12.5px;color:var(--cream-dim);margin-bottom:14px}
+.m-continue .bar{margin-bottom:6px}
+.m-continue .row{display:flex;justify-content:space-between;align-items:center}
+.m-continue .row span{font-size:11px;color:#5E7566}
+.m-continue .go{background:var(--gold);color:#0E2016;font-weight:700;font-size:12.5px;border-radius:7px;padding:8px 14px}
+.m-label{font-family:'Chakra Petch';font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:12px}
+.m-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.m-step{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+.m-step .n{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Chakra Petch';font-weight:700;font-size:13px;flex-shrink:0}
+.m-step.done .n{background:var(--gold);color:#0E2016}
+.m-step.cur .n{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold)}
+.m-step.lock .n{background:var(--surface2);color:#5E7566}
+.m-step .t{flex:1}
+.m-step .t b{display:block;font-size:13.5px;font-weight:600}
+.m-step .t span{font-size:11.5px;color:#5E7566}
+.m-step .st{font-size:11px;color:var(--gold);font-weight:600}
+.m-step.lock{opacity:.55}
+.m-nav{margin-top:auto;background:#0B1B12;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:12px 0 26px;margin-left:-20px;margin-right:-20px}
+.m-nav div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:#5E7566}
+.m-nav div.on{color:var(--gold)}
+.m-nav svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8}
+.caption{max-width:1240px;margin:20px auto 0;color:#5E7566;font-size:13px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="concept-tag"><b>KONSEPT 1 — BASAMAK</b><span>Marka kimliğine sadık · koyu yeşil zemin · basamak metaforu imza öğe</span><span class="rule"></span></div>
+
+<!-- ================= WEB ================= -->
+<div class="browser">
+  <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="urlbox">whystack.dev/app/backend/dotnet</div></div>
+  <div class="app">
+    <aside class="side">
+      <div class="logo"><span class="w">w</span><span class="s">S</span>&nbsp;<span style="font-size:14px;color:var(--cream-dim);font-weight:500">whystack</span></div>
+      <div class="side-label">Alanlar</div>
+      <div class="nav-item active"><svg viewBox="0 0 24 24"><path d="M4 17l6-6-6-6M12 19h8"/></svg>Backend</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>Frontend</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/></svg>Database</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6l2.1 2.1m0-12.8l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>DevOps</div>
+      <div class="side-label">Kısayollar</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>Kaydedilenler</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Geçmiş</div>
+      <div class="side-foot"><div class="avatar">T</div><div><div class="who">Tolga Y.</div><div class="lvl">Mid · Backend/.NET</div></div></div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div class="crumbs">Backend / <b>.NET Ekosistemi</b> / Mid Basamağı</div>
+        <div class="search">Konu, kavram veya soru ara…&nbsp;&nbsp;⌘K</div>
+      </div>
+      <div class="eco-tabs">
+        <div class="eco active">.NET</div>
+        <div class="eco">Java<span class="soon">YAKINDA</span></div>
+        <div class="eco">Node.js<span class="soon">YAKINDA</span></div>
+        <div class="eco">Python<span class="soon">YAKINDA</span></div>
+        <div class="eco">Go<span class="soon">YAKINDA</span></div>
+        <div class="eco">Rust<span class="soon">YAKINDA</span></div>
+      </div>
+      <div class="hero-row">
+        <div class="continue">
+          <div class="kicker">Kaldığın yerden devam et</div>
+          <h2>Dependency Injection Neden Var?</h2>
+          <p>Container'ın arkasındaki fikri kavradın; şimdi lifetime'ların (Transient, Scoped, Singleton) production'daki sonuçlarına geçiyorsun.</p>
+          <span class="btn">Devam et — 12 dk kaldı</span><span class="btn ghost">Konuyu değiştir</span>
+        </div>
+        <div class="basamak-card">
+          <h3>Basamağın</h3>
+          <div class="steps">
+            <div class="step done">JUNIOR<span class="pct">%100</span></div>
+            <div class="step cur">MID<span class="pct">%64</span></div>
+            <div class="step">SENIOR</div>
+            <div class="step">EXPERT</div>
+          </div>
+          <div class="meta">Mid basamağını bitirmene <b>9 konu</b> kaldı.</div>
+        </div>
+      </div>
+      <div class="section-title"><h3>Mid Basamağı — Sıradaki Konular</h3><a href="#">Tüm yol haritası →</a></div>
+      <div class="grid3">
+        <div class="topic">
+          <span class="tag mid">MID · EF CORE</span>
+          <h4>Change Tracking Neden Pahalı?</h4>
+          <p>AsNoTracking'in ne zaman kurtarıcı, ne zaman gereksiz olduğunu production senaryosuyla öğren.</p>
+          <div class="bar"><i style="width:40%"></i></div>
+          <div class="foot"><span>%40 tamamlandı</span><span>18 dk</span></div>
+        </div>
+        <div class="topic">
+          <span class="tag mid">MID · ASP.NET CORE</span>
+          <h4>Middleware Pipeline'ı Kim Yönetiyor?</h4>
+          <p>Request'in uğradığı her durak, sıralamanın neden hayati olduğu ve kendi middleware'ini yazmak.</p>
+          <div class="bar"><i style="width:0%"></i></div>
+          <div class="foot"><span>Başlamadın</span><span>22 dk</span></div>
+        </div>
+        <div class="topic">
+          <span class="tag jr">TEKRAR · JUNIOR</span>
+          <h4>async/await Gerçekte Ne Yapar?</h4>
+          <p>State machine'in perde arkası. Junior basamağından, unutmaman için hatırlatma tekrarı.</p>
+          <div class="bar"><i style="width:100%"></i></div>
+          <div class="foot"><span>Tamamlandı ✓</span><span>Tekrar: 8 dk</span></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ================= MOBILE ================= -->
+<div class="mobile-wrap">
+<div class="phone">
+  <div class="notch"><i></i></div>
+  <div class="m-body">
+    <div class="m-head">
+      <div><div class="hi">Tekrar hoş geldin,</div><div class="name">Tolga</div></div>
+      <div class="streak">🔥 12 gün</div>
+    </div>
+    <div class="m-continue">
+      <div class="kicker">Devam ediyorsun</div>
+      <h3>Dependency Injection Neden Var?</h3>
+      <p>Backend · .NET · Mid basamağı</p>
+      <div class="bar"><i style="width:64%"></i></div>
+      <div class="row"><span>%64 · 12 dk kaldı</span><span class="go">Devam et</span></div>
+    </div>
+    <div class="m-label">Mid Basamağı</div>
+    <div class="m-steps">
+      <div class="m-step done"><div class="n">✓</div><div class="t"><b>Garbage Collector'a Güvenmek</b><span>Bellek yönetimi · 15 dk</span></div><div class="st">Bitti</div></div>
+      <div class="m-step cur"><div class="n">2</div><div class="t"><b>Dependency Injection Neden Var?</b><span>Mimari · 20 dk</span></div><div class="st">%64</div></div>
+      <div class="m-step lock"><div class="n">3</div><div class="t"><b>Change Tracking Neden Pahalı?</b><span>EF Core · 18 dk</span></div></div>
+      <div class="m-step lock"><div class="n">4</div><div class="t"><b>Middleware Pipeline</b><span>ASP.NET Core · 22 dk</span></div></div>
+    </div>
+    <div class="m-nav">
+      <div class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Bugün</div>
+      <div><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M8 15l4-6 4 3 4-7"/></svg>Yol Haritası</div>
+      <div><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Keşfet</div>
+      <div><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Profil</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<p class="caption"><b style="color:#C9A227">Konsept 1 — Basamak:</b> Mevcut marka kimliğinin (racing green, krem, altın, Chakra Petch) doğrudan uygulamaya taşınmış hâli. İmza öğe: Junior→Expert ilerlemeyi gösteren gerçek "basamak" grafiği. Web'de sol menü alanları, üst sekmeler ekosistemleri taşır; mobil tek kolona iner, yalnızca "devam et + sıradaki basamaklar" gösterir.</p>
+
+</body>
+</html>

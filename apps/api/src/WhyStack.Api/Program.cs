@@ -233,6 +233,7 @@ app.MapUserEndpoints();
 app.MapTopicEndpoints();
 app.MapAuthoringEndpoints();
 app.MapProgressEndpoints();
+app.MapRoadmapEndpoints();
 
 app.Run();
 

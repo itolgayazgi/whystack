@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhyStack — Final: Basamak + Hat Haritası</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0E2016; --surface:#12281C; --surface2:#1A3626; --line:#274736;
+  --cream:#EFE9D9; --cream-dim:#B8C4B4; --muted:#5E7566;
+  --gold:#C9A227; --gold-soft:rgba(201,162,39,.14);
+  --ok:#7FB069;
+  /* hat renkleri — koyu zemine uyarlanmış */
+  --l-dotnet:#C9A227;      /* aktif hat: marka altını */
+  --l-java:#C96A5A; --l-node:#6FAF8B; --l-py:#6C9BD1; --l-go:#5BB8C4; --l-rust:#C98A5A;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#081209;color:var(--cream);font-family:'Inter',sans-serif;padding:40px 24px}
+.concept-tag{max-width:1240px;margin:0 auto 20px;display:flex;align-items:center;gap:12px;color:var(--cream-dim);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.concept-tag b{color:var(--gold);font-family:'Chakra Petch';font-size:15px;letter-spacing:.06em}
+.concept-tag span.rule{flex:1;height:1px;background:var(--line)}
+
+/* ============ WEB ============ */
+.browser{max-width:1240px;margin:0 auto 64px;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.browser-bar{background:#0A1810;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.dot{width:11px;height:11px;border-radius:50%;background:#274736}
+.urlbox{margin-left:12px;background:#122A1C;border:1px solid var(--line);border-radius:7px;padding:5px 14px;font-size:12px;color:var(--cream-dim);flex:0 0 340px}
+.app{display:grid;grid-template-columns:232px 1fr;background:var(--bg);min-height:860px}
+
+/* sidebar */
+.side{background:#0B1B12;border-right:1px solid var(--line);padding:22px 0;display:flex;flex-direction:column}
+.logo{font-family:'Chakra Petch';font-weight:700;font-size:20px;padding:0 22px 22px;letter-spacing:.02em}
+.logo .w{color:var(--cream)}.logo .s{color:var(--gold);position:relative;top:-4px}
+.side-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);padding:10px 22px 8px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 22px;font-size:14px;color:var(--cream-dim);cursor:pointer;border-left:3px solid transparent}
+.nav-item svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
+.nav-item.active{color:var(--cream);background:var(--gold-soft);border-left-color:var(--gold)}
+.nav-item:hover{color:var(--cream)}
+.side-foot{margin-top:auto;padding:16px 22px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);color:#0E2016;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.side-foot .who{font-size:13px;font-weight:600}.side-foot .lvl{font-size:11px;color:var(--cream-dim)}
+
+/* main */
+.main{padding:28px 36px 36px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.crumbs{font-size:13px;color:var(--cream-dim)}
+.crumbs b{color:var(--cream)}
+.tr-right{display:flex;align-items:center;gap:14px}
+.streak-pill{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:7px 13px;font-size:12.5px;color:var(--gold);font-weight:600}
+.search{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--muted);width:240px}
+.eco-tabs{display:flex;gap:8px;margin-bottom:26px;border-bottom:1px solid var(--line)}
+.eco{font-family:'Chakra Petch';font-size:13.5px;font-weight:600;letter-spacing:.04em;padding:9px 18px;color:var(--cream-dim);cursor:pointer;border-bottom:2px solid transparent;position:relative;top:1px;display:flex;align-items:center;gap:8px}
+.eco .ldot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.eco.active{color:var(--gold);border-bottom-color:var(--gold)}
+.eco .soon{font-size:9px;background:var(--surface2);color:var(--muted);border-radius:4px;padding:2px 5px;letter-spacing:.06em;font-family:'Inter'}
+
+.hero-row{display:grid;grid-template-columns:1fr 300px;gap:24px;margin-bottom:26px}
+.continue{background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid var(--line);border-radius:14px;padding:24px 26px;position:relative;overflow:hidden}
+.continue::after{content:"";position:absolute;right:-30px;bottom:-30px;width:180px;height:180px;background:linear-gradient(to top right, transparent 49.5%, var(--gold-soft) 50%);opacity:.7}
+.kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+.continue h2{font-family:'Chakra Petch';font-size:24px;font-weight:600;margin-bottom:8px}
+.continue p{font-size:14px;color:var(--cream-dim);max-width:420px;line-height:1.55;margin-bottom:18px}
+.btn{display:inline-block;background:var(--gold);color:#0E2016;font-weight:700;font-size:13.5px;border-radius:8px;padding:10px 20px;cursor:pointer}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--cream);margin-left:10px;font-weight:500}
+
+.basamak-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.basamak-card h3{font-family:'Chakra Petch';font-size:14px;letter-spacing:.05em;margin-bottom:16px;color:var(--cream-dim);text-transform:uppercase}
+.steps{display:flex;align-items:flex-end;gap:6px;height:112px;margin-bottom:12px}
+.step{flex:1;border-radius:6px 6px 0 0;background:var(--surface2);border:1px solid var(--line);position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font-family:'Chakra Petch';font-size:10.5px;letter-spacing:.06em;color:var(--muted)}
+.step.done{background:var(--gold);border-color:var(--gold);color:#0E2016;font-weight:700}
+.step.cur{background:var(--gold-soft);border-color:var(--gold);color:var(--gold);font-weight:700}
+.step:nth-child(1){height:40%}.step:nth-child(2){height:60%}.step:nth-child(3){height:80%}.step:nth-child(4){height:100%}
+.step .pct{position:absolute;top:-22px;font-size:11px;color:var(--cream-dim);font-family:'Inter'}
+.basamak-card .meta{font-size:12.5px;color:var(--cream-dim)}
+.basamak-card .meta b{color:var(--gold)}
+
+/* ==== YOL HARİTASI (metro, marka diline uyarlanmış) ==== */
+.map-panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-bottom:26px}
+.map-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.map-head h3{font-family:'Chakra Petch';font-size:17px;font-weight:600}
+.map-head .sub{font-size:12.5px;color:var(--cream-dim)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:12px}
+.legend div{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--cream-dim)}
+.legend i{width:22px;height:5px;border-radius:3px;display:inline-block}
+.legend .off{opacity:.4}
+.zone-labels{display:flex;font-family:'Chakra Petch';font-size:11px;letter-spacing:.14em;color:var(--muted);margin-bottom:2px}
+.zone-labels span{flex:1;text-align:center}
+.zone-labels .cur{color:var(--gold)}
+.mapbox{border:1px solid var(--line);border-radius:10px;background:
+ repeating-linear-gradient(90deg,transparent 0 24.75%, rgba(201,162,39,.06) 24.75% 25%);padding:4px 0}
+svg.metro{width:100%;height:auto;display:block}
+.station-tip{margin-top:14px;background:var(--surface2);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:8px;padding:13px 16px;display:flex;justify-content:space-between;align-items:center}
+.station-tip b{font-size:14px}
+.station-tip span.d{display:block;font-size:12px;color:var(--cream-dim);margin-top:2px}
+
+/* transfer + next topics */
+.bottom-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.topic{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;cursor:pointer;transition:border-color .15s}
+.topic:hover{border-color:var(--gold)}
+.topic .tag{display:inline-block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;border-radius:5px;padding:3px 8px;margin-bottom:12px;font-weight:600;background:var(--gold-soft);color:var(--gold)}
+.topic .tag.x{background:rgba(111,175,139,.14);color:var(--l-node)}
+.topic h4{font-size:15px;font-weight:600;line-height:1.4;margin-bottom:8px}
+.topic p{font-size:12.5px;color:var(--cream-dim);line-height:1.5;margin-bottom:14px}
+.topic .foot{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted)}
+
+/* ============ MOBILE ============ */
+.mobile-wrap{display:flex;gap:48px;justify-content:center;max-width:1240px;margin:0 auto;flex-wrap:wrap}
+.phone{width:375px;border-radius:44px;border:10px solid #050B06;background:var(--bg);overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.notch{height:34px;display:flex;justify-content:center}
+.notch i{width:120px;height:24px;background:#050B06;border-radius:0 0 16px 16px}
+.m-body{padding:8px 20px 0;min-height:760px;display:flex;flex-direction:column}
+.m-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.m-head .hi{font-size:13px;color:var(--cream-dim)}
+.m-head .name{font-family:'Chakra Petch';font-size:19px;font-weight:600}
+.m-streak{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:12.5px;color:var(--gold);font-weight:600}
+.m-continue{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--gold);border-radius:16px;padding:16px 18px;margin-bottom:20px}
+.m-continue .kicker{margin-bottom:6px}
+.m-continue h3{font-family:'Chakra Petch';font-size:16.5px;margin-bottom:4px}
+.m-continue p{font-size:12px;color:var(--cream-dim);margin-bottom:12px}
+.m-continue .row{display:flex;justify-content:space-between;align-items:center}
+.m-continue .row span{font-size:11px;color:var(--muted)}
+.m-continue .go{background:var(--gold);color:#0E2016;font-weight:700;font-size:12.5px;border-radius:7px;padding:8px 14px}
+.m-maphead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.m-label{font-family:'Chakra Petch';font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream-dim)}
+.zone-chip{font-family:'Chakra Petch';font-size:10.5px;letter-spacing:.12em;color:var(--gold);background:var(--gold-soft);border:1px solid var(--gold);border-radius:5px;padding:3px 9px}
+/* dikey hat */
+.rail{position:relative;margin-left:16px;border-left:5px solid var(--gold);padding-left:26px;padding-bottom:4px}
+.rail::before{content:"";position:absolute;left:-5px;bottom:-60px;height:60px;border-left:5px dashed var(--line)}
+.m-station{position:relative;padding:0 0 24px}
+.m-station::before{content:"";position:absolute;left:-40px;top:2px;width:15px;height:15px;border-radius:50%;background:var(--bg);border:4.5px solid var(--gold)}
+.m-station.done::before{background:var(--gold)}
+.m-station.now::before{border-color:var(--cream);box-shadow:0 0 0 5px var(--gold-soft)}
+.m-station.lock{opacity:.5}
+.m-station.lock::before{border-color:var(--line);background:var(--surface2)}
+.m-station b{display:block;font-size:14px;font-weight:600}
+.m-station span{font-size:11.5px;color:var(--muted)}
+.m-station .here{display:inline-block;background:var(--gold);color:#0E2016;font-size:9.5px;font-weight:700;letter-spacing:.1em;border-radius:4px;padding:2px 7px;margin-left:8px;vertical-align:2px}
+.m-station .card{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:12px;color:var(--cream-dim);display:flex;justify-content:space-between;align-items:center}
+.m-station .card .go{background:var(--gold);color:#0E2016;border-radius:7px;padding:7px 13px;font-weight:700;font-size:11.5px}
+.m-transfer{margin:2px 0 18px;margin-left:16px;padding-left:26px;position:relative;font-size:11.5px;color:var(--cream-dim)}
+.m-transfer::before{content:"⇄";position:absolute;left:-43px;top:-2px;width:21px;height:21px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);color:var(--l-node);display:flex;align-items:center;justify-content:center;font-size:11px}
+.m-transfer b{color:var(--l-node)}
+.m-nav{margin-top:auto;background:#0B1B12;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:12px 0 26px;margin-left:-20px;margin-right:-20px}
+.m-nav div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:var(--muted)}
+.m-nav div.on{color:var(--gold)}
+.m-nav svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8}
+.caption{max-width:1240px;margin:20px auto 0;color:var(--muted);font-size:13px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="concept-tag"><b>FİNAL — BASAMAK + HAT HARİTASI</b><span>Konsept 1 marka dili · Konsept 2 metro yol haritası, altın/yeşile uyarlanmış</span><span class="rule"></span></div>
+
+<!-- ================= WEB ================= -->
+<div class="browser">
+  <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="urlbox">whystack.dev/app/backend/dotnet</div></div>
+  <div class="app">
+    <aside class="side">
+      <div class="logo"><span class="w">w</span><span class="s">S</span>&nbsp;<span style="font-size:14px;color:var(--cream-dim);font-weight:500">whystack</span></div>
+      <div class="side-label">Alanlar</div>
+      <div class="nav-item active"><svg viewBox="0 0 24 24"><path d="M4 17l6-6-6-6M12 19h8"/></svg>Backend</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>Frontend</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/></svg>Database</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6l2.1 2.1m0-12.8l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>DevOps</div>
+      <div class="side-label">Kısayollar</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>Kaydedilenler</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Geçmiş</div>
+      <div class="side-foot"><div class="avatar">T</div><div><div class="who">Tolga Y.</div><div class="lvl">Mid · Backend/.NET</div></div></div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div class="crumbs">Backend / <b>.NET Ekosistemi</b> / Mid Basamağı</div>
+        <div class="tr-right"><div class="streak-pill">🔥 12 gün</div><div class="search">Konu veya kavram ara…&nbsp;&nbsp;⌘K</div></div>
+      </div>
+      <div class="eco-tabs">
+        <div class="eco active"><span class="ldot" style="background:var(--l-dotnet)"></span>.NET</div>
+        <div class="eco"><span class="ldot" style="background:var(--l-java);opacity:.5"></span>Java<span class="soon">YAKINDA</span></div>
+        <div class="eco"><span class="ldot" style="background:var(--l-node);opacity:.5"></span>Node.js<span class="soon">YAKINDA</span></div>
+        <div class="eco"><span class="ldot" style="background:var(--l-py);opacity:.5"></span>Python<span class="soon">YAKINDA</span></div>
+        <div class="eco"><span class="ldot" style="background:var(--l-go);opacity:.5"></span>Go<span class="soon">YAKINDA</span></div>
+        <div class="eco"><span class="ldot" style="background:var(--l-rust);opacity:.5"></span>Rust<span class="soon">YAKINDA</span></div>
+      </div>
+
+      <div class="hero-row">
+        <div class="continue">
+          <div class="kicker">Kaldığın yerden devam et</div>
+          <h2>Dependency Injection Neden Var?</h2>
+          <p>Container'ın arkasındaki fikri kavradın; şimdi lifetime'ların (Transient, Scoped, Singleton) production'daki sonuçlarına geçiyorsun.</p>
+          <span class="btn">Devam et — 12 dk kaldı</span><span class="btn ghost">Konuyu değiştir</span>
+        </div>
+        <div class="basamak-card">
+          <h3>Basamağın</h3>
+          <div class="steps">
+            <div class="step done">JUNIOR<span class="pct">%100</span></div>
+            <div class="step cur">MID<span class="pct">%64</span></div>
+            <div class="step">SENIOR</div>
+            <div class="step">EXPERT</div>
+          </div>
+          <div class="meta">Mid basamağını bitirmene <b>9 durak</b> kaldı.</div>
+        </div>
+      </div>
+
+      <!-- YOL HARİTASI -->
+      <div class="map-panel">
+        <div class="map-head">
+          <h3>Yol Haritan — Backend Hattı</h3>
+          <span class="sub">Her hat bir ekosistem, her durak bir konu. Durağa tıklayıp git.</span>
+        </div>
+        <div class="legend">
+          <div><i style="background:var(--l-dotnet)"></i>.NET Hattı</div>
+          <div class="off"><i style="background:var(--l-java)"></i>Java</div>
+          <div class="off"><i style="background:var(--l-node)"></i>Node.js</div>
+          <div class="off"><i style="background:var(--l-py)"></i>Python</div>
+          <div class="off"><i style="background:var(--l-go)"></i>Go</div>
+          <div class="off"><i style="background:var(--l-rust)"></i>Rust</div>
+        </div>
+        <div class="zone-labels"><span>JUNIOR</span><span class="cur">MID · BURADASIN</span><span>SENIOR</span><span>EXPERT</span></div>
+        <div class="mapbox">
+        <svg class="metro" viewBox="0 0 800 268">
+          <!-- diğer hatlar (soluk) -->
+          <path d="M30 150 L770 150" fill="none" stroke="#C96A5A" stroke-width="7" opacity=".16"/>
+          <path d="M30 196 L300 196 L380 238 L770 238" fill="none" stroke="#6FAF8B" stroke-width="7" opacity=".16" stroke-linejoin="round"/>
+          <path d="M30 242 L280 242 L360 200 L770 200" fill="none" stroke="#6C9BD1" stroke-width="7" opacity=".13" stroke-linejoin="round"/>
+          <!-- .NET hattı (altın) -->
+          <path d="M30 62 L250 62 L330 112 L560 112 L640 62 L770 62" fill="none" stroke="#C9A227" stroke-width="8" stroke-linejoin="round"/>
+          <!-- duraklar -->
+          <g>
+            <circle cx="80" cy="62" r="9" fill="#C9A227"/>
+            <circle cx="160" cy="62" r="9" fill="#C9A227"/>
+            <circle cx="250" cy="62" r="9" fill="#C9A227"/>
+            <!-- şu anki durak -->
+            <circle cx="360" cy="112" r="12" fill="#0E2016" stroke="#EFE9D9" stroke-width="5.5"/>
+            <circle cx="360" cy="112" r="24" fill="none" stroke="#C9A227" stroke-width="2" opacity=".55"/>
+            <!-- sıradakiler -->
+            <circle cx="450" cy="112" r="9" fill="#12281C" stroke="#C9A227" stroke-width="4.5"/>
+            <circle cx="540" cy="112" r="9" fill="#12281C" stroke="#C9A227" stroke-width="4.5"/>
+            <circle cx="660" cy="62" r="9" fill="#12281C" stroke="#3A5744" stroke-width="4.5"/>
+            <circle cx="740" cy="62" r="9" fill="#12281C" stroke="#3A5744" stroke-width="4.5"/>
+          </g>
+          <g font-family="Inter" font-size="11.5" fill="#B8C4B4" font-weight="600">
+            <text x="80" y="42" text-anchor="middle">async/await</text>
+            <text x="160" y="88" text-anchor="middle">LINQ</text>
+            <text x="250" y="42" text-anchor="middle">Middleware</text>
+            <text x="360" y="88" text-anchor="middle" fill="#EFE9D9">Dependency Injection</text>
+            <text x="450" y="140" text-anchor="middle">EF Core Tracking</text>
+            <text x="540" y="88" text-anchor="middle">CQRS</text>
+            <text x="660" y="42" text-anchor="middle" opacity=".55">Kaynak Yönetimi</text>
+            <text x="740" y="88" text-anchor="middle" opacity=".55">GC Tuning</text>
+          </g>
+          <text x="360" y="152" text-anchor="middle" font-family="Chakra Petch" font-size="11" letter-spacing="2" fill="#C9A227" font-weight="700">BURADASIN</text>
+        </svg>
+        </div>
+        <div class="station-tip">
+          <div><b>Sıradaki durak: EF Core Change Tracking</b><span class="d">.NET Hattı · Mid basamağı · tahmini 18 dk · Database hattıyla aktarma noktası ⇄</span></div>
+          <span class="btn">Durağa git →</span>
+        </div>
+      </div>
+
+      <div class="bottom-row">
+        <div class="topic">
+          <span class="tag">MID · EF CORE</span>
+          <h4>Change Tracking Neden Pahalı?</h4>
+          <p>AsNoTracking'in ne zaman kurtarıcı, ne zaman gereksiz olduğunu production senaryosuyla öğren.</p>
+          <div class="foot"><span>Sıradaki durak</span><span>18 dk</span></div>
+        </div>
+        <div class="topic">
+          <span class="tag">MID · MİMARİ</span>
+          <h4>CQRS'e Giriş</h4>
+          <p>Okuma ile yazmayı neden ayırırız? Tek modelin yetmediği anın hikâyesi.</p>
+          <div class="foot"><span>2 durak sonra</span><span>25 dk</span></div>
+        </div>
+        <div class="topic">
+          <span class="tag x">⇄ AKTARMA · DATABASE</span>
+          <h4>Index Stratejileri</h4>
+          <p>EF Core Tracking durağıyla kesişiyor. İkisini art arda almak önerilir.</p>
+          <div class="foot"><span>Database hattı</span><span>20 dk</span></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ================= MOBILE ================= -->
+<div class="mobile-wrap">
+<div class="phone">
+  <div class="notch"><i></i></div>
+  <div class="m-body">
+    <div class="m-head">
+      <div><div class="hi">Tekrar hoş geldin,</div><div class="name">Tolga</div></div>
+      <div class="m-streak">🔥 12 gün</div>
+    </div>
+    <div class="m-continue">
+      <div class="kicker">Devam ediyorsun</div>
+      <h3>Dependency Injection Neden Var?</h3>
+      <p>Backend · .NET Hattı · Mid basamağı</p>
+      <div class="row"><span>%64 · 12 dk kaldı</span><span class="go">Devam et</span></div>
+    </div>
+    <div class="m-maphead">
+      <div class="m-label">.NET Hattın</div>
+      <span class="zone-chip">MID BASAMAĞI</span>
+    </div>
+    <div class="rail">
+      <div class="m-station done"><b>Middleware Pipeline</b><span>Tamamlandı · dün</span></div>
+      <div class="m-station now"><b>Dependency Injection<span class="here">BURADASIN</span></b><span>%64 · 12 dk kaldı</span>
+        <div class="card">Lifetime'ların production etkisi<span class="go">Devam et</span></div>
+      </div>
+      <div class="m-station"><b>EF Core Change Tracking</b><span>Sıradaki durak · 18 dk</span></div>
+    </div>
+    <div class="m-transfer"><b>⇄ Aktarma:</b> Bu durak, Database hattındaki "Index Stratejileri" ile kesişiyor.</div>
+    <div class="rail" style="border-left-color:var(--line)">
+      <div class="m-station lock"><b>CQRS'e Giriş</b><span>Kilitli · 25 dk</span></div>
+    </div>
+    <div class="m-nav">
+      <div class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Bugün</div>
+      <div><svg viewBox="0 0 24 24"><path d="M12 2v20M5 7h14M5 17h14"/><circle cx="12" cy="12" r="3"/></svg>Hattım</div>
+      <div><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Keşfet</div>
+      <div><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>Profil</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<p class="caption"><b style="color:#C9A227">Final tasarım:</b> Basamak konseptinin marka dili (racing green, altın, Chakra Petch, basamak grafiği) korunurken Hat Haritası'nın metro yol haritası ana panele taşındı. .NET hattı marka altınıyla çizilir; diğer ekosistemler soluk hatlar olarak arka planda görünür (merak + talep sinyali). Seviye bölgeleri Zone yerine "basamak" adıyla haritaya işlendi — iki metafor tek dilde birleşti. Mobilde harita dikey raya iner; "aktarma" önerisi Database hattıyla bağ kurar.</p>
+
+</body>
+</html>

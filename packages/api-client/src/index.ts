@@ -51,6 +51,8 @@ export type {
 } from './progress';
 export { progressApi } from './progress';
 export { type RefreshTokenStore, type TokenPlatform, webRefreshTokenStore } from './refresh-token-store';
+export type { LineOption, Roadmap, Station, StationState, Transfer } from './roadmap';
+export { roadmapApi } from './roadmap';
 export type {
   BlockType,
   CheckpointData,

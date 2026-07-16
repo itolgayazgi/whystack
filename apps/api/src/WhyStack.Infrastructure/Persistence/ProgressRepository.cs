@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WhyStack.Application.Progress;
 using WhyStack.Domain.Content;
 using WhyStack.Domain.Users;
@@ -204,7 +204,7 @@ public sealed class ProgressRepository(WhyStackDbContext context, TimeProvider c
 
         var next = await Readable()
             .Where(topic => !started.Contains(topic.Id))
-            .OrderBy(topic => topic.DefaultLevel)
+            .OrderByLevel()
             .ThenBy(topic => topic.DefaultTitle)
             .Take(5)
             .Select(topic => new

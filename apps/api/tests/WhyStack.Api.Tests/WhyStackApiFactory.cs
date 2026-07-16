@@ -99,10 +99,13 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
     /// </remarks>
     private readonly ConcurrentBag<Guid> _seededTopics = [];
     private readonly ConcurrentBag<Guid> _seededUsers = [];
+    private readonly ConcurrentBag<Guid> _seededDomains = [];
 
     public void TrackTopic(Guid id) => _seededTopics.Add(id);
 
     public void TrackUser(Guid id) => _seededUsers.Add(id);
+
+    public void TrackDomain(Guid id) => _seededDomains.Add(id);
 
     public override async ValueTask DisposeAsync()
     {
@@ -114,8 +117,9 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
     {
         var topics = _seededTopics.ToArray();
         var users = _seededUsers.ToArray();
+        var domains = _seededDomains.ToArray();
 
-        if (topics.Length == 0 && users.Length == 0) return;
+        if (topics.Length == 0 && users.Length == 0 && domains.Length == 0) return;
 
         using var scope = Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<WhyStackDbContext>();
@@ -130,6 +134,9 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
         await context.UserStreaks.Where(streak => users.Contains(streak.UserId)).ExecuteDeleteAsync();
         await context.Topics.Where(topic => topics.Contains(topic.Id)).ExecuteDeleteAsync();
         await context.Users.Where(user => users.Contains(user.Id)).ExecuteDeleteAsync();
+
+        // After the topics that sit in them, for the same reason.
+        await context.KnowledgeDomains.Where(domain => domains.Contains(domain.Id)).ExecuteDeleteAsync();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

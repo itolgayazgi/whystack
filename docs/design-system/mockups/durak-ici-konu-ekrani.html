@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhyStack — Konu Anlatım Ekranı (Durak İçi)</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0E2016; --surface:#12281C; --surface2:#1A3626; --line:#274736;
+  --cream:#EFE9D9; --cream-dim:#B8C4B4; --muted:#5E7566;
+  --gold:#C9A227; --gold-soft:rgba(201,162,39,.14);
+  --ok:#7FB069; --warn:#C96A5A; --info:#6C9BD1;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#081209;color:var(--cream);font-family:'Inter',sans-serif;padding:40px 24px}
+.mono{font-family:'JetBrains Mono',monospace}
+.concept-tag{max-width:1240px;margin:0 auto 20px;display:flex;align-items:center;gap:12px;color:var(--cream-dim);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.concept-tag b{color:var(--gold);font-family:'Chakra Petch';font-size:15px}
+.concept-tag span.rule{flex:1;height:1px;background:var(--line)}
+
+/* ============ WEB ============ */
+.browser{max-width:1240px;margin:0 auto 64px;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.browser-bar{background:#0A1810;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.dot{width:11px;height:11px;border-radius:50%;background:#274736}
+.urlbox{margin-left:12px;background:#122A1C;border:1px solid var(--line);border-radius:7px;padding:5px 14px;font-size:12px;color:var(--cream-dim);flex:0 0 380px}
+.app{display:grid;grid-template-columns:240px 1fr 280px;background:var(--bg);min-height:900px}
+
+/* SOL: konu haritası (scrollspy) */
+.outline{background:#0B1B12;border-right:1px solid var(--line);padding:20px 0}
+.back{display:flex;align-items:center;gap:8px;padding:0 20px 16px;font-size:12.5px;color:var(--cream-dim);cursor:pointer}
+.back b{color:var(--gold)}
+.out-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);padding:8px 20px}
+.out-item{display:flex;align-items:center;gap:10px;padding:8px 20px;font-size:13px;color:var(--cream-dim);cursor:pointer;border-left:3px solid transparent}
+.out-item .bt{font-family:'JetBrains Mono';font-size:10px;width:34px;color:var(--muted);flex-shrink:0}
+.out-item.done{color:var(--cream)}
+.out-item.done::after{content:"✓";margin-left:auto;color:var(--ok);font-size:11px}
+.out-item.cur{color:var(--gold);background:var(--gold-soft);border-left-color:var(--gold);font-weight:600}
+.out-item.locked{opacity:.45}
+.out-progress{margin:16px 20px 0;padding-top:14px;border-top:1px solid var(--line)}
+.out-progress .lb{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px}
+.out-progress .track{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.out-progress .track i{display:block;height:100%;width:55%;background:var(--gold)}
+
+/* ORTA: içerik akışı */
+.content{padding:30px 44px 60px;max-width:760px}
+.durak-head{margin-bottom:26px}
+.line-chip{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);background:var(--gold-soft);border:1px solid var(--gold);border-radius:6px;padding:4px 10px;font-family:'Chakra Petch';margin-bottom:14px}
+.line-chip i{width:8px;height:8px;border-radius:50%;background:var(--gold)}
+h1.title{font-family:'Chakra Petch';font-size:30px;font-weight:700;line-height:1.2;margin-bottom:10px}
+.meta{display:flex;gap:18px;font-size:12.5px;color:var(--muted)}
+.meta b{color:var(--cream-dim);font-weight:600}
+
+/* blok stilleri */
+.blk{margin-bottom:26px}
+.blk-tag{font-family:'JetBrains Mono';font-size:10.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.blk-tag::before{content:"";width:18px;height:1px;background:var(--line)}
+/* kanca */
+.hook{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--gold);border-radius:14px;padding:22px 26px}
+.hook .q{font-family:'Chakra Petch';font-size:20px;font-weight:600;line-height:1.4;color:var(--cream)}
+.hook .q em{color:var(--gold);font-style:normal}
+.hook p{font-size:13.5px;color:var(--cream-dim);margin-top:10px;line-height:1.6}
+/* metin */
+.prose{font-size:15px;line-height:1.9;color:var(--cream)}
+.prose p{margin-bottom:14px}
+.prose b{color:var(--gold)}
+.prose .term{border-bottom:1px dashed var(--gold);cursor:help}
+/* kod */
+.code{background:#0A1510;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.code .ch{display:flex;justify-content:space-between;align-items:center;background:var(--surface);padding:8px 16px;font-family:'JetBrains Mono';font-size:11.5px;color:var(--muted);border-bottom:1px solid var(--line)}
+.code .ch .copy{color:var(--cream-dim);cursor:pointer}
+.code pre{padding:16px 18px;font-family:'JetBrains Mono';font-size:13px;line-height:1.8;overflow-x:auto}
+.k{color:#C586C0}.ty{color:#4EC9B0}.s{color:#CE9178}.cm{color:#5E7566;font-style:italic}.fn{color:#C9A227}.hl-line{background:rgba(201,162,39,.1);display:block;margin:0 -18px;padding:0 18px;border-left:3px solid var(--gold)}
+.code .ann{border-top:1px solid var(--line);background:var(--surface);padding:12px 16px;font-size:12.5px;color:var(--cream-dim);line-height:1.6}
+.code .ann b{color:var(--gold)}
+/* yanılgı */
+.myth{background:rgba(201,106,90,.08);border:1px solid rgba(201,106,90,.4);border-radius:12px;padding:18px 22px;display:flex;gap:14px}
+.myth .ic{font-size:18px;flex-shrink:0}
+.myth h4{font-size:14px;font-weight:700;color:var(--warn);margin-bottom:6px}
+.myth p{font-size:13.5px;color:var(--cream-dim);line-height:1.65}
+.myth p b{color:var(--cream)}
+/* diyagram */
+.diagram{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px;text-align:center}
+.diagram svg{max-width:100%;height:auto}
+.diagram .cap{font-size:12px;color:var(--muted);margin-top:12px}
+/* checkpoint */
+.checkpoint{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:12px;padding:20px 24px}
+.checkpoint .cq{font-family:'Chakra Petch';font-size:12px;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;margin-bottom:12px}
+.checkpoint p{font-size:14.5px;margin-bottom:14px;line-height:1.6}
+.opt{border:1px solid var(--line);border-radius:8px;padding:11px 15px;margin-bottom:9px;font-size:13.5px;color:var(--cream-dim);cursor:pointer;display:flex;gap:10px}
+.opt:hover{border-color:var(--gold);color:var(--cream)}
+.opt .key{font-family:'JetBrains Mono';color:var(--muted);font-size:12px}
+.opt.correct{border-color:var(--ok);background:rgba(127,176,105,.08);color:var(--cream)}
+.opt.correct .key{color:var(--ok)}
+.checkpoint .why{margin-top:6px;background:rgba(127,176,105,.08);border-left:3px solid var(--ok);border-radius:6px;padding:11px 14px;font-size:13px;color:var(--cream-dim);line-height:1.6}
+.checkpoint .why b{color:var(--ok)}
+/* production notu */
+.prod{background:var(--surface2);border:1px solid var(--line);border-left:4px solid var(--info);border-radius:10px;padding:16px 20px}
+.prod h4{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--info);margin-bottom:8px;font-family:'Chakra Petch'}
+.prod p{font-size:13.5px;color:var(--cream-dim);line-height:1.7}
+.prod p b{color:var(--cream)}
+/* özet */
+.summary{background:var(--surface);border:1px solid var(--gold);border-radius:14px;padding:22px 26px}
+.summary h4{font-family:'Chakra Petch';font-size:15px;color:var(--gold);margin-bottom:14px}
+.summary ul{list-style:none}
+.summary li{font-size:14px;line-height:1.7;padding:6px 0 6px 26px;position:relative;color:var(--cream-dim)}
+.summary li::before{content:"▸";position:absolute;left:4px;color:var(--gold)}
+.summary li b{color:var(--cream)}
+.next{margin-top:18px;display:flex;justify-content:space-between;align-items:center;background:var(--gold-soft);border:1px solid var(--gold);border-radius:10px;padding:14px 18px}
+.next .t b{display:block;font-size:14px}
+.next .t span{font-size:12px;color:var(--cream-dim)}
+.btn{background:var(--gold);color:#0E2016;font-weight:700;font-size:13px;border-radius:8px;padding:10px 18px;cursor:pointer;white-space:nowrap}
+
+/* SAĞ: durak bilgisi */
+.rail-r{background:#0B1B12;border-left:1px solid var(--line);padding:24px 22px}
+.rail-r h5{font-family:'Chakra Petch';font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.mini-line{position:relative;margin-left:8px;border-left:4px solid var(--gold);padding-left:18px;margin-bottom:24px}
+.mini-st{position:relative;padding-bottom:18px;font-size:12.5px;color:var(--cream-dim)}
+.mini-st::before{content:"";position:absolute;left:-27px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--gold)}
+.mini-st.now{color:var(--gold);font-weight:700}
+.mini-st.now::before{background:var(--bg);border:3px solid var(--cream);width:12px;height:12px;left:-29px}
+.mini-st.later{color:var(--muted)}
+.mini-st.later::before{background:var(--surface2);border:2.5px solid var(--line)}
+.kv{display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-bottom:1px dashed var(--line);color:var(--cream-dim)}
+.kv b{color:var(--cream)}
+.terms{margin-top:22px}
+.term-chip{display:inline-block;font-family:'JetBrains Mono';font-size:11px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 10px;margin:0 6px 8px 0;color:var(--cream-dim);cursor:pointer}
+.term-chip:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ============ MOBILE ============ */
+.mobile-wrap{display:flex;gap:48px;justify-content:center;max-width:1240px;margin:0 auto;flex-wrap:wrap}
+.phone{width:375px;border-radius:44px;border:10px solid #050B06;background:var(--bg);overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.notch{height:34px;display:flex;justify-content:center}
+.notch i{width:120px;height:24px;background:#050B06;border-radius:0 0 16px 16px}
+.m-body{min-height:790px;display:flex;flex-direction:column}
+.m-top{padding:8px 18px 12px;border-bottom:1px solid var(--line)}
+.m-top .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.m-top .bk{font-size:13px;color:var(--cream-dim)}
+.m-top .cnt{font-size:11px;color:var(--muted);font-family:'JetBrains Mono')}
+/* segment progress: her segment bir blok */
+.segs{display:flex;gap:4px}
+.segs i{flex:1;height:4px;border-radius:2px;background:var(--surface2)}
+.segs i.f{background:var(--gold)}
+.segs i.h{background:linear-gradient(90deg,var(--gold) 50%,var(--surface2) 50%)}
+.m-scroll{flex:1;padding:18px 18px 0;overflow:hidden}
+.m-chip{display:inline-flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);background:var(--gold-soft);border:1px solid var(--gold);border-radius:5px;padding:3px 8px;font-family:'Chakra Petch';margin-bottom:10px}
+.m-title{font-family:'Chakra Petch';font-size:21px;font-weight:700;line-height:1.25;margin-bottom:6px}
+.m-meta{font-size:11.5px;color:var(--muted);margin-bottom:18px}
+.m-blk-tag{font-family:'JetBrains Mono';font-size:9.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin:0 0 8px}
+.m-hook{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--gold);border-radius:12px;padding:16px;margin-bottom:18px}
+.m-hook .q{font-family:'Chakra Petch';font-size:15.5px;font-weight:600;line-height:1.45}
+.m-hook .q em{color:var(--gold);font-style:normal}
+.m-prose{font-size:14px;line-height:1.8;color:var(--cream);margin-bottom:18px}
+.m-prose b{color:var(--gold)}
+.m-code{background:#0A1510;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:18px}
+.m-code .ch{background:var(--surface);padding:7px 13px;font-family:'JetBrains Mono';font-size:10.5px;color:var(--muted);border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+.m-code pre{padding:13px 14px;font-family:'JetBrains Mono';font-size:11.5px;line-height:1.75;overflow-x:auto}
+.m-code .ann{border-top:1px solid var(--line);background:var(--surface);padding:10px 13px;font-size:11.5px;color:var(--cream-dim);line-height:1.55}
+.m-code .ann b{color:var(--gold)}
+.m-check{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:12px;padding:16px;margin-bottom:18px}
+.m-check .cq{font-family:'Chakra Petch';font-size:10.5px;letter-spacing:.12em;color:var(--gold);margin-bottom:10px;text-transform:uppercase}
+.m-check p{font-size:13px;line-height:1.55;margin-bottom:12px}
+.m-opt{border:1px solid var(--line);border-radius:8px;padding:10px 13px;margin-bottom:8px;font-size:12.5px;color:var(--cream-dim)}
+.m-opt .key{font-family:'JetBrains Mono';color:var(--muted);margin-right:8px;font-size:11px}
+/* sticky alt bar */
+.m-foot{border-top:1px solid var(--line);background:#0B1B12;padding:12px 18px 28px;display:flex;gap:12px;align-items:center}
+.m-foot .info{flex:1}
+.m-foot .info b{display:block;font-size:12.5px}
+.m-foot .info span{font-size:11px;color:var(--muted)}
+.m-foot .btn{padding:11px 20px}
+.caption{max-width:1240px;margin:20px auto 0;color:var(--muted);font-size:13px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="concept-tag"><b>DURAK İÇİ — KONU ANLATIM EKRANI</b><span>Örnek: async/await · blok tabanlı içerik akışı</span><span class="rule"></span></div>
+
+<!-- ================= WEB ================= -->
+<div class="browser">
+  <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="urlbox">whystack.dev/app/backend/dotnet/mid/async-await</div></div>
+  <div class="app">
+
+    <!-- SOL: blok haritası -->
+    <aside class="outline">
+      <div class="back">← <b>.NET Hattı</b>na dön</div>
+      <div class="out-label">Bu Durağın Haritası</div>
+      <div class="out-item done"><span class="bt">KNC</span>Kanca — Neden var?</div>
+      <div class="out-item done"><span class="bt">HKY</span>Problem hikâyesi</div>
+      <div class="out-item cur"><span class="bt">KVR</span>Zihinsel model</div>
+      <div class="out-item"><span class="bt">KOD</span>Kod: state machine</div>
+      <div class="out-item"><span class="bt">YNL</span>Yaygın yanılgı</div>
+      <div class="out-item locked"><span class="bt">CHK</span>Checkpoint</div>
+      <div class="out-item locked"><span class="bt">PRD</span>Production notu</div>
+      <div class="out-item locked"><span class="bt">ÖZT</span>Özet + sonraki durak</div>
+      <div class="out-progress">
+        <div class="lb"><span>DURAK İLERLEMESİ</span><span>%55</span></div>
+        <div class="track"><i></i></div>
+      </div>
+    </aside>
+
+    <!-- ORTA: içerik -->
+    <main class="content">
+      <div class="durak-head">
+        <div class="line-chip"><i></i>.NET HATTI · MID BASAMAĞI · DURAK 4/12</div>
+        <h1 class="title">async/await Gerçekte Ne Yapar?</h1>
+        <div class="meta"><span>Süre <b>18 dk</b></span><span>Tip <b>Mekanizma</b></span><span>Önkoşul <b>Thread temelleri ✓</b></span></div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-tag">KANCA</div>
+        <div class="hook">
+          <div class="q">await yazdığında thread <em>beklemiyor.</em> Peki 30 saniyelik HTTP çağrısı sırasında o thread nerede?</div>
+          <p>Bu sorunun cevabını bilmeden yazılan her async kod, çalışan ama anlaşılmamış koddur. 18 dakika sonra cevabı kendi cümlenle verebileceksin.</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-tag">KAVRAM — ZİHİNSEL MODEL</div>
+        <div class="prose">
+          <p>Restorandaki garsonu düşün. Siparişini mutfağa iletir ve <b>masanın başında beklemez</b> — diğer masalara bakar. Yemek hazır olunca mutfak ona haber verir, kaldığı yerden devam eder.</p>
+          <p>await tam olarak budur: thread (garson), I/O işini (mutfak) başlatır ve <span class="term">thread pool</span>'a geri döner. İş bittiğinde bir <span class="term">continuation</span> tetiklenir ve metot kaldığı satırdan devam eder. Bekleyen bir thread yok; <b>bekleyen sadece bir "devam noktası" kaydı var.</b></p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-tag">KOD — DERLEYİCİNİN GÖRDÜĞÜ</div>
+        <div class="code">
+          <div class="ch"><span>OrderService.cs</span><span class="copy">Kopyala ⧉</span></div>
+          <pre><span class="k">public async</span> <span class="ty">Task</span>&lt;<span class="ty">Order</span>&gt; <span class="fn">GetOrderAsync</span>(<span class="ty">int</span> id)
+{
+    <span class="cm">// buraya kadar çağıran thread'desin</span>
+<span class="hl-line">    <span class="k">var</span> order = <span class="k">await</span> _http.<span class="fn">GetFromJsonAsync</span>&lt;<span class="ty">Order</span>&gt;($<span class="s">"/orders/{id}"</span>);</span>
+    <span class="cm">// bu satır, belki de BAŞKA bir thread'de çalışacak</span>
+    <span class="k">return</span> order;
+}</pre>
+          <div class="ann"><b>Vurgulu satır:</b> Derleyici bu metodu bir state machine'e çevirir. await noktası, "buradan devam et" etiketidir — metodun geri kalanı continuation olarak paketlenir.</div>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-tag">YAYGIN YANILGI</div>
+        <div class="myth">
+          <div class="ic">⚠️</div>
+          <div>
+            <h4>"async = çoklu thread" değildir</h4>
+            <p>async/await bir <b>eşzamanlılık</b> (concurrency) aracıdır, paralellik aracı değil. Tek thread'li bir ortamda bile (örn. eski ASP.NET SynchronizationContext) çalışır. CPU-bound iş için await değil, <b>Task.Run</b> düşünülür — ve web API'de o da çoğu zaman yanlıştır.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-tag">CHECKPOINT 1/2</div>
+        <div class="checkpoint">
+          <div class="cq">// Kendi cümlenle doğrula</div>
+          <p>await sırasında HTTP çağrısı 30 saniye sürerse, isteği başlatan thread bu sürede ne yapar?</p>
+          <div class="opt"><span class="key">[a]</span>Cevap gelene kadar bloklanır ve bekler</div>
+          <div class="opt correct"><span class="key">[b]</span>Thread pool'a döner, başka istekleri işler</div>
+          <div class="opt"><span class="key">[c]</span>Yeni bir thread yaratıp işi ona devreder</div>
+          <div class="why"><b>Doğru.</b> Thread serbest kalır — bu yüzden async, az thread'le çok isteği ayakta tutar. Cevap geldiğinde continuation, pool'daki uygun bir thread'de koşar.</div>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-tag">PRODUCTION NOTU</div>
+        <div class="prod">
+          <h4>Sahada nerede patlar?</h4>
+          <p>Klasik olay: birisi <b>.Result</b> veya <b>.Wait()</b> ile async'i senkrona çevirir. Yük altında thread pool açlığı (starvation) başlar, API yanıt veremez olur — CPU %10'dayken sistem "donar". Log'da göreceğin şey: artan istek kuyruğu, sabit düşük CPU.</p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-tag">ÖZET + SONRAKİ DURAK</div>
+        <div class="summary">
+          <h4>Bu duraktan cebinde kalanlar</h4>
+          <ul>
+            <li><b>await beklemez;</b> devam noktası kaydeder, thread'i serbest bırakır.</li>
+            <li>Derleyici async metodu <b>state machine</b>'e çevirir.</li>
+            <li>async ≠ paralellik; <b>eşzamanlılık</b> aracıdır.</li>
+            <li>.Result / .Wait() production'da <b>thread pool açlığının</b> bir numaralı sebebidir.</li>
+          </ul>
+          <div class="next">
+            <div class="t"><b>Sonraki durak: ConfigureAwait ve Context</b><span>Bu durağın devamı · 14 dk · aynı hat</span></div>
+            <span class="btn">Durağa ilerle →</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- SAĞ: bağlam -->
+    <aside class="rail-r">
+      <h5>Hattaki Konumun</h5>
+      <div class="mini-line">
+        <div class="mini-st">Middleware Pipeline</div>
+        <div class="mini-st now">async/await ● buradasın</div>
+        <div class="mini-st later">ConfigureAwait</div>
+        <div class="mini-st later" style="padding-bottom:0">EF Core Tracking</div>
+      </div>
+      <h5>Durak Künyesi</h5>
+      <div class="kv"><span>Basamak</span><b>Mid</b></div>
+      <div class="kv"><span>Konu tipi</span><b>Mekanizma</b></div>
+      <div class="kv"><span>Blok sayısı</span><b>8</b></div>
+      <div class="kv"><span>Checkpoint</span><b>2 soru</b></div>
+      <div class="kv"><span>Aktarma</span><b>DevOps: Thread metrikleri ⇄</b></div>
+      <div class="terms">
+        <h5>Bu Duraktaki Terimler</h5>
+        <span class="term-chip">state machine</span>
+        <span class="term-chip">continuation</span>
+        <span class="term-chip">thread pool</span>
+        <span class="term-chip">starvation</span>
+        <span class="term-chip">SynchronizationContext</span>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ================= MOBILE ================= -->
+<div class="mobile-wrap">
+<div class="phone">
+  <div class="notch"><i></i></div>
+  <div class="m-body">
+    <div class="m-top">
+      <div class="row"><span class="bk">← .NET Hattı</span><span class="cnt mono">blok 3/8</span></div>
+      <div class="segs"><i class="f"></i><i class="f"></i><i class="h"></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <div class="m-scroll">
+      <div class="m-chip">MID · DURAK 4/12 · MEKANİZMA</div>
+      <div class="m-title">async/await Gerçekte Ne Yapar?</div>
+      <div class="m-meta">18 dk · 8 blok · 2 checkpoint</div>
+
+      <div class="m-blk-tag">KANCA</div>
+      <div class="m-hook">
+        <div class="q">await yazdığında thread <em>beklemiyor.</em> Peki 30 saniyelik HTTP çağrısı sırasında o thread nerede?</div>
+      </div>
+
+      <div class="m-blk-tag">KAVRAM — ZİHİNSEL MODEL</div>
+      <div class="m-prose">Restorandaki garsonu düşün: siparişi mutfağa iletir ve <b>masada beklemez</b> — diğer masalara bakar. await budur: thread serbest kalır, iş bitince "devam noktası"ndan sürer.</div>
+
+      <div class="m-blk-tag">KOD</div>
+      <div class="m-code">
+        <div class="ch"><span>OrderService.cs</span><span>⧉</span></div>
+        <pre><span class="k">var</span> order = <span class="k">await</span>
+  _http.<span class="fn">GetFromJsonAsync</span>
+  &lt;<span class="ty">Order</span>&gt;($<span class="s">"/orders/{id}"</span>);</pre>
+        <div class="ann"><b>Derleyici</b> bu metodu state machine'e çevirir; await bir "devam et" etiketidir.</div>
+      </div>
+
+      <div class="m-blk-tag">CHECKPOINT 1/2</div>
+      <div class="m-check">
+        <div class="cq">// Kendi cümlenle doğrula</div>
+        <p>30 sn'lik çağrı sırasında isteği başlatan thread ne yapar?</p>
+        <div class="m-opt"><span class="key">[a]</span>Bloklanır ve bekler</div>
+        <div class="m-opt" style="border-color:var(--gold);color:var(--cream)"><span class="key" style="color:var(--gold)">[b]</span>Pool'a döner, başka iş alır</div>
+        <div class="m-opt"><span class="key">[c]</span>Yeni thread yaratır</div>
+      </div>
+    </div>
+    <div class="m-foot">
+      <div class="info"><b>Sıradaki blok: Yaygın Yanılgı</b><span>%55 · ~8 dk kaldı</span></div>
+      <span class="btn">Devam →</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<p class="caption"><b style="color:#C9A227">Durak içi ekran:</b> İçerik sabit bir sayfa değil, <b>blok dizisi</b> — kanca, hikâye, kavram, kod, yanılgı, checkpoint, production notu, özet. Web'de sol panel blok haritası (scrollspy) ve sağda durak künyesi/terimler var; mobilde her blok bir segment olur, üstteki çubuk blok blok dolar ve alttaki sabit bar "sıradaki blok"u gösterir. Aynı içerik JSON blok verisinden iki platforma da render edilir.</p>
+
+</body>
+</html>
