@@ -1,5 +1,5 @@
 import { space } from '@whystack/theme';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useTheme } from '../state/theme';
 
 /**
@@ -14,12 +14,23 @@ export function SegmentBar({
   total,
   current,
   backLabel,
+  onBack,
 }: {
   total: number;
 
   /** 1-based, or null before the reader has scrolled into anything. */
   current: number | null;
+
   backLabel: string;
+
+  /**
+   * Where the back label goes.
+   *
+   * Required, because this was a bare `<Text>` reading "← .NET Hattı" for the whole life of this screen: an
+   * affordance drawn exactly like a link, which a reader taps and nothing happens. A control that looks
+   * pressable must be pressable, so the type makes it impossible to render one that is not.
+   */
+  onBack: () => void;
 }) {
   const { color, textStyle } = useTheme();
 
@@ -44,7 +55,18 @@ export function SegmentBar({
           marginBottom: space[8],
         }}
       >
-        <Text style={[textStyle('caption'), { color: color.textSecondary }]}>{backLabel}</Text>
+        {/* A thumb target, not a word. The label alone is ~11px tall — nowhere near the 44px a finger needs,
+            and the one control on this screen a reader reaches for without looking. */}
+        <Pressable
+          testID="segment-back"
+          onPress={onBack}
+          accessibilityRole="link"
+          accessibilityLabel={backLabel}
+          hitSlop={{ top: space[12], bottom: space[12], left: space[8], right: space[16] }}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+        >
+          <Text style={[textStyle('caption'), { color: color.textSecondary }]}>{backLabel}</Text>
+        </Pressable>
 
         <Text
           testID="segment-count"

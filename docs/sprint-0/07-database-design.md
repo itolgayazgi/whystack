@@ -1087,6 +1087,29 @@ Slugs are used for:
 - Content references
 - Human navigation
 
+### Slug Language
+
+**Slugs are English.** The examples above were always English; this states it as the rule rather than leaving
+it to whoever authors next.
+
+The content is Turkish and stays Turkish — the title, the blocks, the whole reading. The slug is the address,
+not the writing.
+
+Three reasons this is not a preference:
+
+- **The approved technical terms are never translated** (`10` § Terminology; CLAUDE.md §4 — `Middleware`,
+  `Dependency Injection`, `Garbage Collector`). A Turkish slug rule would still produce
+  `dependency-injection`, so half the corpus would be English either way and the two halves would not look
+  like one product.
+- **A slug is ASCII lowercase, digits and hyphens** (enforced in `SaveTopicHandler.IsSlug`). Turkish cannot
+  survive that: `eşzamanlılık` becomes `eszamanlilik`, which is neither Turkish nor English — it is a word
+  with its diacritics knocked off.
+- **The Turkish locale lowercases `I` to `ı`**, so a slug generated from a title is one `ToLower()` away from
+  a bug that only appears on Turkish machines.
+
+ADR-0009 makes these URLs public and indexable, so a slug that ships is a slug that is owed a redirect
+forever. This rule exists to be decided once, before the first topic publishes, rather than per topic.
+
 Slugs must be unique within their defined scope.
 
 Example scope:

@@ -32,12 +32,14 @@ public sealed class GetTopicHandler(ITopicRepository repository)
             ?? topic.DefaultTitle;
 
         var graph = await BuildGraphAsync(topic, language.Returned, cancellationToken);
+        var stop = await BuildStopAsync(topic, language.Returned, cancellationToken);
 
         return Result<TopicDetail>.Success(new TopicDetail(
             topic.Id,
             topic.StableKey,
             topic.Slug,
             title,
+            topic.AreaKey,
             topic.LineKey,
             topic.LineName,
             topic.Category,
@@ -51,6 +53,7 @@ public sealed class GetTopicHandler(ITopicRepository repository)
             sections,
             Implementations(topic, language, ecosystem),
             graph,
+            stop,
             BlocksIn(topic.Blocks, language.Returned, ecosystem)));
     }
 
@@ -154,6 +157,49 @@ public sealed class GetTopicHandler(ITopicRepository repository)
                     implementation.EcosystemKey == preferred,
                     SectionsIn(implementation.Sections, language.Returned, topic.CanonicalLanguage)))
         ];
+
+    /// <summary>
+    /// Where this stop stands on its line, and the stops either side of it.
+    /// </summary>
+    /// <remarks>
+    /// The whole sequence is fetched to find ONE index, then two ids are turned into links. That shape is the
+    /// point: ids are cheap, and resolving titles for a line's worth of stops to render two of them would put
+    /// a line of translations on the page a reader waits longest for.
+    ///
+    /// <b>A draft is not on the route.</b> An editor previewing one reaches here with a topic the published
+    /// sequence does not contain, so the index is -1 — and the honest answer is null ("this stop has no
+    /// number yet"), not stop 0 of 12. Clamping it to a number would print a position the reader would go
+    /// looking for and never find, and would quietly renumber the moment it published.
+    /// </remarks>
+    private async Task<LineStop?> BuildStopAsync(
+        TopicRecord topic,
+        string language,
+        CancellationToken cancellationToken)
+    {
+        var stops = await repository.StopsOnLineAsync(topic.LineKey, cancellationToken);
+
+        var index = stops.ToList().IndexOf(topic.Id);
+        if (index < 0) return null;
+
+        var previousId = index > 0 ? stops[index - 1] : (Guid?)null;
+        var nextId = index < stops.Count - 1 ? stops[index + 1] : (Guid?)null;
+
+        Guid[] neighbours = [.. new[] { previousId, nextId }.OfType<Guid>()];
+
+        // One query for both neighbours, not one each. Two round trips on the reading page to render two
+        // links is the N+1 in miniature — small enough to never show up in a profile, and paid on every open.
+        var links = neighbours.Length == 0
+            ? new Dictionary<Guid, TopicLink>()
+            : (IReadOnlyDictionary<Guid, TopicLink>)await repository.LinksForAsync(
+                neighbours, language, cancellationToken);
+
+        return new LineStop(
+            // 1-based: the reader counts "durak 4/12", not "durak 3/12". The design's own chip says so.
+            index + 1,
+            stops.Count,
+            previousId is null ? null : links.GetValueOrDefault(previousId.Value),
+            nextId is null ? null : links.GetValueOrDefault(nextId.Value));
+    }
 
     /// <summary>
     /// The edges, resolved into links a reader can click.

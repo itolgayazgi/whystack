@@ -13,6 +13,11 @@ type Load = 'loading' | 'ready' | 'missing' | 'unreachable' | 'failed';
 
 const CONTENT_LANGUAGE = 'tr';
 
+/** The line this stop sits on, as the map addresses it. Area AND line — the map defaults to backend without it. */
+function lineHref(topic: TopicDetail) {
+  return `/learn?${new URLSearchParams({ area: topic.areaKey, line: topic.lineKey })}`;
+}
+
 /** The archetype, in the reader's words. "Konu tipi" in the künye (ADR-0024). */
 const ARCHETYPE: Record<string, string> = {
   Concept: 'Kavram',
@@ -147,11 +152,27 @@ export default function TopicPage() {
     <div className={styles.shell}>
       {/* ── The block map ─────────────────────────────────────────────────────────────────────────── */}
       <nav className={styles.outline} aria-label="Bu durağın haritası">
-        {/* The line you came in on. Until the roadmap engine exists there is no line to return to, so this
-            says where it actually goes — the catalogue — rather than promising a screen that is not built. */}
-        <Link href="/learn" className={styles.back}>
-          ← <b>{topic.lineName}</b> kataloğu
-        </Link>
+        {/*
+          Back goes to the STOP BEFORE this one on the line — his call, and the right one: landing at the head
+          of the catalogue is not "back", it is starting over.
+
+          It is NOT browser history. A reader who arrived from a search engine has never seen the previous
+          stop, so the link says its NAME rather than the word "geri" — an affordance that says "back" and
+          lands somewhere you have never been is one that lied to you.
+
+          The first stop of a line has nothing before it, so the link falls back to the line itself. That is
+          the design's own label ("← .NET Hattına dön") and it is where a reader on stop one actually wants
+          to go.
+        */}
+        {topic.stop?.previous ? (
+          <Link href={`/topics/${topic.stop.previous.slug}`} className={styles.back}>
+            ← Önceki durak: <b>{topic.stop.previous.title}</b>
+          </Link>
+        ) : (
+          <Link href={lineHref(topic)} className={styles.back}>
+            ← <b>{topic.lineName}</b>na dön
+          </Link>
+        )}
 
         <p className={styles.outlineLabel}>Bu durağın haritası</p>
 
@@ -170,8 +191,16 @@ export default function TopicPage() {
       {/* ── The flow ──────────────────────────────────────────────────────────────────────────────── */}
       <main className={styles.content}>
         <header className={styles.head}>
+          {/*
+            The design's chip: ".NET HATTI · MID BASAMAĞI · DURAK 4/12" (mockup line 204). The position was
+            missing — a stop that cannot say where it stands is a page, not a stop.
+
+            Dropped rather than faked when the stop is not on the published route (a draft in preview): "durak
+            0/12" is a number the reader would go looking for and never find.
+          */}
           <span className={styles.lineChip}>
             {topic.lineName} · {topic.level}
+            {topic.stop ? ` · Durak ${topic.stop.position}/${topic.stop.total}` : ''}
           </span>
 
           <h1 className={styles.title}>{topic.title}</h1>

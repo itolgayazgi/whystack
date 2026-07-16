@@ -15,6 +15,20 @@ public interface ITopicRepository
         string language,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The published stops of a line, in the line's own order — ids only.
+    /// </summary>
+    /// <remarks>
+    /// Ids rather than links: the reader needs the whole sequence to know WHERE it stands, but it only ever
+    /// renders the two stops beside it. Projecting titles for all of them would fetch a line's worth of
+    /// translations to throw them away, on the page a reader waits longest for.
+    ///
+    /// Bounded by the line, and that bound is real but not enforced: a line is a curated route (the design
+    /// draws twelve). The line map already loads this same set in full to draw itself, so if a line ever grows
+    /// past a few hundred stops, both this and the map need paging — not just this.
+    /// </remarks>
+    Task<IReadOnlyList<Guid>> StopsOnLineAsync(string lineKey, CancellationToken cancellationToken);
+
     /// <summary>Everything an editor needs to fill the "İçerik Üret" form: domains, ecosystems, sections.</summary>
     Task<AuthoringCatalog> CatalogAsync(CancellationToken cancellationToken);
 

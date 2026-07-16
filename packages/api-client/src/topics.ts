@@ -69,6 +69,30 @@ export interface TopicGraph {
   next: TopicLink[];
 }
 
+/**
+ * Where a stop stands on its line — "DURAK 4/12" — and the stops either side of it.
+ *
+ * **Position, not history.** `previous` is the stop BEFORE this one on the route, not the page the reader
+ * came from. Somebody who arrived from a search engine has never seen it, so the UI names it ("← Önceki
+ * durak: …") rather than calling it "geri": a back affordance that lands somewhere the reader has never
+ * been is a back affordance that lied.
+ *
+ * `null` on a draft — a stop that is not published is not on the route yet, and has no number. Null is the
+ * honest answer there, which is why this is optional rather than a `{position: 0}` nobody could interpret.
+ */
+export interface LineStop {
+  /** 1-based: the reader counts "durak 4/12", not "durak 3/12". */
+  position: number;
+
+  total: number;
+
+  /** Null on the first stop of the line. A fact about the route, not a missing value. */
+  previous: TopicLink | null;
+
+  /** Null on the last stop. */
+  next: TopicLink | null;
+}
+
 export interface TopicSection {
   sectionType: string;
   markdown: string;
@@ -195,6 +219,14 @@ export interface TopicImplementation {
 }
 
 export interface TopicDetail extends Omit<TopicSummary, 'language'> {
+  /**
+   * The area the line belongs to — what makes the way back to the line map addressable (`?area=…&line=…`).
+   *
+   * Without it the map has to guess, and its guess is "backend": every frontend reader would land on the
+   * wrong line.
+   */
+  areaKey: string;
+
   /** "Konu tipi" in the künye: the shape of the explanation — Mechanism, Comparison… (ADR-0024). */
   archetype: string;
 
@@ -208,6 +240,9 @@ export interface TopicDetail extends Omit<TopicSummary, 'language'> {
   implementations: TopicImplementation[];
 
   graph: TopicGraph;
+
+  /** Where this stop sits on its line. Null when it is not on the published route — a draft being previewed. */
+  stop: LineStop | null;
 
   /**
    * The block flow to render (ADR-0024) — already merged and filtered by the API.

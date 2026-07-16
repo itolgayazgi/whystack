@@ -225,6 +225,25 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
                     block.DataJson))]);
     }
 
+    /// <summary>
+    /// The published stops of a line, in the line's own order — ids only.
+    /// </summary>
+    /// <remarks>
+    /// The filter and the order both come from <see cref="LineOrder"/>, which the line map reads too. That is
+    /// the whole reason this is not two lines of LINQ written here: the reader's "durak 4/12" is a promise
+    /// about the route the map draws, and a second ORDER BY would let the two drift apart silently.
+    /// </remarks>
+    public async Task<IReadOnlyList<Guid>> StopsOnLineAsync(
+        string lineKey,
+        CancellationToken cancellationToken) =>
+        await context.Topics
+            .AsNoTracking()
+            .Where(topic => topic.Line!.Key == lineKey)
+            .Published()
+            .InLineOrder()
+            .Select(topic => topic.Id)
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyDictionary<Guid, TopicLink>> LinksForAsync(
         IReadOnlyCollection<Guid> topicIds,
         string language,

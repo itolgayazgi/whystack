@@ -89,8 +89,25 @@ export function TopicScreen({ slug }: { slug: string }) {
     <ReadingCanvas aside={<TableOfContents topic={topic} />} onScroll={onScroll}>
       {/* The design's segment bar. Above the header, so it is the first thing on screen and stays the
           reader's answer to "how much of this is left?" without them having to guess from the scrollbar. */}
+      {/*
+        Back goes to the STOP BEFORE this one, matching the website. Landing at the head of the line is not
+        "back", it is starting over.
+
+        It is position, not history: somebody who opened this from a share link has never seen the previous
+        stop, so the label names it. The first stop of a line has nothing before it, and falls back to the
+        line — which is the design's own label.
+      */}
       {topic.blocks.length > 0 ? (
-        <SegmentBar total={topic.blocks.length} current={current} backLabel={`← ${topic.lineName}`} />
+        <SegmentBar
+          total={topic.blocks.length}
+          current={current}
+          backLabel={topic.stop?.previous ? `← ${topic.stop.previous.title}` : t('topic.backToMyLine')}
+          onBack={() =>
+            topic.stop?.previous
+              ? router.push({ pathname: '/topics/[slug]', params: { slug: topic.stop.previous.slug } })
+              : router.push('/line')
+          }
+        />
       ) : null}
 
       <TopicHeader topic={topic} />
@@ -138,6 +155,29 @@ function TopicHeader({ topic }: { topic: TopicDetail }) {
 
   return (
     <View style={{ gap: space[12] }}>
+      {/*
+        The design's chip: "MID · DURAK 4/12 · MEKANİZMA" (durak-ici-konu-ekrani.html, `.m-chip`). It sits
+        ABOVE the title because it is the answer to "where am I?", which a reader asks before "what is this?".
+
+        Dropped rather than faked when the stop is not on the published route — an editor previewing a draft.
+        "Durak 0/12" is a number the reader would go looking for and never find.
+      */}
+      {topic.stop ? (
+        <Text
+          testID="topic-stop-chip"
+          style={[
+            textStyle('caption'),
+            { color: color.accent, fontVariant: ['tabular-nums'], textTransform: 'uppercase' },
+          ]}
+        >
+          {topic.level} ·{' '}
+          {t('topic.stopPosition', {
+            position: String(topic.stop.position),
+            total: String(topic.stop.total),
+          })}
+        </Text>
+      ) : null}
+
       <Text testID="topic-title" role="heading" aria-level={1} style={textStyle('pageTitle')}>
         {topic.title}
       </Text>

@@ -523,7 +523,12 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
                   onChange={(event) => update({ slug: event.target.value })}
                   placeholder="connection-pooling"
                 />
-                <span className={styles.hint}>URL'de görünür. Düzeltilebilir.</span>
+                {/* The rule lives in `07` § Slug Language. It is repeated here because the author decides it
+                    HERE, and a rule nobody is shown at the moment they break it is a rule that gets broken. */}
+                <span className={styles.hint}>
+                  URL'de görünür. <b>İngilizce</b> yaz — içerik Türkçe kalır, slug adrestir. Küçük harf, rakam
+                  ve tire.
+                </span>
               </label>
 
               <label className={styles.field}>

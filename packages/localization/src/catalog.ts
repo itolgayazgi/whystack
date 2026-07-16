@@ -108,6 +108,13 @@ export interface Messages {
   'common.continue': string;
 
   'topic.implementation': string;
+
+  /** Where the back label goes on the FIRST stop of a line — there is no stop before it to name. */
+  'topic.backToMyLine': string;
+
+  /** The design's chip: "MID · DURAK 4/12 · MEKANİZMA" (durak-ici-konu-ekrani.html). */
+  'topic.stopPosition': string;
+
   'topic.readingTime': string;
   'topic.lastReviewed': string;
   'topic.draft': string;
@@ -367,6 +374,8 @@ const en: Messages = {
   'common.continue': 'Continue',
 
   'topic.implementation': 'Implementation',
+  'topic.backToMyLine': '← My line',
+  'topic.stopPosition': 'Stop {position}/{total}',
   'topic.readingTime': '{minutes} min read',
   'topic.lastReviewed': 'Last reviewed {date}',
   'topic.draft': 'Draft — not published',
@@ -622,6 +631,8 @@ const tr: Messages = {
   'common.continue': 'Devam',
 
   'topic.implementation': 'İmplementasyon',
+  'topic.backToMyLine': '← Hattım',
+  'topic.stopPosition': 'Durak {position}/{total}',
   'topic.readingTime': '{minutes} dk okuma',
   'topic.lastReviewed': 'Son inceleme: {date}',
   'topic.draft': 'Taslak — yayınlanmadı',

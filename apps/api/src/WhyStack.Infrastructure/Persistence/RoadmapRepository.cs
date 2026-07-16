@@ -7,12 +7,7 @@ namespace WhyStack.Infrastructure.Persistence;
 public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepository
 {
     /// <summary>Published stops, whichever line they are on. The shared filter for every count below.</summary>
-    private IQueryable<Topic> Published() =>
-        context.Topics.Where(topic =>
-            topic.Versions
-                .OrderByDescending(version => version.VersionNumber)
-                .Select(version => version.Status)
-                .First() == ContentStatus.Published);
+    private IQueryable<Topic> Published() => context.Topics.Published();
 
     public async Task<IReadOnlyList<EcosystemOption>> EcosystemsAsync(
         string areaKey,
@@ -84,23 +79,12 @@ public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepos
         // a reader, and only one of them is worth telling them about.
         if (ecosystem is null || line is null) return null;
 
+        // Both facts come from LineOrder, so the map and the reader's "durak 4/12" can never disagree.
         var stations = await context.Topics
             .AsNoTracking()
-            .Where(topic =>
-                topic.LineId == line.Id
-                && topic.Versions
-                    .OrderByDescending(version => version.VersionNumber)
-                    .Select(version => version.Status)
-                    .First() == ContentStatus.Published)
-
-            // The station ORDER. Level first — that is the basamak the whole product is built on — then the
-            // theme's own order (ADR-0023), then the title so the sequence is STABLE. Not a graph walk over
-            // `Next` edges: those edges are sparse today, and a topological sort over a sparse graph produces
-            // a confident-looking order that changes whenever an editor adds one edge. A wrong-but-stable
-            // line is honest; a line that reshuffles under the reader is not.
-            .OrderBy(topic => topic.DefaultLevel)
-            .ThenBy(topic => topic.Scope!.SortOrder)
-            .ThenBy(topic => topic.DefaultTitle)
+            .Where(topic => topic.LineId == line.Id)
+            .Published()
+            .InLineOrder()
             .Select(topic => new
             {
                 topic.Id,

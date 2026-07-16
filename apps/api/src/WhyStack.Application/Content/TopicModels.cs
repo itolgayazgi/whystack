@@ -52,6 +52,17 @@ public sealed record TopicDetail(
     string StableKey,
     string Slug,
     string Title,
+
+    /// <summary>
+    /// The area the line belongs to. Asked through the line, never stored twice.
+    /// </summary>
+    /// <remarks>
+    /// Here because a stop must be able to name the way back to its line, and the line map is addressed by
+    /// area AND line. Without it the reader would have to guess — and a guess defaults to "backend", which
+    /// sends every frontend reader to the wrong map.
+    /// </remarks>
+    string AreaKey,
+
     string LineKey,
     string LineName,
     string Category,
@@ -73,6 +84,9 @@ public sealed record TopicDetail(
     IReadOnlyList<TopicImplementationView> Implementations,
 
     TopicGraph Graph,
+
+    /// <summary>Where this stop stands on its line, and the stops either side of it. Null if it is not on one.</summary>
+    LineStop? Stop,
 
     /// <summary>
     /// The block flow the reader renders (ADR-0024): the shared blocks plus the chosen ecosystem's, in order.
@@ -113,6 +127,25 @@ public sealed record TopicGraph(
     IReadOnlyList<TopicLink> Next);
 
 public sealed record TopicLink(string StableKey, string Slug, string Title);
+
+/// <summary>
+/// A stop's place on its line: "DURAK 4/12", and the stops either side of it.
+/// </summary>
+/// <remarks>
+/// <b>This is position, not history.</b> <c>Previous</c> is the stop BEFORE this one on the route — not the
+/// page the reader came from. A visitor who arrived from a search engine never saw it, so the UI must name
+/// it ("← Önceki durak: …") rather than call it "geri". A back affordance that lands somewhere the reader
+/// has never been is a back affordance that lied.
+///
+/// <c>Previous</c> is null on the first stop and <c>Next</c> on the last; both are null on a line of one.
+/// Those are facts about the route, not gaps — the reader says something different for each, and a caller
+/// that treats null as "not loaded yet" would render a spinner forever on stop one.
+///
+/// Ordering and the published filter both come from the infrastructure's LineOrder, which the line map reads
+/// too. That is deliberate: <c>Position</c> is a promise about a route the map draws, and two screens
+/// disagreeing about a route is the kind of bug nobody reports because neither screen looks broken.
+/// </remarks>
+public sealed record LineStop(int Position, int Total, TopicLink? Previous, TopicLink? Next);
 
 /// <summary>`08` § Pagination. A collection endpoint without a page size is an outage waiting for a corpus.</summary>
 public sealed record Page<T>(IReadOnlyList<T> Items, int PageNumber, int PageSize, int TotalCount)
