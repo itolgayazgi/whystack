@@ -1,10 +1,11 @@
 'use client';
 
-import { canAuthor, type RoadmapDomainOption, roadmapApi } from '@whystack/api-client';
+import { type AreaOption, canAuthor, type RoadmapLineOption, roadmapApi } from '@whystack/api-client';
+import { lineColor } from '@whystack/theme';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type ReactNode, Suspense, useEffect, useRef, useState } from 'react';
-import { DomainIcon } from '@/components/learn/domain-icon';
+import { AreaIcon } from '@/components/learn/area-icon';
 import { Wordmark } from '@/components/wordmark';
 import { useSession } from '@/lib/session';
 import styles from './learn.module.css';
@@ -64,11 +65,13 @@ export default function LearnLayout({ children }: { children: ReactNode }) {
 function Rail() {
   const { client, status, user, signOut } = useSession();
   const search = useSearchParams();
-  const [domains, setDomains] = useState<RoadmapDomainOption[]>([]);
+  const [areas, setAreas] = useState<AreaOption[]>([]);
+  const [lines, setLines] = useState<RoadmapLineOption[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const activeDomain = search.get('domain') ?? 'backend';
+  const activeArea = search.get('area') ?? 'backend';
+  const activeLine = search.get('line');
 
   useEffect(() => {
     if (status !== 'signed-in') return;
@@ -76,10 +79,22 @@ function Rail() {
     // The rail is not worth an error state. If this fails the reader still has the page, the map and their
     // place — a red banner over a navigation list would be louder than what it costs them.
     roadmapApi
-      .domains(client)
-      .then((response) => setDomains(response.data))
-      .catch(() => setDomains([]));
+      .areas(client)
+      .then((response) => setAreas(response.data))
+      .catch(() => setAreas([]));
   }, [client, status]);
+
+  useEffect(() => {
+    if (status !== 'signed-in') return;
+
+    // The lines of the OPEN area only. Fetching all four areas' lines to show one area's would be three
+    // requests for rows nobody is looking at — and the taxonomy says an area's line list is its own
+    // (ADR-0027), so there is nothing to share.
+    roadmapApi
+      .lines(client, activeArea)
+      .then((response) => setLines(response.data))
+      .catch(() => setLines([]));
+  }, [client, status, activeArea]);
 
   // An open menu must close the two ways every open menu on every platform closes: click away, or Escape. A
   // menu you can only close by clicking the exact button that opened it is a trap, and a keyboard user has
@@ -116,22 +131,58 @@ function Rail() {
       <nav aria-label="Alanlar">
         <p className={styles.sideLabel}>Alanlar</p>
 
-        {domains.map((domain) => {
-          const query = new URLSearchParams({ domain: domain.key });
-          if (ecosystem) query.set('eco', ecosystem);
-
-          const active = domain.key === activeDomain;
+        {areas.map((area) => {
+          const open = area.key === activeArea;
 
           return (
-            <Link
-              key={domain.key}
-              href={`/learn?${query}`}
-              className={`${styles.navItem} ${active ? styles.navItemActive : ''}`}
-              aria-current={active ? 'page' : undefined}
-            >
-              <DomainIcon domainKey={domain.key} />
-              {domain.name}
-            </Link>
+            <div key={area.key}>
+              <Link
+                href={`/learn?area=${area.key}${ecosystem ? `&eco=${ecosystem}` : ''}`}
+                className={`${styles.navItem} ${open ? styles.navItemActive : ''}`}
+                aria-current={open ? 'page' : undefined}
+              >
+                <AreaIcon areaKey={area.key} />
+                {area.name}
+              </Link>
+
+              {/*
+                The lines, nested under the OPEN area only (ADR-0027).
+
+                Areas and lines are not peers — B3 is a route through Backend, not a sibling of it — and the
+                old rail listed them side by side because the model conflated them. Rendering every area's
+                lines at once would put 30 rows in a 232px column and lose the one thing the nesting says.
+              */}
+              {open && lines.length > 0 ? (
+                <div className={styles.lineList}>
+                  {lines.map((line) => {
+                    const query = new URLSearchParams({ area: area.key, line: line.key });
+                    if (ecosystem) query.set('eco', ecosystem);
+
+                    const current = line.key === activeLine;
+
+                    return (
+                      <Link
+                        key={line.key}
+                        href={`/learn?${query}`}
+                        className={`${styles.lineItem} ${current ? styles.lineItemActive : ''}`}
+                        aria-current={current ? 'page' : undefined}
+                      >
+                        {/* The line's own colour, from the server. This dot is the only thing tying the
+                            rail to the map, and both read the same value. */}
+                        <i className={styles.lineDot} style={{ background: lineColor(line.color) }} />
+                        {line.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {/* An area with no lines is a real state, not a gap: Frontend exists and has none written
+                  yet. Saying so beats an area that opens onto nothing. */}
+              {open && lines.length === 0 ? (
+                <p className={styles.lineEmpty}>Bu alanda henüz hat yok.</p>
+              ) : null}
+            </div>
           );
         })}
       </nav>

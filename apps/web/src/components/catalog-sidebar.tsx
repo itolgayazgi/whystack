@@ -26,23 +26,23 @@ export function CatalogSidebar({ topics }: { topics: TopicSummary[] }) {
       ? topics.filter(
           (topic) =>
             topic.title.toLocaleLowerCase('tr').includes(needle) ||
-            topic.domainName.toLocaleLowerCase('tr').includes(needle),
+            topic.lineName.toLocaleLowerCase('tr').includes(needle),
         )
       : topics;
 
-    const domains = new Map<string, TopicSummary[]>();
+    const lines = new Map<string, TopicSummary[]>();
 
     for (const topic of matching) {
-      const bucket = domains.get(topic.domainName);
+      const bucket = lines.get(topic.lineName);
 
       if (bucket) {
         bucket.push(topic);
       } else {
-        domains.set(topic.domainName, [topic]);
+        lines.set(topic.lineName, [topic]);
       }
     }
 
-    return [...domains.entries()].sort(([a], [b]) => a.localeCompare(b, 'tr'));
+    return [...lines.entries()].sort(([a], [b]) => a.localeCompare(b, 'tr'));
   }, [topics, query]);
 
   return (
@@ -56,11 +56,11 @@ export function CatalogSidebar({ topics }: { topics: TopicSummary[] }) {
       />
 
       {grouped.length === 0 ? (
-        <p className={styles.domainName}>Eşleşen konu yok.</p>
+        <p className={styles.lineName}>Eşleşen konu yok.</p>
       ) : (
         grouped.map(([domain, inDomain]) => (
           <div key={domain} className={styles.domain}>
-            <p className={styles.domainName}>{domain}</p>
+            <p className={styles.lineName}>{domain}</p>
 
             {inDomain.map((topic) => (
               <Link key={topic.id} href={`/topics/${topic.slug}`} className={styles.topicLink}>

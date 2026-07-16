@@ -153,7 +153,7 @@ export function TopicSearch({ language }: { language: string }) {
             <Link key={topic.id} href={`/topics/${topic.slug}`} className={styles.result} role="option">
               <span className={styles.resultTitle}>{topic.title}</span>
               <span className={styles.resultMeta}>
-                {topic.domainName} · {topic.level} · ~{topic.estimatedReadingMinutes} dk
+                {topic.lineName} · {topic.level} · ~{topic.estimatedReadingMinutes} dk
                 {/* Per row, and never hidden: a Turkish reader shown English text has to be told it is
                     English, or they will conclude the translation is bad rather than absent. */}
                 {topic.language.fallbackUsed ? ` · ${topic.language.returned.toUpperCase()}` : ''}

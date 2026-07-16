@@ -791,3 +791,60 @@
     align-items: flex-start;
   }
 }
+
+/*
+  The lines, nested under their area.
+
+  Indented and quieter than the area above them, because they are not peers: B3 is a route through Backend,
+  not a sibling of it. The old rail listed them side by side — that was the model conflating areas and lines
+  (ADR-0027), and the nesting is the fix made visible.
+*/
+.lineList {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) 0 var(--space-8);
+}
+
+.lineItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+
+  /* Indented past the area's icon, so the eye reads the hierarchy before it reads a word. */
+  padding: 7px 22px 7px 50px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+}
+
+.lineItem:hover {
+  color: var(--color-text-primary);
+}
+
+.lineItemActive {
+  color: var(--color-text-primary);
+  border-left-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.lineItem:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+/* The line's own colour, from the server — the one value the rail and the map both read. */
+.lineDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.lineEmpty {
+  padding: var(--space-8) 22px var(--space-12) 50px;
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0;
+}

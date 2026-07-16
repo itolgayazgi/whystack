@@ -83,10 +83,10 @@ interface Form {
   id: string | null;
   stableKey: string;
   slug: string;
-  domainKey: string;
+  lineKey: string;
 
   /** '' means "no theme". Kept as a string so the <select> is controlled; mapped to null in the payload. */
-  subAreaKey: string;
+  scopeKey: string;
 
   category: string;
   archetype: string;
@@ -121,8 +121,8 @@ const EMPTY: Form = {
   id: null,
   stableKey: '',
   slug: '',
-  domainKey: '',
-  subAreaKey: '',
+  lineKey: '',
+  scopeKey: '',
   category: 'Concept',
   archetype: 'Concept',
   blocks: [],
@@ -217,8 +217,8 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
             id: topic.id,
             stableKey: topic.stableKey,
             slug: topic.slug,
-            domainKey: topic.domainKey,
-            subAreaKey: topic.subAreaKey ?? '',
+            lineKey: topic.lineKey,
+            scopeKey: topic.scopeKey ?? '',
             category: topic.category,
             archetype: topic.archetype,
             blocks: topic.blocks,
@@ -253,10 +253,10 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
 
           setProblems(topic.problems);
         } else {
-          const first = catalogData.domains[0];
+          const first = catalogData.lines[0];
 
           if (first) {
-            setForm((current) => ({ ...current, domainKey: first.key }));
+            setForm((current) => ({ ...current, lineKey: first.key }));
           }
         }
 
@@ -298,8 +298,8 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
       id: form.id,
       stableKey: form.stableKey.trim(),
       slug: form.slug.trim(),
-      domainKey: form.domainKey,
-      subAreaKey: form.subAreaKey || null,
+      lineKey: form.lineKey,
+      scopeKey: form.scopeKey || null,
       category: form.category.trim(),
       archetype: form.archetype,
       blocks: form.blocks,
@@ -521,10 +521,10 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
                 <span className={styles.label}>Bilgi alanı</span>
                 <select
                   className={styles.select}
-                  value={form.domainKey}
-                  onChange={(event) => update({ domainKey: event.target.value })}
+                  value={form.lineKey}
+                  onChange={(event) => update({ lineKey: event.target.value })}
                 >
-                  {catalog.domains.map((domain) => (
+                  {catalog.lines.map((domain) => (
                     <option key={domain.key} value={domain.key}>
                       {domain.name}
                     </option>
@@ -554,21 +554,21 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
                 <span className={styles.label}>Tema</span>
                 <select
                   className={styles.select}
-                  value={form.subAreaKey}
-                  onChange={(event) => update({ subAreaKey: event.target.value })}
+                  value={form.scopeKey}
+                  onChange={(event) => update({ scopeKey: event.target.value })}
                 >
                   {/* Optional, and the empty option says so. A theme threads a topic across levels — async,
                       bellek yönetimi — but "Transaction nedir?" belongs to none, and that is normal (ADR-0023). */}
                   <option value="">— tema yok —</option>
-                  {catalog.subAreas.map((subArea) => (
-                    <option key={subArea.key} value={subArea.key}>
-                      {subArea.name}
+                  {catalog.scopes.map((scope) => (
+                    <option key={scope.key} value={scope.key}>
+                      {scope.name}
                     </option>
                   ))}
                 </select>
                 <span className={styles.hint}>
                   Seviyeler boyunca ilerleyen iplik. Seviye ve kategoriden bağımsız.{' '}
-                  <Link href="/studio/subareas">Temaları yönet</Link>
+                  <Link href="/studio/scopes">Temaları yönet</Link>
                 </span>
               </label>
 

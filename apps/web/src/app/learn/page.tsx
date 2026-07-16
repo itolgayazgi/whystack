@@ -2,13 +2,14 @@
 
 import {
   type HomeSnapshot,
-  type LineOption,
   NetworkError,
   progressApi,
   type Roadmap,
+  type RoadmapEcosystemOption,
+  type RoadmapLineOption,
   roadmapApi,
 } from '@whystack/api-client';
-import { lineColor } from '@whystack/theme';
+import { dark, lineColor } from '@whystack/theme';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
@@ -41,12 +42,17 @@ function Home() {
   const { client, status: session } = useSession();
   const search = useSearchParams();
 
-  const domain = search.get('domain') ?? 'backend';
+  const area = search.get('area') ?? 'backend';
   const ecosystem = search.get('eco') ?? 'dotnet';
+
+  // The line the map draws. Defaulted rather than required: a reader who lands on /learn with nothing in the
+  // URL still gets a map, and B1 is the taxonomy's own main line (ADR-0027).
+  const line = search.get('line') ?? 'b1-language-runtime';
 
   const [home, setHome] = useState<HomeSnapshot | null>(null);
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
-  const [lines, setLines] = useState<LineOption[]>([]);
+  const [ecosystems, setEcosystems] = useState<RoadmapEcosystemOption[]>([]);
+  const [lines, setLines] = useState<RoadmapLineOption[]>([]);
   const [load, setLoad] = useState<'loading' | 'ready' | 'unreachable' | 'failed'>('loading');
 
   const fetchAll = useCallback(async () => {
@@ -55,23 +61,25 @@ function Home() {
     try {
       // In parallel. They are three independent facts and the screen shows all three at once — sequencing
       // them would add two round trips of latency to the screen a reader opens first, every time.
-      const [homeResponse, linesResponse, roadmapResponse] = await Promise.all([
+      const [homeResponse, ecosystemsResponse, linesResponse, roadmapResponse] = await Promise.all([
         progressApi.home(client, { ecosystem, language: CONTENT_LANGUAGE }),
-        roadmapApi.lines(client),
+        roadmapApi.ecosystems(client),
+        roadmapApi.lines(client, area),
 
-        // A 404 here is expected and survivable: a domain with no line yet is a real state, and it must not
-        // take the streak and the continue card down with it.
-        roadmapApi.get(client, { ecosystem, domain, language: CONTENT_LANGUAGE }).catch(() => null),
+        // A 404 here is expected and survivable: a line with nothing published on it yet is a real state,
+        // and it must not take the streak and the continue card down with it.
+        roadmapApi.get(client, { ecosystem, line, language: CONTENT_LANGUAGE }).catch(() => null),
       ]);
 
       setHome(homeResponse.data);
+      setEcosystems(ecosystemsResponse.data);
       setLines(linesResponse.data);
       setRoadmap(roadmapResponse?.data ?? null);
       setLoad('ready');
     } catch (error) {
       setLoad(error instanceof NetworkError ? 'unreachable' : 'failed');
     }
-  }, [client, domain, ecosystem]);
+  }, [client, area, ecosystem, line]);
 
   useEffect(() => {
     if (session === 'signed-in') void fetchAll();
@@ -88,7 +96,7 @@ function Home() {
         <p className={styles.crumbs}>
           {roadmap ? (
             <>
-              {roadmap.domainName} / <b>{roadmap.ecosystemName} Ekosistemi</b>
+              {roadmap.lineName} / <b>{roadmap.ecosystemName} Ekosistemi</b>
               {current ? ` / ${LEVEL_LABEL[current.level] ?? current.level} Basamağı` : ''}
             </>
           ) : (
@@ -112,22 +120,22 @@ function Home() {
       </div>
 
       <div className={styles.ecoTabs} role="tablist" aria-label="Ekosistemler">
-        {lines.map((line) => {
-          const active = line.key === ecosystem;
-          const query = new URLSearchParams({ domain, eco: line.key });
+        {ecosystems.map((tab) => {
+          const active = tab.key === ecosystem;
+          const query = new URLSearchParams({ area, line, eco: tab.key });
 
           // An ecosystem the product has not written yet is a real tab that says so — not a hidden one, and
           // not a disabled one either: `disabled` drops it out of the tab order and gives a keyboard user
           // no way to find out WHY it does nothing.
-          if (!line.isAvailable) {
+          if (!tab.isAvailable) {
             return (
               <span
-                key={line.key}
+                key={tab.key}
                 className={`${styles.eco} ${styles.ecoSoon}`}
-                title="Bu hat henüz yazılmadı"
+                title="Bu ekosistem henüz yazılmadı"
               >
-                <i className={styles.ldot} style={{ background: lineColor(line.key), opacity: 0.5 }} />
-                {line.name}
+                <i className={styles.ldot} style={{ background: dark.borderStrong }} />
+                {tab.name}
                 <span className={styles.soon}>YAKINDA</span>
               </span>
             );
@@ -135,14 +143,16 @@ function Home() {
 
           return (
             <Link
-              key={line.key}
+              key={tab.key}
               href={`/learn?${query}`}
               role="tab"
               aria-selected={active}
               className={`${styles.eco} ${active ? styles.ecoActive : ''}`}
             >
-              <i className={styles.ldot} style={{ background: lineColor(line.key) }} />
-              {line.name}
+              {/* The dot is the LINE's colour, not the ecosystem's — the ecosystem swaps the whole network,
+                  so every tab shows the line you are currently on, rebuilt (ADR-0027). */}
+              <i className={styles.ldot} style={{ background: lineColor(roadmap?.lineColor) }} />
+              {tab.name}
             </Link>
           );
         })}
@@ -193,7 +203,7 @@ function Home() {
                   Devam et — ~{home.continue.estimatedReadingMinutes} dk
                 </Link>
                 <Link
-                  href={`/learn?domain=${domain}&eco=${ecosystem}#harita`}
+                  href={`/learn?area=${area}&line=${line}&eco=${ecosystem}#harita`}
                   className={`${styles.btn} ${styles.btnGhost}`}
                 >
                   Konuyu değiştir
@@ -262,16 +272,25 @@ function Home() {
 
           <section className={styles.mapPanel} id="harita">
             <div className={styles.mapHead}>
-              <h2>Yol Haritan — {roadmap?.domainName ?? 'Hat'} Hattı</h2>
-              <p className={styles.mapSub}>Her hat bir ekosistem, her durak bir konu. Durağa tıklayıp git.</p>
+              <h2>Yol Haritan — {roadmap?.lineName ?? 'Hat'} Hattı</h2>
+              <p className={styles.mapSub}>
+                Her hat bir bölüm, her durak bir konu. Ekosistem sekmesi ağın tamamını değiştirir.
+              </p>
             </div>
 
+            {/*
+              The legend is the AREA's lines, not the ecosystems (ADR-0027).
+
+              It used to list .NET / Java / Python because lines WERE ecosystems. They are not: the tab strip
+              above swaps the whole network, and these eight routes are what the network is made of. The
+              colours come from the server — one value, read by the rail, the legend and the stroke alike.
+            */}
             <ul className={styles.legend}>
-              {lines.map((line) => (
-                <li key={line.key} className={line.key === ecosystem ? '' : styles.legendOff}>
-                  <i style={{ background: lineColor(line.key) }} />
-                  {line.name}
-                  {line.key === ecosystem ? ' Hattı' : ''}
+              {lines.map((entry) => (
+                <li key={entry.key} className={entry.key === line ? '' : styles.legendOff}>
+                  <i style={{ background: lineColor(entry.color) }} />
+                  {entry.name}
+                  {entry.key === line ? ' Hattı' : ''}
                 </li>
               ))}
             </ul>
@@ -307,7 +326,7 @@ function Home() {
                     {roadmap?.ecosystemName} Hattı · {LEVEL_LABEL[nextStation.level] ?? nextStation.level}{' '}
                     basamağı · tahmini {nextStation.estimatedReadingMinutes} dk
                     {nextStation.transfer
-                      ? ` · ${nextStation.transfer.domainName} hattıyla aktarma noktası ⇄`
+                      ? ` · ${nextStation.transfer.areaName} hattıyla aktarma noktası ⇄`
                       : ''}
                   </span>
                 </div>
@@ -328,7 +347,7 @@ function Home() {
                 {home.next.slice(0, 3).map((topic) => (
                   <Link key={topic.slug} href={`/topics/${topic.slug}`} className={styles.topic}>
                     <span className={styles.tag}>
-                      {LEVEL_LABEL[topic.level] ?? topic.level} · {topic.domainName}
+                      {LEVEL_LABEL[topic.level] ?? topic.level} · {topic.lineName}
                     </span>
                     <h3>{topic.title}</h3>
                     <p className={styles.topicBody}>Neden var olduğundan başlayarak.</p>

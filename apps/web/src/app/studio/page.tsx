@@ -128,12 +128,12 @@ export default function StudioTopicsPage() {
                   </Link>
                   <code className={styles.rowKey}>{topic.stableKey}</code>
                 </td>
-                <td>{topic.domainName}</td>
+                <td>{topic.lineName}</td>
                 <td>
-                  {/* A dash, not a blank. Empty is normal — a topic with no thread (ADR-0023) — but a blank
+                  {/* A dash, not a blank. Empty is normal — a stop in no neighbourhood (ADR-0027) — but a blank
                       cell reads as missing data. */}
-                  {topic.subAreaName ? (
-                    <span className={styles.chip}>{topic.subAreaName}</span>
+                  {topic.scopeName ? (
+                    <span className={styles.chip}>{topic.scopeName}</span>
                   ) : (
                     <span className={styles.hint}>—</span>
                   )}

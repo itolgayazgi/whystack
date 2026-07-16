@@ -150,7 +150,7 @@ export default function TopicPage() {
         {/* The line you came in on. Until the roadmap engine exists there is no line to return to, so this
             says where it actually goes — the catalogue — rather than promising a screen that is not built. */}
         <Link href="/learn" className={styles.back}>
-          ← <b>{topic.domainName}</b> kataloğu
+          ← <b>{topic.lineName}</b> kataloğu
         </Link>
 
         <p className={styles.outlineLabel}>Bu durağın haritası</p>
@@ -171,7 +171,7 @@ export default function TopicPage() {
       <main className={styles.content}>
         <header className={styles.head}>
           <span className={styles.lineChip}>
-            {topic.domainName} · {topic.level}
+            {topic.lineName} · {topic.level}
           </span>
 
           <h1 className={styles.title}>{topic.title}</h1>
@@ -226,10 +226,10 @@ export default function TopicPage() {
           <span>Checkpoint</span>
           <b>{checkpoints === 0 ? '—' : `${checkpoints} soru`}</b>
         </div>
-        {topic.subAreaName ? (
+        {topic.scopeName ? (
           <div className={styles.kv}>
             <span>Tema</span>
-            <b>{topic.subAreaName}</b>
+            <b>{topic.scopeName}</b>
           </div>
         ) : null}
         {topic.supportedVersions.length > 0 ? (

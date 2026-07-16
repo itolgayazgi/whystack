@@ -109,8 +109,8 @@ export interface StudioTopic {
   title: string;
   lineName: string;
 
-  /** The theme's name, or null. A topic with no thread shows a dash — omission would read as "fine". */
-  subAreaName: string | null;
+  /** The scope's name, or null. A stop in no neighbourhood shows a dash — omission would read as "fine". */
+  scopeName: string | null;
 
   level: SkillLevel;
   status: ContentStatus;

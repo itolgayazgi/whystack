@@ -27,10 +27,10 @@ const PATHS: Record<string, React.ReactNode> = {
 /** A neutral marker for a domain nobody drew yet. It holds the row's shape rather than vanishing. */
 const FALLBACK = <circle cx="12" cy="12" r="8" />;
 
-export function DomainIcon({ domainKey }: { domainKey: string }) {
+export function AreaIcon({ areaKey }: { areaKey: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      {PATHS[domainKey] ?? FALLBACK}
+      {PATHS[areaKey] ?? FALLBACK}
     </svg>
   );
 }

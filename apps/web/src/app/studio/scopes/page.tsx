@@ -1,6 +1,6 @@
 'use client';
 
-import { ApiError, authoringApi, type EditableSubArea, NetworkError } from '@whystack/api-client';
+import { ApiError, authoringApi, type EditableScope, NetworkError } from '@whystack/api-client';
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { useSession } from '@/lib/session';
 import styles from '../studio.module.css';
@@ -35,7 +35,7 @@ function toKey(name: string): string {
 export default function SubAreasPage() {
   const { client, status: session } = useSession();
 
-  const [subAreas, setSubAreas] = useState<EditableSubArea[]>([]);
+  const [scopes, setSubAreas] = useState<EditableScope[]>([]);
   const [load, setLoad] = useState<'loading' | 'ready' | 'unreachable' | 'failed'>('loading');
   const [failure, setFailure] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -48,7 +48,7 @@ export default function SubAreasPage() {
     setLoad('loading');
 
     try {
-      const { data } = await authoringApi.subAreas(client);
+      const { data } = await authoringApi.scopes(client);
       setSubAreas(data);
       setLoad('ready');
     } catch (error) {
@@ -94,12 +94,12 @@ export default function SubAreasPage() {
     }
   }
 
-  async function remove(subArea: EditableSubArea) {
+  async function remove(scope: EditableScope) {
     setBusy(true);
     setFailure(undefined);
 
     try {
-      await authoringApi.deleteSubArea(client, subArea.id);
+      await authoringApi.deleteSubArea(client, scope.id);
       await fetchSubAreas();
     } catch (error) {
       // The 409 is the whole point: a theme in use is not deleted, and the message says how many topics
@@ -186,14 +186,14 @@ export default function SubAreasPage() {
         </div>
       ) : null}
 
-      {load === 'ready' && subAreas.length === 0 ? (
+      {load === 'ready' && scopes.length === 0 ? (
         <div className={styles.empty}>
           <p>Henüz tema yok.</p>
           <p>İlk temayı ekle — sonra bir konu açarken künyeden seçebilirsin.</p>
         </div>
       ) : null}
 
-      {load === 'ready' && subAreas.length > 0 ? (
+      {load === 'ready' && scopes.length > 0 ? (
         <table className={styles.table}>
           <thead>
             <tr>
@@ -204,20 +204,16 @@ export default function SubAreasPage() {
             </tr>
           </thead>
           <tbody>
-            {subAreas.map((subArea) => (
-              <tr key={subArea.id}>
+            {scopes.map((scope) => (
+              <tr key={scope.id}>
                 <td>
-                  <span className={styles.rowTitle}>{subArea.name}</span>
+                  <span className={styles.rowTitle}>{scope.name}</span>
                 </td>
                 <td>
-                  <code className={styles.rowKey}>{subArea.key}</code>
+                  <code className={styles.rowKey}>{scope.key}</code>
                 </td>
                 <td>
-                  {subArea.topicCount > 0 ? (
-                    `${subArea.topicCount} konu`
-                  ) : (
-                    <span className={styles.hint}>—</span>
-                  )}
+                  {scope.topicCount > 0 ? `${scope.topicCount} konu` : <span className={styles.hint}>—</span>}
                 </td>
                 <td>
                   <button
@@ -226,21 +222,21 @@ export default function SubAreasPage() {
                     disabled={busy}
                     // Disabled when in use, and the title says why — the server would refuse it anyway, but a
                     // button that visibly cannot be pressed beats a button that fails when pressed.
-                    aria-disabled={subArea.topicCount > 0}
+                    aria-disabled={scope.topicCount > 0}
                     title={
-                      subArea.topicCount > 0
-                        ? `${subArea.topicCount} konu bu temayı kullanıyor. Önce onları başka bir temaya taşı.`
+                      scope.topicCount > 0
+                        ? `${scope.topicCount} konu bu temayı kullanıyor. Önce onları başka bir temaya taşı.`
                         : undefined
                     }
                     onClick={() => {
-                      if (subArea.topicCount > 0) {
+                      if (scope.topicCount > 0) {
                         setFailure(
-                          `"${subArea.name}" ${subArea.topicCount} konu tarafından kullanılıyor. ` +
+                          `"${scope.name}" ${scope.topicCount} konu tarafından kullanılıyor. ` +
                             'Silinirse o konular sessizce temasız kalırdı — önce onları taşı.',
                         );
                         return;
                       }
-                      void remove(subArea);
+                      void remove(scope);
                     }}
                   >
                     Sil
