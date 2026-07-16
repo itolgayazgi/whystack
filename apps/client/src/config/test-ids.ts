@@ -45,7 +45,9 @@ export const testId = {
   },
 
   nav: {
-    learn: 'nav-learn',
-    settings: 'nav-settings',
+    today: 'nav-today',
+    line: 'nav-line',
+    explore: 'nav-explore',
+    profile: 'nav-profile',
   },
 } as const;

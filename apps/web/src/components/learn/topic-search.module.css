@@ -5,7 +5,7 @@
 .input {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   padding: 8px 14px;
   font-size: 13px;
   color: var(--color-text-primary);
@@ -31,7 +31,7 @@
   overflow-y: auto;
   background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   padding: 4px;
   z-index: 30;
   display: flex;
@@ -40,7 +40,7 @@
 
 .result {
   padding: 10px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   text-decoration: none;
   display: flex;
   flex-direction: column;

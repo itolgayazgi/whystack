@@ -20,14 +20,14 @@
   align-self: start;
   max-height: 100vh;
   overflow-y: auto;
-  padding: var(--space-4) 0;
+  padding: var(--space-16) 0;
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
 }
 
 .back {
   display: block;
-  padding: 0 var(--space-4) var(--space-4);
+  padding: 0 var(--space-16) var(--space-16);
   font-size: 12.5px;
   color: var(--color-text-secondary);
   text-decoration: none;
@@ -38,7 +38,7 @@
 }
 
 .outlineLabel {
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-8) var(--space-16);
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -48,9 +48,9 @@
 .outItem {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-8);
   width: 100%;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-8) var(--space-16);
   background: none;
   border: none;
   border-left: 3px solid transparent;
@@ -90,20 +90,20 @@
 /* ── Middle: the flow ────────────────────────────────────────────────────────────────────────────── */
 
 .content {
-  padding: var(--space-6) var(--space-6) var(--space-8);
+  padding: var(--space-24) var(--space-24) var(--space-8);
   max-width: 760px;
 }
 
 .head {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-24);
 }
 
 .lineChip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-  padding: 4px var(--space-3);
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+  padding: 4px var(--space-12);
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-small);
@@ -123,7 +123,7 @@
 }
 
 .title {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-8);
   font-family: var(--font-display);
   font-size: 30px;
   font-weight: 700;
@@ -134,7 +134,7 @@
 .meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
+  gap: var(--space-16);
   font-size: 12.5px;
   color: var(--color-text-muted);
 }
@@ -147,8 +147,8 @@
 /* The language fallback, said out loud. A reader who asked for Turkish and got English must be told
    (CLAUDE.md §1.7) — never a silent swap. */
 .fallback {
-  margin-bottom: var(--space-4);
-  padding: var(--space-3);
+  margin-bottom: var(--space-16);
+  padding: var(--space-12);
   border: 1px solid var(--color-warning);
   border-radius: var(--radius-small);
   font-size: 13px;
@@ -164,13 +164,13 @@
   align-self: start;
   max-height: 100vh;
   overflow-y: auto;
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-20) var(--space-16);
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
 }
 
 .railLabel {
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-12);
   font-family: var(--font-display);
   font-size: 12px;
   letter-spacing: 0.12em;
@@ -181,8 +181,8 @@
 .kv {
   display: flex;
   justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
+  gap: var(--space-8);
+  padding: var(--space-8) 0;
   border-bottom: 1px dashed var(--color-border);
   font-size: 12.5px;
   color: var(--color-text-secondary);
@@ -194,12 +194,12 @@
 }
 
 .links {
-  margin-top: var(--space-5);
+  margin-top: var(--space-20);
 }
 
 .link {
   display: block;
-  padding: var(--space-2) 0;
+  padding: var(--space-8) 0;
   font-size: 13px;
   color: var(--color-text-secondary);
   text-decoration: none;
@@ -212,11 +212,11 @@
 .termChips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-4);
 }
 
 .termChip {
-  padding: 5px var(--space-2);
+  padding: 5px var(--space-8);
   background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
@@ -228,12 +228,12 @@
 .ecoSwitch {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
+  gap: var(--space-4);
+  margin-top: var(--space-8);
 }
 
 .eco {
-  padding: 4px var(--space-2);
+  padding: 4px var(--space-8);
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
@@ -251,7 +251,7 @@
 /* ── States ──────────────────────────────────────────────────────────────────────────────────────── */
 
 .state {
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-8) var(--space-24);
   max-width: 640px;
   margin: 0 auto;
   font-family: var(--font-ui);
@@ -260,7 +260,7 @@
 }
 
 .stateTitle {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-8);
   font-family: var(--font-display);
   font-size: 22px;
   color: var(--color-text-primary);
@@ -269,7 +269,7 @@
 /* Skeletons, not a blank page: the shape arrives before the words do. */
 .skeleton {
   height: 14px;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-8);
   border-radius: var(--radius-small);
   background: var(--color-surface-elevated);
   animation: pulse 1.4s ease-in-out infinite;
@@ -278,7 +278,7 @@
 .skeletonTitle {
   height: 30px;
   width: 60%;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-16);
 }
 
 @keyframes pulse {
@@ -316,7 +316,7 @@
   }
 
   .content {
-    padding: var(--space-4);
+    padding: var(--space-16);
   }
 
   .title {

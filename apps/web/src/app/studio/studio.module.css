@@ -15,8 +15,8 @@
 .rail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-4) var(--space-3);
+  gap: var(--space-4);
+  padding: var(--space-16) var(--space-12);
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
 }
@@ -24,9 +24,9 @@
 .railBrand {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
-  margin-bottom: var(--space-5);
-  padding: 0 var(--space-2);
+  gap: var(--space-8);
+  margin-bottom: var(--space-20);
+  padding: 0 var(--space-8);
 }
 
 .railBrandLabel {
@@ -38,7 +38,7 @@
 }
 
 .railLink {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-8) var(--space-12);
   border-radius: var(--radius-small);
   font-family: var(--font-ui);
   font-size: 14px;
@@ -58,7 +58,7 @@
 
 .railFoot {
   margin-top: auto;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-8) var(--space-12);
   border-top: 1px solid var(--color-border);
 }
 
@@ -75,15 +75,15 @@
 
 .main {
   min-width: 0;
-  padding: var(--space-6);
+  padding: var(--space-24);
 }
 
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-5);
+  gap: var(--space-16);
+  margin-bottom: var(--space-20);
 }
 
 .title {
@@ -93,7 +93,7 @@
 }
 
 .subtitle {
-  margin-top: var(--space-1);
+  margin-top: var(--space-4);
   font-family: var(--font-ui);
   font-size: 14px;
   color: var(--color-text-muted);
@@ -110,7 +110,7 @@
 }
 
 .table th {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-8) var(--space-12);
   text-align: left;
   font-size: 12px;
   letter-spacing: 0.06em;
@@ -121,7 +121,7 @@
 }
 
 .table td {
-  padding: var(--space-3);
+  padding: var(--space-12);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text-secondary);
   vertical-align: middle;
@@ -148,11 +148,11 @@
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-4);
 }
 
 .chip {
-  padding: 2px var(--space-2);
+  padding: 2px var(--space-8);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
   font-size: 11px;
@@ -167,7 +167,7 @@
 /* Status is the topic's position in the editorial lifecycle — it has to be readable at a glance. */
 .status {
   display: inline-block;
-  padding: 2px var(--space-2);
+  padding: 2px var(--space-8);
   border-radius: var(--radius-small);
   font-size: 11px;
   letter-spacing: 0.04em;
@@ -199,14 +199,14 @@
 
 .actions {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-8);
   align-items: center;
 }
 
 .primary,
 .secondary,
 .ghost {
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-8) var(--space-16);
   border-radius: var(--radius-small);
   font-family: var(--font-ui);
   font-size: 14px;
@@ -242,7 +242,7 @@
   background: transparent;
   color: var(--color-text-muted);
   border-color: transparent;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-4) var(--space-8);
 }
 
 .ghost:hover {
@@ -254,13 +254,13 @@
 .editor {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: var(--space-6);
+  gap: var(--space-24);
   align-items: start;
 }
 
 .panel {
-  margin-bottom: var(--space-6);
-  padding: var(--space-4);
+  margin-bottom: var(--space-24);
+  padding: var(--space-16);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
@@ -270,27 +270,27 @@
   font-family: var(--font-ui);
   font-size: var(--text-section-title);
   color: var(--color-text-primary);
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-4);
 }
 
 .panelHint {
   font-family: var(--font-ui);
   font-size: 13px;
   color: var(--color-text-muted);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-16);
   max-width: 72ch;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-3);
+  gap: var(--space-12);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-4);
 }
 
 .label {
@@ -308,7 +308,7 @@
 .input,
 .select,
 .textarea {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-8) var(--space-12);
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
@@ -338,15 +338,15 @@
 .bilingual {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
 }
 
 .sectionHead {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
 }
 
 .sectionName {
@@ -372,8 +372,8 @@
 }
 
 .implementation {
-  padding: var(--space-3);
-  margin-bottom: var(--space-4);
+  padding: var(--space-12);
+  margin-bottom: var(--space-16);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
   background: var(--color-surface-muted);
@@ -383,31 +383,31 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
 }
 
 .relationship {
   display: grid;
   grid-template-columns: 160px 1fr auto;
-  gap: var(--space-2);
+  gap: var(--space-8);
   align-items: center;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-8);
 }
 
 /* ── The problems rail — the editor's true companion ─────────────────────────────────────────────── */
 
 .rail2 {
   position: sticky;
-  top: var(--space-4);
-  padding: var(--space-4);
+  top: var(--space-16);
+  padding: var(--space-16);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
 }
 
 .problem {
-  padding: var(--space-3) 0;
+  padding: var(--space-12) 0;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -438,8 +438,8 @@
 }
 
 .notice {
-  padding: var(--space-3);
-  margin-bottom: var(--space-4);
+  padding: var(--space-12);
+  margin-bottom: var(--space-16);
   border-radius: var(--radius-small);
   border: 1px solid var(--color-error);
   color: var(--color-error);
@@ -454,7 +454,7 @@
 }
 
 .empty {
-  padding: var(--space-6);
+  padding: var(--space-24);
   text-align: center;
   font-family: var(--font-ui);
   color: var(--color-text-muted);

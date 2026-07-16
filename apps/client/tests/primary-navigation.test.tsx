@@ -46,25 +46,25 @@ describe('PrimaryNavigation', () => {
     const selected = screen.getAllByRole('tab').filter((el) => el.getAttribute('aria-selected') === 'true');
 
     expect(selected).toHaveLength(1);
-    expect(selected[0]?.textContent).toContain('Settings');
+    expect(selected[0]?.textContent).toContain('Profile');
   });
 
-  it('does not mark Learn as current while the learner is in Settings', () => {
+  it('does not mark Today as current while the learner is in Profile', () => {
     routerState.pathname = '/settings';
     renderWithProviders(<PrimaryNavigation />, VIEWPORT.compact);
 
-    const learn = screen.getAllByRole('tab').find((el) => el.textContent?.includes('Learn'));
+    const learn = screen.getAllByRole('tab').find((el) => el.textContent?.includes('Today'));
 
     expect(learn?.getAttribute('aria-selected')).toBe('false');
   });
 
-  it('marks Learn as current at the root', () => {
+  it('marks Today as current at the root', () => {
     routerState.pathname = '/';
     renderWithProviders(<PrimaryNavigation />, VIEWPORT.compact);
 
     const selected = screen.getAllByRole('tab').filter((el) => el.getAttribute('aria-selected') === 'true');
 
     expect(selected).toHaveLength(1);
-    expect(selected[0]?.textContent).toContain('Learn');
+    expect(selected[0]?.textContent).toContain('Today');
   });
 });

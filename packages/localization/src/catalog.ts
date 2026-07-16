@@ -21,8 +21,30 @@ export interface Messages {
   'empty.generic.title': string;
   'empty.generic.body': string;
 
-  'nav.learn': string;
-  'nav.settings': string;
+  'nav.today': string;
+  'nav.line': string;
+  'nav.explore': string;
+  'nav.profile': string;
+
+  'home.greeting': string;
+  'home.streak': string;
+  'home.continue.kicker': string;
+  'home.continue.empty.title': string;
+  'home.continue.empty.body': string;
+  'home.continue.go': string;
+  'home.line.mine': string;
+  'home.station.here': string;
+  'home.station.done': string;
+  'home.station.next': string;
+  'home.station.ahead': string;
+  'home.transfer': string;
+  'home.empty.line': string;
+
+  'explore.title': string;
+  'explore.placeholder': string;
+  'explore.hint': string;
+  'explore.empty': string;
+  'explore.failed': string;
 
   'settings.title': string;
 
@@ -248,8 +270,30 @@ const en: Messages = {
   'empty.generic.title': 'Nothing here yet',
   'empty.generic.body': 'There is nothing to show on this screen at the moment.',
 
-  'nav.learn': 'Learn',
-  'nav.settings': 'Settings',
+  'nav.today': 'Today',
+  'nav.line': 'My line',
+  'nav.explore': 'Explore',
+  'nav.profile': 'Profile',
+
+  'home.greeting': 'Welcome back,',
+  'home.streak': '{days} days',
+  'home.continue.kicker': 'You are in the middle of',
+  'home.continue.empty.title': 'You have not started a topic yet.',
+  'home.continue.empty.body': 'We do not impose an order — start at whichever stop you are curious about.',
+  'home.continue.go': 'Continue',
+  'home.line.mine': '{ecosystem} line',
+  'home.station.here': 'YOU ARE HERE',
+  'home.station.done': 'Done',
+  'home.station.next': 'Next stop',
+  'home.station.ahead': 'Further along',
+  'home.transfer': 'Transfer: this stop meets “{topic}” on the {domain} line.',
+  'home.empty.line': 'No published stops on this line yet.',
+
+  'explore.title': 'Explore',
+  'explore.placeholder': 'Search a topic or concept…',
+  'explore.hint': 'Type at least three letters.',
+  'explore.empty': 'Nothing for “{term}”. An unreviewed draft does not show up in search either.',
+  'explore.failed': 'The search could not run. Check your connection.',
 
   'settings.title': 'Settings',
 
@@ -465,8 +509,30 @@ const tr: Messages = {
   'empty.generic.title': 'Burada henüz bir şey yok',
   'empty.generic.body': 'Bu ekranda şu an gösterilecek bir şey bulunmuyor.',
 
-  'nav.learn': 'Öğren',
-  'nav.settings': 'Ayarlar',
+  'nav.today': 'Bugün',
+  'nav.line': 'Hattım',
+  'nav.explore': 'Keşfet',
+  'nav.profile': 'Profil',
+
+  'home.greeting': 'Tekrar hoş geldin,',
+  'home.streak': '{days} gün',
+  'home.continue.kicker': 'Devam ediyorsun',
+  'home.continue.empty.title': 'Henüz bir konuya başlamadın.',
+  'home.continue.empty.body': 'Sıra dayatmıyoruz — merak ettiğin duraktan başla.',
+  'home.continue.go': 'Devam et',
+  'home.line.mine': '{ecosystem} Hattın',
+  'home.station.here': 'BURADASIN',
+  'home.station.done': 'Bitti',
+  'home.station.next': 'Sıradaki durak',
+  'home.station.ahead': 'İleride',
+  'home.transfer': 'Aktarma: Bu durak, {domain} hattındaki “{topic}” ile kesişiyor.',
+  'home.empty.line': 'Bu hatta henüz yayınlanmış durak yok.',
+
+  'explore.title': 'Keşfet',
+  'explore.placeholder': 'Konu veya kavram ara…',
+  'explore.hint': 'En az üç harf yaz.',
+  'explore.empty': '“{term}” için bir şey yok. İncelemeden geçmemiş bir taslak aramada da çıkmaz.',
+  'explore.failed': 'Arama yapılamadı. Bağlantını kontrol et.',
 
   'settings.title': 'Ayarlar',
 

@@ -10,6 +10,7 @@ import { PrimaryNavigation, useNavigationPlacement } from '../components/navigat
 import { SessionGate } from '../components/session-gate';
 import { fontAssets } from '../config/fonts';
 import { AuthProvider } from '../state/auth';
+import { HomeProvider } from '../state/home';
 import { LanguageProvider } from '../state/language';
 import { OnboardingProvider } from '../state/onboarding';
 import { PreferencesProvider } from '../state/preferences';
@@ -93,9 +94,15 @@ export default function RootLayout() {
                     request would go out in English and the Turkish reader would see the wrong titles
                     for as long as it took the preferences to land. */}
                   <TopicsProvider>
-                    <SessionGate>
-                      <Shell />
-                    </SessionGate>
+                    {/* HomeProvider sits here for the same reason TopicsProvider does: the streak, the
+                      continue card and the line all arrive in the reader's CONTENT language, and that
+                      language is a preference. Above PreferencesProvider, the first request would leave in
+                      English and the Turkish reader would watch their own line re-title itself. */}
+                    <HomeProvider>
+                      <SessionGate>
+                        <Shell />
+                      </SessionGate>
+                    </HomeProvider>
                   </TopicsProvider>
                 </PreferencesProvider>
               </OnboardingProvider>

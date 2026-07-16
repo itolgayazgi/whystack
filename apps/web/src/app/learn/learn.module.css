@@ -121,7 +121,7 @@
 .who:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 3px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
 }
 
 .avatar {
@@ -156,7 +156,7 @@
   right: 0;
   background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   padding: 4px;
   display: flex;
   flex-direction: column;
@@ -166,7 +166,7 @@
 .item {
   padding: 9px 12px;
   font-size: 13px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   background: none;
   border: 0;
   text-align: left;
@@ -299,7 +299,7 @@
   font-size: 9px;
   background: var(--color-surface-elevated);
   color: var(--color-text-muted);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   padding: 2px 5px;
   letter-spacing: 0.06em;
   font-family: var(--font-ui);
@@ -375,7 +375,7 @@
   color: var(--color-background);
   font-weight: 700;
   font-size: 13.5px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   padding: 10px 20px;
   cursor: pointer;
   border: 1px solid var(--color-accent);
@@ -557,7 +557,7 @@
 
 .mapBox {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-large);
   background: repeating-linear-gradient(
     90deg,
     transparent 0 24.75%,
@@ -572,7 +572,7 @@
   background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
   border-left: 4px solid var(--color-accent);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   padding: 13px 16px;
   display: flex;
   justify-content: space-between;
@@ -641,7 +641,7 @@
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   padding: 3px 8px;
   margin-bottom: 12px;
   font-weight: 600;
@@ -678,7 +678,7 @@
   background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
   border-left: 3px solid var(--color-warning);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   padding: 12px 14px;
   font-size: 13px;
   color: var(--color-text-secondary);
