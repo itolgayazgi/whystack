@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@expo-google-fonts/chakra-petch": "^0.4.1",
     "@expo-google-fonts/inter": "^0.4.1",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@expo-google-fonts/literata": "^0.4.1",

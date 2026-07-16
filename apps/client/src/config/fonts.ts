@@ -1,11 +1,15 @@
 import {
+  ChakraPetch_500Medium,
+  ChakraPetch_600SemiBold,
+  ChakraPetch_700Bold,
+} from '@expo-google-fonts/chakra-petch';
+import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
-import { Literata_400Regular } from '@expo-google-fonts/literata';
 import type { FontRole } from '@whystack/theme';
 
 // React Native does NOT synthesise weight for custom fonts. Asking for fontWeight: '600' on a family
@@ -13,7 +17,9 @@ import type { FontRole } from '@whystack/theme';
 // So every weight the token system uses must be loaded as its own family, and resolved explicitly here.
 
 export const fontAssets = {
-  Literata_400Regular,
+  ChakraPetch_500Medium,
+  ChakraPetch_600SemiBold,
+  ChakraPetch_700Bold,
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
@@ -22,7 +28,22 @@ export const fontAssets = {
 } as const;
 
 const FAMILIES: Record<FontRole, Record<number, keyof typeof fontAssets>> = {
-  body: { 400: 'Literata_400Regular' },
+  // The brand voice: titles, the wordmark, section labels. Only the weights the designs actually use.
+  display: {
+    500: 'ChakraPetch_500Medium',
+    600: 'ChakraPetch_600SemiBold',
+    700: 'ChakraPetch_700Bold',
+  },
+
+  // Reading text is Inter, not a serif. The approved designs read in Inter throughout, and a reading font
+  // nothing is designed against is a font that is never seen (this replaces Literata — ADR-0013's family
+  // choice, superseded by the designs).
+  body: {
+    400: 'Inter_400Regular',
+    500: 'Inter_500Medium',
+    600: 'Inter_600SemiBold',
+    700: 'Inter_700Bold',
+  },
   ui: {
     400: 'Inter_400Regular',
     500: 'Inter_500Medium',

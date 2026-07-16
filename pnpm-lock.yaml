@@ -39,6 +39,9 @@ importers:
 
   apps/client:
     dependencies:
+      '@expo-google-fonts/chakra-petch':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@expo-google-fonts/inter':
         specifier: ^0.4.1
         version: 0.4.2
@@ -1131,6 +1134,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@expo-google-fonts/chakra-petch@0.4.1':
+    resolution: {integrity: sha512-a0Lf+kHUO1UrCWTylvfssuoIpyoU+4ey8HoHmu0XSutFbq2FqkAGYChaiaHksQqayqv+X2R7cUKcBY+4zFqr1w==}
 
   '@expo-google-fonts/inter@0.4.2':
     resolution: {integrity: sha512-syfiImMaDmq7cFi0of+waE2M4uSCyd16zgyWxdPOY7fN2VBmSLKEzkfbZgeOjJq61kSqPBNNtXjggiQiSD6gMQ==}
@@ -6074,6 +6080,8 @@ snapshots:
     optional: true
 
   '@exodus/bytes@1.15.1': {}
+
+  '@expo-google-fonts/chakra-petch@0.4.1': {}
 
   '@expo-google-fonts/inter@0.4.2': {}
 

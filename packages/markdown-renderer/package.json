@@ -9,7 +9,8 @@
   "//exports": "Two entry points, and the split is the design. `.` is the PARSER: pure TypeScript, no React, no React Native — so the Astro site (which ships zero JavaScript) can consume the same tree at build time. `./native` is the renderer, and it is the only half that knows what a View is.",
   "exports": {
     ".": "./src/index.ts",
-    "./native": "./src/renderer/markdown-view.tsx"
+    "./native": "./src/renderer/markdown-view.tsx",
+    "./web": "./src/renderer/markdown-html.tsx"
   },
   "scripts": {
     "test": "vitest run",

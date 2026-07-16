@@ -2,20 +2,25 @@
 
 import readingFontScaleTokens from './reading-font-scale.json';
 
-export type FontRole = 'body' | 'ui' | 'code';
+export type FontRole = 'display' | 'body' | 'ui' | 'code';
 
 /**
  * Family names as registered with the platform. On native these must match the names the font
  * files are loaded under; on web they must match the @font-face family.
+ *
+ * <b>`display` is the brand voice</b> — titles, the wordmark, section labels. It carries the identity the
+ * approved designs are built on; `ui` and `body` stay out of its way and do the reading.
  */
 export const fontFamily: Record<FontRole, string> = {
-  body: 'Literata',
+  display: 'Chakra Petch',
+  body: 'Inter',
   ui: 'Inter',
-  code: 'JetBrainsMono',
+  code: 'JetBrains Mono',
 };
 
 export const fontFallback: Record<FontRole, string> = {
-  body: "Georgia, 'Times New Roman', serif",
+  display: "'Chakra Petch', system-ui, sans-serif",
+  body: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   ui: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   code: "ui-monospace, 'SF Mono', Consolas, monospace",
 };

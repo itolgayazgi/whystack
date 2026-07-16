@@ -1,8 +1,38 @@
 import type { Metadata } from 'next';
+import { Chakra_Petch, Inter, JetBrains_Mono } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { SessionProvider } from '@/lib/session';
 import { tokensCss } from '@/styles/tokens';
 import './globals.css';
+
+/*
+  Self-hosted at build time by next/font — not a <link> to Google.
+
+  A font fetched from fonts.googleapis.com is a third-party render-blocking request on every first paint,
+  and it tells Google who is reading. next/font downloads the files at build and serves them from our own
+  origin, with `display: swap` so text is never invisible while a font loads.
+
+  Only the weights the designs use. Every extra weight is a file every reader downloads to never see.
+*/
+const display = Chakra_Petch({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-chakra-petch',
+  display: 'swap',
+});
+
+// latin-ext carries the Turkish characters — ş, ğ, ı, İ. Without it the interface falls back mid-word.
+const sans = Inter({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const mono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://whystack.dev'),
@@ -21,7 +51,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
       <head>
         {/*
           The tokens are INLINED, not fetched. A stylesheet in <head> is a render-blocking round trip and

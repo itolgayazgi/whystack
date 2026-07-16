@@ -23,9 +23,10 @@ export function tokensCss(): string {
 :root {
 ${paletteToCss('light')}
 
-  --font-body: ${fontFamily.body}, ${fontFallback.body};
-  --font-ui: ${fontFamily.ui}, ${fontFallback.ui};
-  --font-code: ${fontFamily.code}, ${fontFallback.code};
+  --font-display: var(--font-chakra-petch), ${fontFallback.display};
+  --font-body: var(--font-inter), ${fontFallback.body};
+  --font-ui: var(--font-inter), ${fontFallback.ui};
+  --font-code: var(--font-jetbrains-mono), ${fontFallback.code};
 
 ${Object.entries(space)
   .map(([step, value]) => `  --space-${step}: ${value}px;`)
