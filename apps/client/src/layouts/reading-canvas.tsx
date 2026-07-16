@@ -1,6 +1,6 @@
 import { space } from '@whystack/theme';
 import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../state/theme';
 
@@ -19,9 +19,18 @@ interface ReadingCanvasProps {
    * screen reader's attention.
    */
   aside?: ReactNode;
+
+  /**
+   * Where the reader has scrolled to.
+   *
+   * The canvas owns the ScrollView, so it is the only thing that can report this — a screen that wanted its
+   * own would have to nest a second scroller inside this one, which on a phone means two things that scroll
+   * and a reader who cannot predict which one their thumb is moving.
+   */
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
-export function ReadingCanvas({ testID, children, aside }: ReadingCanvasProps) {
+export function ReadingCanvas({ testID, children, aside, onScroll }: ReadingCanvasProps) {
   const { color, gutter, layoutMode, readingMaxWidth } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -30,6 +39,10 @@ export function ReadingCanvas({ testID, children, aside }: ReadingCanvasProps) {
   return (
     <ScrollView
       testID={testID}
+      onScroll={onScroll}
+      // 16ms would be a callback per frame. 100 is four or five a second: enough to know which block the
+      // reader is in, and not enough to spend the phone's battery deciding.
+      scrollEventThrottle={100}
       style={{ backgroundColor: color.background }}
       contentContainerStyle={{
         paddingHorizontal: gutter,

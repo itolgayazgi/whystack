@@ -10,8 +10,10 @@ import { BlockFlow } from '../components/block-flow';
 import { EmptyState } from '../components/empty-state';
 import { LanguageFallbackNotice } from '../components/language-fallback-notice';
 import { Notice } from '../components/notice';
+import { SegmentBar } from '../components/segment-bar';
 import { ReadingCanvas } from '../layouts/reading-canvas';
 import { useLanguage } from '../state/language';
+import { useReadingPosition } from '../state/reading-position';
 import { useTheme } from '../state/theme';
 import { useTopic } from '../state/topics';
 
@@ -35,6 +37,10 @@ export function TopicScreen({ slug }: { slug: string }) {
   const { color, textStyle } = useTheme();
   const router = useRouter();
   const { status, topic, reload } = useTopic(slug);
+
+  // Above the early returns. A hook that only runs once the topic has loaded is a hook that runs a
+  // different number of times per render, and React ends the app over it.
+  const { current, onScroll, onBlockLayout } = useReadingPosition(slug, undefined);
 
   if (status === 'loading') {
     return (
@@ -80,7 +86,13 @@ export function TopicScreen({ slug }: { slug: string }) {
   }
 
   return (
-    <ReadingCanvas aside={<TableOfContents topic={topic} />}>
+    <ReadingCanvas aside={<TableOfContents topic={topic} />} onScroll={onScroll}>
+      {/* The design's segment bar. Above the header, so it is the first thing on screen and stays the
+          reader's answer to "how much of this is left?" without them having to guess from the scrollbar. */}
+      {topic.blocks.length > 0 ? (
+        <SegmentBar total={topic.blocks.length} current={current} backLabel={`← ${topic.domainName}`} />
+      ) : null}
+
       <TopicHeader topic={topic} />
 
       {topic.graph.prerequisites.length > 0 ? (
@@ -95,6 +107,7 @@ export function TopicScreen({ slug }: { slug: string }) {
       {topic.blocks.length > 0 ? (
         <BlockFlow
           blocks={topic.blocks}
+          onBlockLayout={onBlockLayout}
           onTopicPress={(target) => router.push({ pathname: '/topics/[slug]', params: { slug: target } })}
         />
       ) : (

@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { anchorOf, BlockFlow, codeOf, labelOf } from '@/components/reader/block-flow';
 import { useSession } from '@/lib/session';
+import { useProgress } from '@/lib/use-progress';
 import styles from './reader.module.css';
 
 type Load = 'loading' | 'ready' | 'missing' | 'unreachable' | 'failed';
@@ -37,6 +38,10 @@ export default function TopicPage() {
   const [load, setLoad] = useState<Load>('loading');
   const [ecosystem, setEcosystem] = useState<string | undefined>();
   const [current, setCurrent] = useState<number | null>(null);
+
+  // The scrollspy already knows which block the reader is in — that is what the map on the left follows.
+  // This is the same fact, sent to the server, so "kaldığın yer" on the home means something.
+  useProgress(slug, ecosystem, current);
 
   const fetchTopic = useCallback(async () => {
     setLoad('loading');
