@@ -219,3 +219,29 @@ correctly on every topic, forever, with nothing to tell them how.
   ADR is a prerequisite for that work, not part of it.
 - The seeded `SubArea` values are re-cut against B1–B8 rather than kept as they are; they were seeded
   before the taxonomy existed.
+
+---
+
+## Follow-up — 2026-07-16: the ecosystem axis belongs to an area
+
+The owner's `whystack-alan-taksonomisi.md` (vendored alongside this ADR's other sources) confirms this
+model across all four areas and adds one constraint it does not yet satisfy:
+
+| Area | What its ecosystem axis MEANS | Values |
+|---|---|---|
+| Backend | Language / platform | .NET · Java · Node.js · Python · Go · Rust |
+| Frontend | Framework | React · Angular · Vue · Svelte |
+| Database | Engine | SQL Server · PostgreSQL · MySQL · MongoDB |
+| DevOps | Cloud | Cloud-agnostic · Azure · AWS · GCP |
+
+**`Ecosystems` is flat.** It has no `AreaId`, so `.NET` is an ecosystem of everything — and the tab strip on
+Frontend would offer .NET, Java and PHP. Nothing breaks today because Backend is the only area with lines,
+which is exactly the kind of bug that waits for the second area and then looks like a UI mistake.
+
+`Ecosystem.AreaId` (Restrict), and the tab strip reads the current area's ecosystems. Not done in this
+ADR's migration: it is a separate change with its own seed, and folding it in would have made a migration
+that already refuses unmappable rows into one nobody could review.
+
+`ProgrammingLanguage` needs a second look at the same time. It exists under `Ecosystem` and models "C# in
+.NET" — under this taxonomy the ecosystem IS the language for Backend, so the table may be a layer this
+model no longer has. That is a question, not a decision.
