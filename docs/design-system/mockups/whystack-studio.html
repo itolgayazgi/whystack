@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhyStack Studio — İçerik Üretim Ekranı</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0E2016; --bg-deep:#081209; --surface:#12281C; --surface2:#1A3626; --line:#274736;
+  --cream:#EFE9D9; --cream-dim:#B8C4B4; --muted:#5E7566;
+  --gold:#C9A227; --gold-soft:rgba(201,162,39,.14);
+  --ok:#7FB069; --err:#D96A5F; --warn:#E3B23C; --info:#6C9BD1;
+  --b3:#6C9BD1;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050B06;color:var(--cream);font-family:'Inter',sans-serif;padding:40px 24px;line-height:1.55}
+.mono{font-family:'JetBrains Mono',monospace}
+.concept-tag{max-width:1360px;margin:0 auto 20px;display:flex;align-items:center;gap:12px;color:var(--cream-dim);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.concept-tag b{color:var(--gold);font-family:'Chakra Petch';font-size:15px}
+.concept-tag span.rule{flex:1;height:1px;background:var(--line)}
+.browser{max-width:1360px;margin:0 auto;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6)}
+.browser-bar{background:#0A1810;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.dot{width:11px;height:11px;border-radius:50%;background:#274736}
+.urlbox{margin-left:12px;background:#122A1C;border:1px solid var(--line);border-radius:7px;padding:5px 14px;font-size:12px;color:var(--cream-dim);flex:0 0 340px}
+
+/* ÜST BAR */
+.studiobar{background:var(--bg-deep);border-bottom:1px solid var(--line);padding:12px 24px;display:flex;align-items:center;gap:18px}
+.logo{font-family:'Chakra Petch';font-weight:700;font-size:19px}
+.logo .s{color:var(--gold);position:relative;top:-3px}
+.studio-badge{font-family:'Chakra Petch';font-size:10.5px;letter-spacing:.16em;background:var(--gold);color:#0E2016;border-radius:5px;padding:3px 9px;font-weight:700}
+.studiobar nav{display:flex;gap:4px;margin-left:16px}
+.studiobar nav span{font-size:13px;font-weight:600;color:var(--cream-dim);padding:7px 14px;border-radius:7px;cursor:pointer}
+.studiobar nav span.on{background:var(--gold-soft);color:var(--gold)}
+.studiobar .sp{flex:1}
+.env{font-family:'JetBrains Mono';font-size:11px;color:var(--muted)}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--gold);color:#0E2016;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+
+/* 3 KOLON */
+.app{display:grid;grid-template-columns:270px 1fr 310px;background:var(--bg);min-height:960px}
+
+/* SOL: içerik kuyruğu */
+.queue{background:#0B1B12;border-right:1px solid var(--line);padding:18px 0;overflow:hidden}
+.q-head{display:flex;align-items:center;justify-content:space-between;padding:0 18px 14px}
+.q-head h4{font-family:'Chakra Petch';font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream-dim)}
+.newbtn{background:var(--gold);color:#0E2016;font-weight:700;font-size:12px;border-radius:7px;padding:7px 13px;cursor:pointer}
+.q-filter{display:flex;gap:6px;padding:0 18px 14px}
+.q-filter span{font-size:11px;border:1px solid var(--line);border-radius:14px;padding:4px 11px;color:var(--cream-dim);cursor:pointer}
+.q-filter span.on{border-color:var(--gold);color:var(--gold);background:var(--gold-soft)}
+.q-label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding:10px 18px 6px}
+.q-item{padding:11px 18px;border-left:3px solid transparent;cursor:pointer}
+.q-item:hover{background:var(--surface)}
+.q-item.on{background:var(--gold-soft);border-left-color:var(--gold)}
+.q-item b{display:block;font-size:13px;font-weight:600;line-height:1.35}
+.q-item .m{display:flex;gap:8px;margin-top:4px;font-size:10.5px;color:var(--muted);align-items:center}
+.q-item .m i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.pill{font-size:9.5px;letter-spacing:.06em;border-radius:4px;padding:2px 7px;font-weight:700}
+.pill.draft{background:rgba(227,178,60,.14);color:var(--warn)}
+.pill.rev{background:rgba(108,155,209,.14);color:var(--info)}
+.pill.pub{background:rgba(127,176,105,.14);color:var(--ok)}
+.q-stats{margin:16px 18px 0;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--cream-dim);line-height:2}
+.q-stats b{color:var(--gold)}
+
+/* ORTA: editör */
+.editor{padding:24px 30px 60px;overflow:hidden}
+.ed-top{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.ed-top .crumb{font-size:12.5px;color:var(--muted)}
+.ed-top .crumb b{color:var(--cream-dim)}
+.ed-top .sp{flex:1}
+.autosave{font-family:'JetBrains Mono';font-size:11px;color:var(--muted)}
+.autosave i{color:var(--ok)}
+/* künye */
+.meta-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:22px}
+.title-input{width:100%;background:transparent;border:none;outline:none;color:var(--cream);font-family:'Chakra Petch';font-size:24px;font-weight:700;border-bottom:1px dashed var(--line);padding-bottom:10px;margin-bottom:16px}
+.title-input::placeholder{color:var(--muted)}
+.meta-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.field label{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.sel{background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:12.5px;color:var(--cream);display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.sel.gold{border-color:var(--gold);color:var(--gold)}
+.sel .car{color:var(--muted);font-size:10px}
+.arketip-note{margin-top:14px;background:var(--gold-soft);border:1px solid var(--gold);border-radius:9px;padding:10px 14px;font-size:12px;color:var(--cream-dim)}
+.arketip-note b{color:var(--gold)}
+
+/* blok listesi */
+.blocks-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.blocks-head h3{font-family:'Chakra Petch';font-size:15px}
+.blocks-head .hint{font-size:11.5px;color:var(--muted)}
+.blk{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.blk.focus{border-color:var(--gold)}
+.blk-bar{display:flex;align-items:center;gap:10px;padding:9px 14px;background:rgba(0,0,0,.14);border-bottom:1px solid var(--line)}
+.grip{color:var(--muted);cursor:grab;font-size:13px}
+.btag{font-family:'JetBrains Mono';font-size:10px;letter-spacing:.1em;color:var(--gold);background:var(--gold-soft);border:1px solid var(--gold);border-radius:4px;padding:2px 8px}
+.btag.req::after{content:" · ZORUNLU";color:var(--muted)}
+.blk-bar .sp{flex:1}
+.blk-bar .ic{color:var(--muted);font-size:12px;cursor:pointer;padding:2px 5px}
+.blk-bar .ic:hover{color:var(--cream)}
+.blk-body{padding:14px 16px}
+.blk-body textarea, .inp{width:100%;background:var(--surface2);border:1px solid var(--line);border-radius:8px;color:var(--cream);font-family:'Inter';font-size:13.5px;padding:10px 12px;outline:none;resize:vertical}
+.blk-body textarea:focus,.inp:focus{border-color:var(--gold)}
+.blk-body .lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:10px 0 6px}
+.blk-body .lbl:first-child{margin-top:0}
+.code-area{background:#0A1510;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-family:'JetBrains Mono';font-size:12px;line-height:1.75;color:var(--cream-dim)}
+.code-area .k2{color:#8FBF9F}.code-area .ty2{color:#5BB8C4}.code-area .fn2{color:#C9A227}.code-area .s2{color:#C98A5A}.code-area .cm2{color:#5E7566;font-style:italic}
+.hl-note{font-size:11px;color:var(--muted);margin-top:6px}
+.hl-note b{color:var(--gold)}
+.opt-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.opt-row .r{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;cursor:pointer}
+.opt-row .r.c{border-color:var(--ok);background:rgba(127,176,105,.25)}
+.opt-row input{flex:1;background:var(--surface2);border:1px solid var(--line);border-radius:7px;color:var(--cream);font-size:12.5px;padding:8px 11px;outline:none}
+.claude-line{display:flex;gap:10px;margin-top:12px}
+.claude-btn{display:inline-flex;align-items:center;gap:7px;background:transparent;border:1px dashed var(--gold);color:var(--gold);font-size:12px;font-weight:600;border-radius:8px;padding:8px 14px;cursor:pointer}
+.claude-btn:hover{background:var(--gold-soft)}
+.ghost-btn{border:1px solid var(--line);color:var(--cream-dim);font-size:12px;border-radius:8px;padding:8px 14px;cursor:pointer}
+/* eksik blok */
+.blk.missing{border-style:dashed;border-color:var(--err);background:rgba(217,106,95,.05)}
+.blk.missing .blk-bar{background:transparent;border-bottom:none}
+.blk.missing .btag{color:var(--err);background:rgba(217,106,95,.1);border-color:var(--err)}
+.blk.missing .why{padding:0 16px 14px;font-size:12.5px;color:var(--cream-dim)}
+/* blok paleti */
+.palette{border:1px dashed var(--line);border-radius:12px;padding:16px;text-align:center;margin-top:6px}
+.palette .pt{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.pal-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.pal{font-family:'JetBrains Mono';font-size:11px;border:1px solid var(--line);border-radius:7px;padding:7px 12px;color:var(--cream-dim);cursor:pointer}
+.pal:hover{border-color:var(--gold);color:var(--gold)}
+
+/* SAĞ: yayın paneli */
+.publish{background:#0B1B12;border-left:1px solid var(--line);padding:22px 20px;display:flex;flex-direction:column;gap:18px}
+.p-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.p-card h5{font-family:'Chakra Petch';font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:12px}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:6px 0;font-size:12.5px;color:var(--cream-dim)}
+.chk .s{width:16px;text-align:center;flex-shrink:0}
+.chk.ok .s{color:var(--ok)}.chk.ok{color:var(--cream)}
+.chk.no .s{color:var(--err)}
+.chk.wa .s{color:var(--warn)}
+.chk small{display:block;font-size:11px;color:var(--muted)}
+.vbar{height:7px;border-radius:4px;background:var(--surface2);overflow:hidden;margin-top:10px}
+.vbar i{display:block;height:100%;width:71%;background:linear-gradient(90deg,var(--warn),var(--gold))}
+.vnote{font-size:11px;color:var(--muted);margin-top:6px}
+.impact p{font-size:12.5px;color:var(--cream-dim);line-height:1.6}
+.impact b{color:var(--gold)}
+.notif-prev{margin-top:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+.notif-prev .nt{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted);margin-bottom:6px}
+.notif-prev .nt i{width:16px;height:16px;border-radius:4px;background:var(--gold);display:inline-block}
+.notif-prev b{font-size:12px;color:var(--cream)}
+.notif-prev span{display:block;font-size:11px;color:var(--cream-dim);margin-top:2px}
+.ver-row{display:flex;justify-content:space-between;font-size:12px;color:var(--cream-dim);padding:6px 0;border-bottom:1px dashed var(--line)}
+.ver-row:last-child{border:none}
+.ver-row .mono{font-size:11px;color:var(--muted)}
+.big-actions{display:flex;flex-direction:column;gap:10px}
+.pubbtn{background:var(--gold);color:#0E2016;font-weight:700;font-size:14px;border-radius:10px;padding:13px;text-align:center;cursor:pointer;opacity:.45}
+.pubbtn small{display:block;font-size:10.5px;font-weight:600;margin-top:2px}
+.prevbtn{border:1px solid var(--line);color:var(--cream);font-weight:600;font-size:13px;border-radius:10px;padding:12px;text-align:center;cursor:pointer}
+.caption{max-width:1360px;margin:20px auto 0;color:#5E7566;font-size:13px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="concept-tag"><b>WHYSTACK STUDIO</b><span>İçerik üretim ekranı · sadece web · yönetici hesabı</span><span class="rule"></span></div>
+
+<div class="browser">
+  <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="urlbox">studio.whystack.dev/durak/dotnet-b3-ef-change-tracking-2</div></div>
+
+  <div class="studiobar">
+    <div class="logo">w<span class="s">S</span></div>
+    <span class="studio-badge">STUDIO</span>
+    <nav><span class="on">Duraklar</span><span>Harita</span><span>Terimler</span><span>Bildirimler</span><span>Analitik</span></nav>
+    <div class="sp"></div>
+    <span class="env">rol: admin · tolga@whystack.dev</span>
+    <div class="avatar">T</div>
+  </div>
+
+  <div class="app">
+
+    <!-- SOL: KUYRUK -->
+    <aside class="queue">
+      <div class="q-head"><h4>İçerik Kuyruğu</h4><span class="newbtn">+ Yeni Durak</span></div>
+      <div class="q-filter"><span class="on">Tümü</span><span>Taslak</span><span>Yayında</span></div>
+      <div class="q-label">B3 · Veri Erişimi</div>
+      <div class="q-item on">
+        <b>Change Tracking II — Snapshot Mekanizması</b>
+        <div class="m"><i style="background:var(--b3)"></i>EF Core · Mid <span class="pill draft">TASLAK</span></div>
+      </div>
+      <div class="q-item">
+        <b>Change Tracking I — Neden Var?</b>
+        <div class="m"><i style="background:var(--b3)"></i>EF Core · Mid <span class="pill pub">YAYINDA v3</span></div>
+      </div>
+      <div class="q-item">
+        <b>N+1 Problemi — Log'da 400 Sorgu</b>
+        <div class="m"><i style="background:var(--b3)"></i>EF Core · Mid <span class="pill rev">REVİZYON</span></div>
+      </div>
+      <div class="q-label">B1 · Dil &amp; Runtime</div>
+      <div class="q-item">
+        <b>async/await Gerçekte Ne Yapar?</b>
+        <div class="m"><i style="background:var(--gold)"></i>Async · Mid <span class="pill pub">YAYINDA v2</span></div>
+      </div>
+      <div class="q-item">
+        <b>Span&lt;T&gt; — Kopyasız Dünya</b>
+        <div class="m"><i style="background:var(--gold)"></i>Bellek · Mid <span class="pill draft">TASLAK</span></div>
+      </div>
+      <div class="q-stats">
+        Yayında: <b>23</b> · Taslak: <b>4</b> · Revizyon: <b>1</b><br>
+        Bu hafta hedef: <b>3 durak</b> — 1/3 ✓
+      </div>
+    </aside>
+
+    <!-- ORTA: EDİTÖR -->
+    <main class="editor">
+      <div class="ed-top">
+        <span class="crumb">Backend / .NET / <b>B3 Veri Erişimi</b> / EF Core kapsamı</span>
+        <div class="sp"></div>
+        <span class="autosave"><i>●</i> otomatik kaydedildi · 14:32</span>
+      </div>
+
+      <!-- KÜNYE -->
+      <div class="meta-card">
+        <input class="title-input" value="Change Tracking II — Snapshot Mekanizması">
+        <div class="meta-grid">
+          <div class="field"><label>Hat</label><div class="sel"><span style="color:var(--b3)">B3 Veri Erişimi</span><span class="car">▾</span></div></div>
+          <div class="field"><label>Kapsam</label><div class="sel">EF Core<span class="car">▾</span></div></div>
+          <div class="field"><label>Basamak</label><div class="sel">Mid<span class="car">▾</span></div></div>
+          <div class="field"><label>Arketip</label><div class="sel gold">Mekanizma<span class="car">▾</span></div></div>
+          <div class="field"><label>Dizi</label><div class="sel">II / III<span class="car">▾</span></div></div>
+          <div class="field"><label>Süre (tahmini)</label><div class="sel">20 dk<span class="car">▾</span></div></div>
+        </div>
+        <div class="arketip-note"><b>Mekanizma arketipi seçildi:</b> iskelet otomatik kuruldu — hook → concept → code → diagram → myth → checkpoint → prod → summary → next. Blok ekleyebilir, sıralarını sürükleyebilirsin; zorunlu bloklar silinemez.</div>
+      </div>
+
+      <!-- BLOKLAR -->
+      <div class="blocks-head"><h3>Bloklar (6/9 dolu)</h3><span class="hint">⠿ sürükleyerek sırala · zorunlu bloklar kilitli</span></div>
+
+      <div class="blk">
+        <div class="blk-bar"><span class="grip">⠿</span><span class="btag req">HOOK · KANCA</span><div class="sp"></div><span class="ic">⧉</span><span class="ic" style="opacity:.3">🗑</span></div>
+        <div class="blk-body">
+          <div class="lbl">Neden sorusu</div>
+          <textarea rows="2">SaveChanges'a kadar EF Core hiçbir UPDATE atmıyor. Peki hangi property'nin değiştiğini nereden biliyor?</textarea>
+          <div class="lbl">Vaat (18 dk sonra...)</div>
+          <textarea rows="1">Bu durağın sonunda snapshot'ın bellekteki maliyetini kendi cümlenle açıklayabileceksin.</textarea>
+        </div>
+      </div>
+
+      <div class="blk focus">
+        <div class="blk-bar"><span class="grip">⠿</span><span class="btag">CODE · AÇIKLAMALI KOD</span><div class="sp"></div><span class="ic">⧉</span><span class="ic">🗑</span></div>
+        <div class="blk-body">
+          <div class="lbl">Dosya adı</div>
+          <input class="inp" value="OrderRepository.cs" style="max-width:260px">
+          <div class="lbl">Kod (vurgulu satır: 3)</div>
+          <div class="code-area">
+<span class="cm2">// entity izlenmeye başladığı an snapshot alınır</span><br>
+<span class="k2">var</span> order = <span class="k2">await</span> _db.Orders.<span class="fn2">FirstAsync</span>(o => o.Id == id);<br>
+order.Status = <span class="ty2">OrderStatus</span>.Shipped; <span class="cm2">// henüz hiçbir SQL yok</span><br>
+<span class="k2">await</span> _db.<span class="fn2">SaveChangesAsync</span>(); <span class="cm2">// diff burada hesaplanır</span>
+          </div>
+          <div class="hl-note">Vurgulu satır: <b>3</b> — değiştirmek için satıra tıkla</div>
+          <div class="lbl">Annotation (tek paragraf)</div>
+          <textarea rows="2">SaveChanges çağrıldığında EF Core, snapshot ile güncel değerleri property property karşılaştırır — UPDATE cümlesine yalnızca değişen kolonlar girer.</textarea>
+          <div class="claude-line">
+            <span class="claude-btn">✦ Claude ile taslak üret</span>
+            <span class="ghost-btn">Bloğu önizle</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="blk-bar"><span class="grip">⠿</span><span class="btag req">CHECKPOINT · 1/1</span><div class="sp"></div><span class="ic">⧉</span><span class="ic" style="opacity:.3">🗑</span></div>
+        <div class="blk-body">
+          <div class="lbl">Soru</div>
+          <textarea rows="2">Bin satırlık bir listeyi sadece OKUMAK için çektiğinde, snapshot mekanizması sana neye mal olur?</textarea>
+          <div class="lbl">Seçenekler (doğruyu işaretle)</div>
+          <div class="opt-row"><span class="r"></span><input value="Hiçbir şeye — okuma bedavadır"></div>
+          <div class="opt-row"><span class="r c"></span><input value="Her entity için ekstra bellek + karşılaştırma maliyeti"></div>
+          <div class="opt-row"><span class="r"></span><input value="Sadece SaveChanges çağrılırsa maliyet oluşur"></div>
+          <div class="lbl">Cevap açıklaması (zorunlu)</div>
+          <textarea rows="2">İzleme, sorgu anında başlar — SaveChanges'ı hiç çağırmasan da snapshot bellekte durur. AsNoTracking tam bu yüzden var; III. durakta production faciasını göreceğiz.</textarea>
+        </div>
+      </div>
+
+      <!-- EKSİK ZORUNLU BLOK -->
+      <div class="blk missing">
+        <div class="blk-bar"><span class="btag">SUMMARY · ÖZET</span><div class="sp"></div><span class="pill" style="background:rgba(217,106,95,.12);color:var(--err)">EKSİK — YAYIN ENGELİ</span></div>
+        <div class="why">Her durak "cebinde kalanlar" özetiyle kapanmak zorunda. 3-5 madde yaz veya Claude'a mevcut bloklardan ürettir. <span class="claude-btn" style="margin-left:8px;padding:5px 11px;font-size:11px">✦ Bloklardan özet üret</span></div>
+      </div>
+
+      <!-- BLOK PALETİ -->
+      <div class="palette">
+        <div class="pt">+ Blok ekle</div>
+        <div class="pal-row">
+          <span class="pal">story</span><span class="pal">concept</span><span class="pal">code</span><span class="pal">diagram</span><span class="pal">compare</span><span class="pal">myth</span><span class="pal">checkpoint</span><span class="pal">prod</span><span class="pal">term</span><span class="pal">summary</span><span class="pal">next</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- SAĞ: YAYIN PANELİ -->
+    <aside class="publish">
+      <div class="p-card">
+        <h5>Yayın Kontrol Listesi</h5>
+        <div class="chk ok"><span class="s">✓</span><div>Hook bloğu dolu<small>"Neden" sorusuyla açılıyor</small></div></div>
+        <div class="chk ok"><span class="s">✓</span><div>En az 1 checkpoint<small>Cevap açıklaması mevcut</small></div></div>
+        <div class="chk ok"><span class="s">✓</span><div>Künye tam<small>Hat, kapsam, basamak, arketip</small></div></div>
+        <div class="chk ok"><span class="s">✓</span><div>Önkoşul bağlı<small>← Change Tracking I (yayında)</small></div></div>
+        <div class="chk no"><span class="s">✕</span><div>Özet bloğu eksik<small>Yayın engeli — zorunlu blok</small></div></div>
+        <div class="chk no"><span class="s">✕</span><div>Sonraki durak bağlanmadı<small>→ Change Tracking III önerilir</small></div></div>
+        <div class="chk wa"><span class="s">!</span><div>Diagram boş<small>Mekanizma arketipinde önerilir, engel değil</small></div></div>
+        <div class="vbar"><i></i></div>
+        <div class="vnote">Yayına hazırlık: %71 — 2 engel kaldı</div>
+      </div>
+
+      <div class="p-card impact">
+        <h5>Yayın Etkisi</h5>
+        <p>Bu durak yayınlanınca <b>EF Core kapsamı 7→8</b> durağa çıkar. Kapsamı tamamlamış <b>214 kullanıcıya</b> "yeni durak" bildirimi gidecek.</p>
+        <div class="notif-prev">
+          <div class="nt"><i></i>Push önizleme</div>
+          <b>EF Core mahallene yeni durak açıldı 🏗️</b>
+          <span>"Change Tracking II — Snapshot Mekanizması" · Mid · 20 dk. Rozetin duruyor, sadece mahalle büyüdü.</span>
+        </div>
+      </div>
+
+      <div class="p-card">
+        <h5>Sürümler</h5>
+        <div class="ver-row"><span>Taslak (şu an)</span><span class="mono">v1-draft</span></div>
+        <div class="ver-row"><span>Otomatik kayıt</span><span class="mono">14:32 · 8 blok</span></div>
+        <div class="ver-row"><span>Instagram kuyruğu</span><span class="mono" style="color:var(--gold)">hook → "Neden Var?" adayı</span></div>
+      </div>
+
+      <div class="big-actions">
+        <span class="prevbtn">👁 Uygulamada önizle (web + mobil)</span>
+        <span class="pubbtn">Yayınla &amp; bildirimi tetikle<small>2 yayın engeli çözülünce aktifleşir</small></span>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<p class="caption"><b style="color:#C9A227">Studio ekranı:</b> Üç kolon — solda içerik kuyruğu (hat/kapsam gruplu, taslak-revizyon-yayında durumları + haftalık üretim hedefi), ortada blok editörü (arketip seçilince iskelet otomatik kurulur, zorunlu bloklar silinemez, her blokta "✦ Claude ile taslak üret" butonu — senin insan-onaylı üretim akışın), sağda yayın paneli: FluentValidation'lık kontrol listesi (özetsiz/checkpoint'siz durak yayınlanamaz), yayın etkisi (kapsam 7→8, 214 kullanıcıya bildirim önizlemesi) ve sürüm geçmişi. Yayınla butonu engeller çözülene dek pasif. Instagram satırı, hook'un otomatik olarak "Neden Var?" içerik kuyruğuna aday düştüğünü gösteriyor — tek üretim, iki kanal burada da işliyor.</p>
+
+</body>
+</html>
