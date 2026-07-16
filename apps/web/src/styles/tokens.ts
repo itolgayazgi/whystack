@@ -1,4 +1,7 @@
-import { fontFallback, fontFamily, palettes, radius, reading, space, text } from '@whystack/theme';
+// `fontFamily` is deliberately NOT imported. On web the family name is next/font's — it self-hosts the
+// files and generates a hashed family, exposed as the CSS variables below. The theme still owns WHICH font
+// (layout.tsx imports the same three it names) and the fallback chain, which is what is read here.
+import { fontFallback, palettes, radius, reading, space, text } from '@whystack/theme';
 
 /**
  * The design tokens, as CSS custom properties.

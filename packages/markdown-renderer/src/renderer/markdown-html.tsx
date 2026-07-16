@@ -57,6 +57,7 @@ function renderBlock(
       return (
         <Tag key={key} className={`${prefix}-list`}>
           {block.items.map((item, index) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: the parse tree has no ids and is rebuilt wholesale on every parse, so position IS the identity.
             <li key={`${key}-${index}`} className={`${prefix}-li`}>
               {item.map((child, childIndex) =>
                 renderBlock(child, `${key}-${index}-${childIndex}`, prefix, renderLink),
@@ -83,6 +84,7 @@ function renderBlock(
             <thead>
               <tr>
                 {block.header.map((cell, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a table's columns are positional by definition — column 2 IS the second cell.
                   <th key={`${key}-h-${index}`}>
                     {cell.map((inline, i) =>
                       renderInline(inline, `${key}-h-${index}-${i}`, prefix, renderLink),
@@ -93,8 +95,10 @@ function renderBlock(
             </thead>
             <tbody>
               {block.rows.map((row, rowIndex) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: a table's rows are positional by definition — row 2 IS the second row.
                 <tr key={`${key}-r-${rowIndex}`}>
                   {row.map((cell, cellIndex) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: a table's cells are positional by definition.
                     <td key={`${key}-r-${rowIndex}-${cellIndex}`}>
                       {cell.map((inline, i) =>
                         renderInline(inline, `${key}-r-${rowIndex}-${cellIndex}-${i}`, prefix, renderLink),
