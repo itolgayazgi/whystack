@@ -46,3 +46,10 @@
     display: none;
   }
 }
+
+/* A raster needs a ceiling, not a fixed size — and `height: auto` is what keeps the ratio while it shrinks.
+   Without it the browser honours the height attribute and the logo squashes on a narrow screen. */
+.promiseLockup {
+  max-width: 100%;
+  height: auto;
+}

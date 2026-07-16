@@ -87,3 +87,13 @@
   border-left: 3px solid var(--color-accent);
   font-size: 1.15rem;
 }
+
+/*
+  The lockup is a raster, so it needs a ceiling rather than a fixed size: 420 is right on a laptop and wider
+  than a phone. `height: auto` is what keeps the aspect ratio while it shrinks — without it the browser
+  honours the height attribute and the logo squashes.
+*/
+.heroLockup {
+  max-width: 100%;
+  height: auto;
+}

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Wordmark } from '@/components/wordmark';
+import { Lockup } from '@/components/lockup';
 import styles from './auth.module.css';
 
 /**
@@ -18,7 +18,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <main className={styles.split}>
       <aside className={styles.promise} aria-hidden="false">
-        <Wordmark size={64} />
+        <Lockup width={360} priority className={styles.promiseLockup} />
 
         <h1>Why before how.</h1>
 

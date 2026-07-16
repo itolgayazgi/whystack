@@ -2,11 +2,11 @@
 
 import { type AreaOption, canAuthor, type RoadmapLineOption, roadmapApi } from '@whystack/api-client';
 import { lineColor } from '@whystack/theme';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type ReactNode, Suspense, useEffect, useRef, useState } from 'react';
 import { AreaIcon } from '@/components/learn/area-icon';
+import { Lockup } from '@/components/lockup';
 import { useSession } from '@/lib/session';
 import styles from './learn.module.css';
 
@@ -61,17 +61,6 @@ export default function LearnLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-
-/**
- * The lockup, at the rail's own width.
- *
- * The source is 600x244. The height is derived rather than typed, so the day a new export changes the
- * artboard there is one number to update and no chance of a squashed logo — the kind of wrong that reads as
- * "the brand looks off today" and never as "somebody typed 76".
- */
-const LOCKUP = { source: { width: 600, height: 244 }, width: 168 } as const;
-
-const LOCKUP_HEIGHT = Math.round((LOCKUP.width * LOCKUP.source.height) / LOCKUP.source.width);
 
 function Rail() {
   const { client, status, user, signOut } = useSession();
@@ -170,14 +159,7 @@ function Rail() {
         page — lazily loading the logo means the app opens with a hole where it goes.
       */}
       <Link href="/learn" className={styles.brand} aria-label="WhyStack — ana sayfa">
-        <Image
-          src="/brand/lockup.png"
-          alt=""
-          width={LOCKUP.width}
-          height={LOCKUP_HEIGHT}
-          priority
-          className={styles.lockup}
-        />
+        <Lockup width={168} priority className={styles.lockup} />
       </Link>
 
       <nav aria-label="Alanlar">

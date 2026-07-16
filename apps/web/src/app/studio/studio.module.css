@@ -487,3 +487,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* See the other lockup rules: a raster shrinks by max-width, and only keeps its shape with height: auto. */
+.railLockup {
+  max-width: 100%;
+  height: auto;
+}

@@ -1,6 +1,6 @@
 import Link from 'next/link';
+import { Lockup } from '@/components/lockup';
 import { SignedInRedirect } from '@/components/signed-in-redirect';
-import { Wordmark } from '@/components/wordmark';
 import styles from './page.module.css';
 
 /**
@@ -35,7 +35,11 @@ export default function LandingPage() {
       <SignedInRedirect />
 
       <header className={styles.hero}>
-        <Wordmark size={72} />
+        {/*
+          420, because the mark it replaced rendered ~448 wide here and the hero was built around that. The
+          source is 600 across, so this is a downscale — crisp on a 2x display, which a hero has to be.
+        */}
+        <Lockup width={420} priority className={styles.heroLockup} />
 
         <h1>Why before how.</h1>
 

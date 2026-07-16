@@ -4,7 +4,7 @@ import { canAuthor } from '@whystack/api-client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { Wordmark } from '@/components/wordmark';
+import { Lockup } from '@/components/lockup';
 import { useSession } from '@/lib/session';
 import styles from './studio.module.css';
 
@@ -62,7 +62,7 @@ export default function StudioLayout({ children }: { children: ReactNode }) {
     <div className={styles.shell}>
       <nav className={styles.rail}>
         <div className={styles.railBrand}>
-          <Wordmark size={20} />
+          <Lockup width={124} priority className={styles.railLockup} />
           <span className={styles.railBrandLabel}>Studio</span>
         </div>
 
