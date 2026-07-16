@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using WhyStack.Api.Common;
 using WhyStack.Application.Content;
 using WhyStack.Application.Content.Authoring;
@@ -17,10 +17,12 @@ public sealed record SaveTopicRequest(
     string? DomainKey,
     string? SubAreaKey,
     string? Category,
+    string? Archetype,
     string? Level,
     int? EstimatedReadingMinutes,
     IReadOnlyList<string>? SupportedVersions,
     IReadOnlyList<TranslationCommand>? Translations,
+    IReadOnlyList<BlockCommand>? Blocks,
     IReadOnlyList<SectionCommand>? Sections,
     IReadOnlyList<ImplementationCommand>? Implementations,
     IReadOnlyList<RelationshipCommand>? Relationships,
@@ -342,24 +344,33 @@ public static class AuthoringEndpoints
 
     /// <summary>The request shape, mapped to the command. One place, so the two endpoints cannot drift.</summary>
     private static SaveTopicCommand ToCommand(SaveTopicRequest request) => new(
-        request.Id,
-        request.StableKey ?? string.Empty,
-        request.Slug ?? string.Empty,
-        request.DomainKey ?? string.Empty,
+        Id: request.Id,
+        // NAMED, not positional. This record has sixteen members and grew twice; a positional call silently
+        // reorders the day one is inserted, and the compiler only catches it when two neighbours happen to
+        // have different types. Naming them makes that impossible.
+        StableKey: request.StableKey ?? string.Empty,
+        Slug: request.Slug ?? string.Empty,
+        DomainKey: request.DomainKey ?? string.Empty,
 
         // Trimmed to null: an empty string from a "— no theme —" dropdown selection means "no theme", not a
         // theme whose key is the empty string.
-        string.IsNullOrWhiteSpace(request.SubAreaKey) ? null : request.SubAreaKey.Trim(),
+        SubAreaKey: string.IsNullOrWhiteSpace(request.SubAreaKey) ? null : request.SubAreaKey.Trim(),
 
-        request.Category ?? "Concept",
-        request.Level ?? string.Empty,
-        request.EstimatedReadingMinutes ?? 0,
-        request.SupportedVersions ?? [],
-        request.Translations ?? [],
-        request.Sections ?? [],
-        request.Implementations ?? [],
-        request.Relationships ?? [],
-        request.RowVersion);
+        Category: request.Category ?? "Concept",
+
+        // Concept when unsaid: a topic that has not chosen its shape is a plain explanation, and that is the
+        // most common one. The studio always sends it; a raw caller may not.
+        Archetype: request.Archetype ?? "Concept",
+
+        Level: request.Level ?? string.Empty,
+        EstimatedReadingMinutes: request.EstimatedReadingMinutes ?? 0,
+        SupportedVersions: request.SupportedVersions ?? [],
+        Translations: request.Translations ?? [],
+        Blocks: request.Blocks ?? [],
+        Sections: request.Sections ?? [],
+        Implementations: request.Implementations ?? [],
+        Relationships: request.Relationships ?? [],
+        RowVersion: request.RowVersion);
 
     private static async Task<IResult> SaveAsync(
         SaveTopicRequest request,

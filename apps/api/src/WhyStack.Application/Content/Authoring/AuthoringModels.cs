@@ -33,7 +33,19 @@ public sealed record SaveTopicCommand(
     /// <summary>Title and summary per language. English is required — a translation with no source cannot be reviewed.</summary>
     IReadOnlyList<TranslationCommand> Translations,
 
-    /// <summary>The concept. Written once, true in every ecosystem (ADR-0021).</summary>
+    /// <summary>The shape of the explanation (ADR-0024). Decides which blocks the skeleton starts with.</summary>
+    string Archetype,
+
+    /// <summary>
+    /// The block flow — the topic's body (ADR-0024).
+    /// </summary>
+    /// <remarks>
+    /// A FULL REPLACEMENT, like everything else here: what is on screen is what is saved. A block the editor
+    /// deleted must disappear, not linger in a flow pointing at text nobody wrote.
+    /// </remarks>
+    IReadOnlyList<BlockCommand> Blocks,
+
+    /// <summary>The concept. Written once, true in every ecosystem (ADR-0021). Retired by ADR-0024.</summary>
     IReadOnlyList<SectionCommand> Sections,
 
     /// <summary>The `[ .NET ▾ ]` panel. May be empty — "what is a transaction?" has no code.</summary>
@@ -55,6 +67,18 @@ public sealed record SaveTopicCommand(
 public sealed record TranslationCommand(string LanguageCode, string Title, string? Summary);
 
 public sealed record SectionCommand(string SectionTypeKey, string LanguageCode, string Markdown);
+
+/// <summary>One block the editor composed (ADR-0024).</summary>
+public sealed record BlockCommand(
+    int Order,
+    string Type,
+    string LanguageCode,
+
+    /// <summary>Null = SHARED (the why, written once). A key = one ecosystem's treatment.</summary>
+    string? EcosystemKey,
+
+    /// <summary>The body, shaped by <see cref="Type"/>. Validated against that shape on every save.</summary>
+    string DataJson);
 
 public sealed record ImplementationCommand(
     string EcosystemKey,

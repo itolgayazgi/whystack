@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WhyStack.Application.Content.Authoring;
 using WhyStack.Domain.Content;
 using WhyStack.Infrastructure.Persistence;
@@ -26,10 +26,12 @@ public sealed class SubAreaAuthoringTests(DatabaseFixture fixture)
         DomainKey: BackendDomain,
         SubAreaKey: subAreaKey,
         Category: "Concept",
+        Archetype: "Concept",
         Level: "MidLevel",
         EstimatedReadingMinutes: 8,
         SupportedVersions: [],
         Translations: [new TranslationCommand("en", "Subarea Test", "A fixture topic.")],
+        Blocks: [],
         Sections: [],
         Implementations: [],
         Relationships: [],

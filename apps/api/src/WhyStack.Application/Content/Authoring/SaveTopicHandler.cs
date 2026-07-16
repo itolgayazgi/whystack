@@ -87,6 +87,17 @@ public sealed class SaveTopicHandler(
                 problem => new[] { problem.Message }));
         }
 
+        // The block bodies. The column is schemaless (ADR-0024, Decision 6), so this is the only thing between
+        // an editor and a checkpoint with no correct answer. A DRAFT is allowed to have these problems — they
+        // come back WITH the saved topic — but they are computed on every save, not at publish, because a
+        // hundred topics later is the wrong time to find out.
+        var blockProblems = command.Blocks
+            .SelectMany(block => Blocks.BlockData.Validate(
+                Enum.TryParse<Domain.Content.BlockType>(block.Type, out var type) ? type : default,
+                block.DataJson,
+                block.Order))
+            .ToList();
+
         var terminology = await topics.TerminologyAsync(cancellationToken);
         var validator = new TopicValidator(terminology);
 
@@ -119,7 +130,7 @@ public sealed class SaveTopicHandler(
         // The content problems come back WITH the saved topic, not instead of it. A draft is allowed to have
         // them; the editor is the one who fixes them, and they cannot fix what they cannot save.
         return Result<SaveTopicResult>.Success(
-            new SaveTopicResult(outcome.Id, outcome.Status, outcome.RowVersion, [.. content]));
+            new SaveTopicResult(outcome.Id, outcome.Status, outcome.RowVersion, [.. content, .. blockProblems]));
     }
 
     /// <summary>The shape, not the prose. A topic with no identity is not a draft — it is a broken row.</summary>

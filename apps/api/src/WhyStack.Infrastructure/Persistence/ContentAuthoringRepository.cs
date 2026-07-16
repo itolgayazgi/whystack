@@ -57,6 +57,13 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 $"No category \"{command.Category}\".", "category");
         }
 
+        if (!Enum.TryParse<Archetype>(command.Archetype, out var archetype))
+        {
+            return new SaveOutcome(
+                Guid.Empty, string.Empty, string.Empty, false,
+                $"No archetype \"{command.Archetype}\". It decides the block skeleton (ADR-0024).", "archetype");
+        }
+
         if (!Enum.TryParse<SkillLevel>(command.Level, out var level))
         {
             return new SaveOutcome(
@@ -92,6 +99,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 DomainId = domain.Id,
                 SubAreaId = subAreaId,
                 Category = category,
+                Archetype = archetype,
                 DefaultLevel = level,
                 DefaultTitle = command.Translations.First(translation => translation.LanguageCode == "en").Title,
                 CreatedAtUtc = now,
@@ -136,6 +144,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             topic.DomainId = domain.Id;
             topic.SubAreaId = subAreaId;
             topic.Category = category;
+            topic.Archetype = archetype;
             topic.DefaultLevel = level;
             topic.DefaultTitle = command.Translations.First(translation => translation.LanguageCode == "en").Title;
             topic.UpdatedAtUtc = now;
@@ -200,6 +209,10 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
         await context.TopicSupportedVersions
             .Where(supported => supported.TopicVersionId == versionId)
             .ExecuteDeleteAsync(cancellationToken);
+
+        await context.TopicBlocks
+            .Where(block => block.TopicVersionId == versionId)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     private void Fill(TopicVersion version, SaveTopicCommand command, DateTime now)
@@ -211,6 +224,23 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 Id = Guid.CreateVersion7(),
                 TopicVersionId = version.Id,
                 Version = supported,
+            });
+        }
+
+        // The block flow — the topic's body (ADR-0024). Written from scratch every save; ClearAsync removed
+        // the previous run, so a block the editor deleted is gone rather than orphaned in the flow.
+        foreach (var block in command.Blocks)
+        {
+            context.TopicBlocks.Add(new TopicBlock
+            {
+                Id = Guid.CreateVersion7(),
+                TopicVersionId = version.Id,
+                Order = block.Order,
+                Type = Enum.Parse<BlockType>(block.Type),
+                LanguageCode = block.LanguageCode,
+                EcosystemKey = block.EcosystemKey,
+                DataJson = block.DataJson,
+                CreatedAtUtc = now,
             });
         }
 
@@ -485,6 +515,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             .AsNoTracking()
             .Include(candidate => candidate.Domain)
             .Include(candidate => candidate.SubArea)
+            .Include(candidate => candidate.Versions).ThenInclude(version => version.Blocks)
             .Include(candidate => candidate.OutgoingRelationships).ThenInclude(edge => edge.ToTopic)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Sections)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Translations)
@@ -508,6 +539,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             topic.Domain!.Key,
             topic.SubArea?.Key,
             topic.Category.ToString(),
+            topic.Archetype.ToString(),
             topic.DefaultLevel.ToString(),
             version.Status.ToString(),
             version.EstimatedReadingMinutes,
@@ -519,6 +551,15 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 translation.Title,
                 translation.Summary,
                 translation.Status.ToString()))],
+
+            [.. version.Blocks
+                .OrderBy(block => block.Order)
+                .Select(block => new EditableBlock(
+                    block.Order,
+                    block.Type.ToString(),
+                    block.LanguageCode,
+                    block.EcosystemKey,
+                    block.DataJson))],
 
             [.. version.Sections
                 .OrderBy(section => section.SortOrder)

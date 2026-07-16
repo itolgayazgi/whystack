@@ -1,4 +1,4 @@
-namespace WhyStack.Application.Content.Authoring;
+﻿namespace WhyStack.Application.Content.Authoring;
 
 /// <summary>
 /// A topic as the STUDIO needs it — everything, in every language, in every ecosystem.
@@ -22,12 +22,19 @@ public sealed record EditableTopic(
     string? SubAreaKey,
 
     string Category,
+
+    /// <summary>The shape of the explanation — decides the skeleton the editor starts from (ADR-0024).</summary>
+    string Archetype,
+
     string Level,
     string Status,
     int EstimatedReadingMinutes,
     DateOnly LastReviewedOn,
     IReadOnlyList<string> SupportedVersions,
     IReadOnlyList<EditableTranslation> Translations,
+    /// <summary>The block flow, exactly as stored. The editor reshapes it and sends the whole thing back.</summary>
+    IReadOnlyList<EditableBlock> Blocks,
+
     IReadOnlyList<EditableSection> Sections,
     IReadOnlyList<EditableImplementation> Implementations,
     IReadOnlyList<EditableRelationship> Relationships,
@@ -48,6 +55,14 @@ public sealed record EditableTopic(
 public sealed record EditableTranslation(string LanguageCode, string Title, string? Summary, string Status);
 
 public sealed record EditableSection(string SectionTypeKey, string LanguageCode, string Markdown);
+
+/// <summary>One block, for the editor. <c>DataJson</c> is raw — the studio owns the per-type form.</summary>
+public sealed record EditableBlock(
+    int Order,
+    string Type,
+    string LanguageCode,
+    string? EcosystemKey,
+    string DataJson);
 
 public sealed record EditableImplementation(
     string EcosystemKey,
