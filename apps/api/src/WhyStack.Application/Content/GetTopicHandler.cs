@@ -1,3 +1,4 @@
+using System.Text.Json;
 using WhyStack.Application.Common;
 
 namespace WhyStack.Application.Content;
@@ -48,7 +49,47 @@ public sealed class GetTopicHandler(ITopicRepository repository)
             language,
             sections,
             Implementations(topic, language, ecosystem),
-            graph));
+            graph,
+            BlocksIn(topic.Blocks, language.Returned, ecosystem)));
+    }
+
+    /// <summary>
+    /// The reader's flow: the SHARED blocks plus the chosen ecosystem's, merged by order (ADR-0024).
+    /// </summary>
+    /// <remarks>
+    /// An untagged block is the "why" — written once and true everywhere, so it appears on every line. A
+    /// tagged block belongs to one ecosystem's treatment, so a .NET reader never sees Java's state machine.
+    /// The merge happens HERE, once, rather than in two clients that would drift.
+    ///
+    /// A block whose data will not parse is DROPPED rather than thrown: one corrupt row must not take down the
+    /// page around it. The save gate (BlockData.Validate) is what stops such a row existing.
+    /// </remarks>
+    private static IReadOnlyList<TopicBlockView> BlocksIn(
+        IReadOnlyList<TopicBlockRecord> blocks,
+        string language,
+        string? ecosystem)
+    {
+        var views = new List<TopicBlockView>();
+
+        foreach (var block in blocks
+            .Where(candidate => candidate.LanguageCode == language)
+            .Where(candidate => candidate.EcosystemKey is null || candidate.EcosystemKey == ecosystem)
+            .OrderBy(candidate => candidate.Order))
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(block.DataJson);
+
+                views.Add(new TopicBlockView(
+                    block.Order, block.Type, block.EcosystemKey, document.RootElement.Clone()));
+            }
+            catch (JsonException)
+            {
+                // Skipped, deliberately and visibly in the gap it leaves — not rendered as a broken block.
+            }
+        }
+
+        return views;
     }
 
     /// <summary>

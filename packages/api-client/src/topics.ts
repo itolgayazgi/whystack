@@ -67,6 +67,111 @@ export interface TopicSection {
   markdown: string;
 }
 
+/* ── Blocks (ADR-0024) ────────────────────────────────────────────────────────────────────────────
+ *
+ * A topic's body is an ordered flow of typed blocks, not fixed sections. The API has already merged
+ * the reader's view — the shared blocks plus the chosen ecosystem's — so a client renders what it is
+ * given rather than re-deriving the rule (which two clients would drift on).
+ *
+ * The union is discriminated on `type`, so a renderer that forgets a block type fails to compile
+ * instead of rendering a blank.
+ */
+
+export type BlockType =
+  | 'Hook'
+  | 'Story'
+  | 'Concept'
+  | 'Code'
+  | 'Diagram'
+  | 'Compare'
+  | 'Myth'
+  | 'Checkpoint'
+  | 'Prod'
+  | 'Term'
+  | 'Summary'
+  | 'Next';
+
+/** Opens the topic with a QUESTION, never a definition — "why before how" (ADR-0019). */
+export interface HookData {
+  question: string;
+  promise?: string;
+}
+
+/** The prose blocks: story, concept, production note. */
+export interface ProseData {
+  markdown: string;
+  analogy?: string;
+}
+
+export interface CodeData {
+  lang: string;
+  source: string;
+  file?: string;
+  highlightLines?: number[];
+  annotation?: string;
+}
+
+export interface DiagramData {
+  svg: string;
+  caption?: string;
+}
+
+export interface CompareData {
+  headers: string[];
+  rows: string[][];
+  conclusion?: string;
+}
+
+export interface MythData {
+  claim: string;
+  truth: string;
+}
+
+/** The checkpoint that breaks passive reading. `explanation` is mandatory — an answer with no why teaches nothing. */
+export interface CheckpointData {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface TermData {
+  term: string;
+  definition: string;
+  termKey?: string;
+}
+
+export interface SummaryData {
+  items: string[];
+}
+
+/** No dead ends: every station has a continuation, and maybe a transfer to another line. */
+export interface NextData {
+  label: string;
+  toStableKey?: string;
+  transferStableKey?: string;
+  transferReason?: string;
+}
+
+interface BlockBase {
+  order: number;
+
+  /** Null is a SHARED block — the why, written once and true on every line (ADR-0024). */
+  ecosystemKey: string | null;
+}
+
+export type TopicBlock =
+  | (BlockBase & { type: 'Hook'; data: HookData })
+  | (BlockBase & { type: 'Story' | 'Concept' | 'Prod'; data: ProseData })
+  | (BlockBase & { type: 'Code'; data: CodeData })
+  | (BlockBase & { type: 'Diagram'; data: DiagramData })
+  | (BlockBase & { type: 'Compare'; data: CompareData })
+  | (BlockBase & { type: 'Myth'; data: MythData })
+  | (BlockBase & { type: 'Checkpoint'; data: CheckpointData })
+  | (BlockBase & { type: 'Term'; data: TermData })
+  | (BlockBase & { type: 'Summary'; data: SummaryData })
+  | (BlockBase & { type: 'Next'; data: NextData });
+
 /**
  * What sits behind the `[ .NET ▾ ]` control (ADR-0021).
  *
@@ -93,6 +198,13 @@ export interface TopicDetail extends Omit<TopicSummary, 'language'> {
   implementations: TopicImplementation[];
 
   graph: TopicGraph;
+
+  /**
+   * The block flow to render (ADR-0024) — already merged and filtered by the API.
+   *
+   * `sections` and `implementations` above are the retired model; they go once every topic is blocks.
+   */
+  blocks: TopicBlock[];
 }
 
 export interface Pagination {

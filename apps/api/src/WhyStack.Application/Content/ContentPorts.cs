@@ -48,7 +48,21 @@ public sealed record TopicRecord(
     IReadOnlyList<TopicSectionRecord> Sections,
     IReadOnlyList<TopicImplementationRecord> Implementations,
     IReadOnlyList<TopicTranslationRecord> Translations,
-    IReadOnlyList<TopicEdge> Edges);
+    IReadOnlyList<TopicEdge> Edges,
+
+    /// <summary>The block flow (ADR-0024). Sections above are retired and go once every topic is blocks.</summary>
+    IReadOnlyList<TopicBlockRecord> Blocks);
+
+/// <summary>One stored block, straight off the row. <c>DataJson</c> is parsed at the edge, not here.</summary>
+public sealed record TopicBlockRecord(
+    int Order,
+    string Type,
+    string LanguageCode,
+
+    /// <summary>Null is a SHARED block — the why, written once. A key marks one ecosystem's treatment.</summary>
+    string? EcosystemKey,
+
+    string DataJson);
 
 public sealed record TopicSectionRecord(string SectionTypeKey, string LanguageCode, string Markdown, int SortOrder);
 

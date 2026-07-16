@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace WhyStack.Application.Content;
 
 /// <summary>
@@ -66,7 +68,21 @@ public sealed record TopicDetail(
     /// <summary>The `[ .NET ▾ ]` panel. Empty for a topic with no code — "what is a transaction?".</summary>
     IReadOnlyList<TopicImplementationView> Implementations,
 
-    TopicGraph Graph);
+    TopicGraph Graph,
+
+    /// <summary>
+    /// The block flow the reader renders (ADR-0024): the shared blocks plus the chosen ecosystem's, in order.
+    /// </summary>
+    /// <remarks>
+    /// Already merged and filtered — the client renders what it is given rather than re-deriving the rule.
+    /// Sections and Implementations above are the retired model and go once every topic is blocks.
+    /// </remarks>
+    IReadOnlyList<TopicBlockView> Blocks);
+
+/// <summary>
+/// One block, ready to render. <c>Data</c> is the parsed object, not a string the client must parse again.
+/// </summary>
+public sealed record TopicBlockView(int Order, string Type, string? EcosystemKey, JsonElement Data);
 
 /// <summary>One section: what it is, and the Markdown that fills it.</summary>
 public sealed record TopicSectionContent(string SectionType, string Markdown);

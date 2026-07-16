@@ -39,8 +39,20 @@ export type { ProblemDetails } from './problem';
 export { ApiError, ErrorCode, NetworkError, toApiError } from './problem';
 export { type RefreshTokenStore, type TokenPlatform, webRefreshTokenStore } from './refresh-token-store';
 export type {
+  BlockType,
+  CheckpointData,
+  CodeData,
+  CompareData,
   ContentStatus,
+  DiagramData,
+  HookData,
+  MythData,
+  NextData,
   Pagination,
+  ProseData,
+  SummaryData,
+  TermData,
+  TopicBlock,
   TopicDetail,
   TopicGraph,
   TopicImplementation,

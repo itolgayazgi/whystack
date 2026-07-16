@@ -109,6 +109,10 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
                         translation.Summary,
                         translation.Status.ToString()))
                     .ToList(),
+                [],
+
+                // The list shows titles, not bodies — loading every block's JSON to render a card would make
+                // the list screen the slowest page in the app.
                 []))
             .ToList();
 
@@ -123,6 +127,7 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
         var topic = await Readable(includeDrafts)
             .Include(candidate => candidate.Domain)
             .Include(candidate => candidate.SubArea)
+            .Include(candidate => candidate.Versions).ThenInclude(version => version.Blocks)
             .Include(candidate => candidate.OutgoingRelationships)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Sections)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Translations)
@@ -179,7 +184,18 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
                 translation.Summary,
                 translation.Status.ToString()))],
 
-            [.. topic.OutgoingRelationships.Select(edge => new TopicEdge(edge.Type.ToString(), edge.ToTopicId))]);
+            [.. topic.OutgoingRelationships.Select(edge => new TopicEdge(edge.Type.ToString(), edge.ToTopicId))],
+
+            // Every block, in every language and ecosystem. The handler merges the reader's view (ADR-0024) —
+            // one place decides the rule rather than two clients that would drift.
+            [.. version.Blocks
+                .OrderBy(block => block.Order)
+                .Select(block => new TopicBlockRecord(
+                    block.Order,
+                    block.Type.ToString(),
+                    block.LanguageCode,
+                    block.EcosystemKey,
+                    block.DataJson))]);
     }
 
     public async Task<IReadOnlyDictionary<Guid, TopicLink>> LinksForAsync(
