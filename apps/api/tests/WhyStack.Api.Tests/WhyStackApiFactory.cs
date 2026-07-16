@@ -132,6 +132,7 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
             .ExecuteDeleteAsync();
 
         await context.UserStreaks.Where(streak => users.Contains(streak.UserId)).ExecuteDeleteAsync();
+        await context.UserLevelBaselines.Where(baseline => users.Contains(baseline.UserId)).ExecuteDeleteAsync();
         await context.Topics.Where(topic => topics.Contains(topic.Id)).ExecuteDeleteAsync();
         await context.Users.Where(user => users.Contains(user.Id)).ExecuteDeleteAsync();
 

@@ -1,4 +1,4 @@
-namespace WhyStack.Application.Progress;
+﻿namespace WhyStack.Application.Progress;
 
 /// <summary>Reading progress and the streak (ADR-0025). EF Core stays on the far side of this line.</summary>
 public interface IProgressRepository
@@ -55,8 +55,15 @@ public sealed record ContinueView(
     int TotalBlocks,
     int EstimatedReadingMinutes);
 
-/// <summary>One rung of the basamak chart: how much of this level's corpus this reader has finished.</summary>
-public sealed record LevelProgressView(string Level, int Completed, int Total);
+/// <summary>
+/// One rung of the basamak chart.
+/// </summary>
+/// <remarks>
+/// <c>Total</c> is the corpus AS IT WAS when the reader arrived at this level, not as it stands now — so
+/// publishing never lowers anybody's percentage. <c>Fresh</c> is what has opened since: the design's
+/// "10/11 · 1 yeni". A reward, never a debt.
+/// </remarks>
+public sealed record LevelProgressView(string Level, int Completed, int Total, int Fresh);
 
 public sealed record NextTopicView(
     string Slug,

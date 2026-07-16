@@ -89,3 +89,29 @@ public class UserStreak
         LastActiveOn = today;
     }
 }
+
+/// <summary>
+/// The moment a reader entered a basamak — and therefore which stops their percentage is measured against.
+/// </summary>
+/// <remarks>
+/// <b>A reader's percentage must never fall because we published something.</b> Without this, the
+/// denominator is the corpus as it stands right now: publish one Junior topic and every Junior reader on
+/// the platform wakes up further from the top than they went to bed. "Dün %100'düm, bugün %91 oldum" reads
+/// as a punishment for our productivity, and it punishes the readers who finished the most.
+///
+/// So the level's threshold is the set of stops that existed when the reader ARRIVED at it. A stop
+/// published afterwards is a reward — "10/11 · 1 yeni" — never a debt.
+///
+/// An INSTANT rather than a table of topic ids. The set is recoverable: it is exactly the published topics
+/// at that level with <c>PublishedAtUtc &lt;= EnteredAtUtc</c>, which is a fact the content already carries.
+/// A join table would store the same answer in a shape that can drift from it.
+/// </remarks>
+public class UserLevelBaseline
+{
+    public required Guid UserId { get; init; }
+
+    public required SkillLevel Level { get; init; }
+
+    /// <summary>Stamped once, the first time the reader touches a stop at this level. Never moved.</summary>
+    public required DateTime EnteredAtUtc { get; init; }
+}

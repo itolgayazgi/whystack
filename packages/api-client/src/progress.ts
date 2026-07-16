@@ -27,11 +27,20 @@ export interface ContinueView {
   estimatedReadingMinutes: number;
 }
 
-/** One rung of the basamak chart: how much of this level's published corpus the reader has finished. */
+/**
+ * One rung of the basamak chart.
+ *
+ * `total` is the corpus AS IT WAS when the reader arrived at this level — not as it stands now. Publishing
+ * a new stop must never lower somebody's percentage; "dün %100'düm, bugün %91 oldum" reads as a punishment
+ * for our own productivity, charged to the readers who finished the most.
+ *
+ * `fresh` is what has opened since they got here: the design's "10/11 · 1 yeni". A reward, never a debt.
+ */
 export interface LevelProgressView {
   level: SkillLevel;
   completed: number;
   total: number;
+  fresh: number;
 }
 
 export interface NextTopicView {

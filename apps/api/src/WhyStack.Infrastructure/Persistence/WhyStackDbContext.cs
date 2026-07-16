@@ -19,6 +19,7 @@ public class WhyStackDbContext(DbContextOptions<WhyStackDbContext> options) : Db
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
     public DbSet<UserTopicProgress> UserTopicProgress => Set<UserTopicProgress>();
     public DbSet<UserStreak> UserStreaks => Set<UserStreak>();
+    public DbSet<UserLevelBaseline> UserLevelBaselines => Set<UserLevelBaseline>();
 
     public DbSet<KnowledgeDomain> KnowledgeDomains => Set<KnowledgeDomain>();
     public DbSet<SubArea> SubAreas => Set<SubArea>();

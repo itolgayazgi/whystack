@@ -91,3 +91,40 @@ bar past 100% is the least of what a hand-written request would do.
 - **Keep the streak out.** Consistent with `09`, and against an explicit decision by the person whose product
   it is. The right response to that is to write the override down, not to quietly obey the document.
 - **A daily activity table.** Grows forever, answers a question nothing asks.
+
+---
+
+## Amendment — 2026-07-16: the basamak's denominator is frozen at arrival
+
+**Status:** Accepted · **Decider:** Tolga Yazgı (owner) · **Source:** the owner's live-content design
+(`whystack-canli-icerik-dongusu.md`), reproduced here because the decision now lives in code.
+
+This ADR shipped with the level chart counting the corpus **as it stands right now**. That is a defect, and
+a cruel one: publish a single Junior topic and every Junior reader on the platform wakes up further from the
+top than they went to bed. It charges our own productivity to the people who read the most, and hardest of
+all to whoever had just finished everything.
+
+> *"dün %100'düm, bugün %91 oldum" hissi cezalandırma gibi çalışır. Yeni içerik ödül kapısıdır, borç değil.*
+
+**Decision.** A level's denominator is the set of stops that existed **when the reader arrived at that
+level**. Anything published afterwards is `fresh` — the design's "10/11 · 1 yeni" — never a debt.
+
+**Model.** `UserLevelBaselines(UserId, Level, EnteredAtUtc)`, stamped once on first contact with a stop at
+that level and never moved.
+
+An **instant**, not a table of topic ids: the set is recoverable as "published stops at this level with
+`PublishedAtUtc <= EnteredAtUtc`", which is a fact the content already carries. A join table would store the
+same answer in a second shape that can drift from the first.
+
+Stamped on first **contact**, not on completion. Somebody who has opened one Mid topic is at Mid; waiting
+for them to finish one would leave the denominator floating for exactly as long as it matters.
+
+**Consequences.**
+
+- A reader with no baseline at a level sees the whole published corpus, and `fresh` is 0 — there is no
+  history to protect and no "since" for anything to be new after.
+- `completed` is clamped to the baseline, so a reader who finishes a stop we published after they arrived
+  reads `10/10 · 1 yeni` rather than `11/10`.
+- Archiving a stop still shrinks the denominator. That raises a percentage rather than lowering one, which
+  this decision does not object to.
+- Proved by `LevelBaselineTests`, both ways: ignoring the baseline, and re-stamping it on every read.

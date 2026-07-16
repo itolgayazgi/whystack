@@ -31,6 +31,7 @@ public sealed class ProgressRepository(WhyStackDbContext context, TimeProvider c
             .Select(candidate => new
             {
                 candidate.Id,
+                candidate.DefaultLevel,
 
                 // The topic's real block count in the canonical language, so the position can be clamped to
                 // something that exists. Shared blocks plus this ecosystem's — the same merge the reader sees
@@ -102,10 +103,42 @@ public sealed class ProgressRepository(WhyStackDbContext context, TimeProvider c
         }
 
         await TouchStreakAsync(userId, today, cancellationToken);
+        await EnterLevelAsync(userId, topic.DefaultLevel, now, cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
 
         return new RecordOutcome(progress.LastBlockOrder, progress.IsCompleted, topic.Blocks);
+    }
+
+    /// <summary>
+    /// Stamps the moment a reader first arrives at a basamak. Once — never moved.
+    /// </summary>
+    /// <remarks>
+    /// This is what stops a reader's percentage falling because we published something. The denominator for
+    /// a level is the stops that existed when they GOT there; anything published later is "1 yeni", a
+    /// reward rather than a debt.
+    ///
+    /// Stamped on first CONTACT with a stop at that level, not on completion. Somebody who has opened one
+    /// Mid topic is at Mid — waiting for them to finish one would leave the denominator floating for as long
+    /// as they are still reading, which is the whole time it matters.
+    /// </remarks>
+    private async Task EnterLevelAsync(
+        Guid userId,
+        SkillLevel level,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var already = await context.UserLevelBaselines
+            .AnyAsync(baseline => baseline.UserId == userId && baseline.Level == level, cancellationToken);
+
+        if (already) return;
+
+        context.UserLevelBaselines.Add(new UserLevelBaseline
+        {
+            UserId = userId,
+            Level = level,
+            EnteredAtUtc = now,
+        });
     }
 
     private async Task TouchStreakAsync(Guid userId, DateOnly today, CancellationToken cancellationToken)
@@ -172,12 +205,50 @@ public sealed class ProgressRepository(WhyStackDbContext context, TimeProvider c
             })
             .FirstOrDefaultAsync(cancellationToken);
 
-        // The basamak chart: how much of each level's PUBLISHED corpus this reader has finished. Counted per
-        // level in one grouped query rather than one query per rung.
-        var totals = await Readable()
-            .GroupBy(topic => topic.DefaultLevel)
-            .Select(group => new { Level = group.Key, Total = group.Count() })
+        // The basamak chart, measured against the corpus AS IT WAS WHEN THE READER ARRIVED.
+        //
+        // Not as it stands now. Publishing one Junior topic would otherwise push every Junior reader further
+        // from the top than they were yesterday — the platform's own productivity, charged to the people who
+        // read the most. A stop published after they got here is "1 yeni", never a debt.
+        var baselines = await context.UserLevelBaselines
+            .AsNoTracking()
+            .Where(baseline => baseline.UserId == userId)
+            .ToDictionaryAsync(baseline => baseline.Level, baseline => baseline.EnteredAtUtc, cancellationToken);
+
+        var counts = await Readable()
+            .Select(topic => new
+            {
+                topic.DefaultLevel,
+
+                // The version that is live. Its PublishedAtUtc is what "already existed" is measured on.
+                PublishedAtUtc = topic.Versions
+                    .OrderByDescending(version => version.VersionNumber)
+                    .Select(version => version.PublishedAtUtc)
+                    .First(),
+            })
             .ToListAsync(cancellationToken);
+
+        var totals = counts
+            .GroupBy(entry => entry.DefaultLevel)
+            .Select(group =>
+            {
+                // No baseline means the reader has never touched this level. There is no history to protect,
+                // so the honest denominator is everything that is published — that is what they would find
+                // if they went there now.
+                var entered = baselines.TryGetValue(group.Key, out var at) ? at : (DateTime?)null;
+
+                var inBaseline = entered is null
+                    ? group.Count()
+                    : group.Count(entry => entry.PublishedAtUtc is not null && entry.PublishedAtUtc <= entered);
+
+                return new
+                {
+                    Level = group.Key,
+                    Total = inBaseline,
+                    Fresh = group.Count() - inBaseline,
+                };
+            })
+            .ToList();
 
         var done = await context.UserTopicProgress
             .AsNoTracking()
@@ -190,8 +261,12 @@ public sealed class ProgressRepository(WhyStackDbContext context, TimeProvider c
             .OrderBy(entry => entry.Level)
             .Select(entry => new LevelProgressView(
                 entry.Level.ToString(),
-                done.FirstOrDefault(finished => finished.Level == entry.Level)?.Completed ?? 0,
-                entry.Total))
+
+                // Clamped to the baseline. A reader who finished ten stops and then read an eleventh that we
+                // published afterwards would otherwise read "11/10" — the guard against their own reward.
+                Math.Min(done.FirstOrDefault(finished => finished.Level == entry.Level)?.Completed ?? 0, entry.Total),
+                entry.Total,
+                entry.Fresh))
             .ToList();
 
         // What to read next: published topics this reader has not finished. Not a recommendation engine —
