@@ -23,13 +23,13 @@ export interface ContentProblem {
   message: string;
 }
 
-export interface DomainOption {
+export interface LineOption {
   key: string;
   name: string;
 }
 
 /** A theme a topic may be tagged with (ADR-0023). Curated in the studio. */
-export interface SubAreaOption {
+export interface ScopeOption {
   key: string;
   name: string;
 }
@@ -66,8 +66,8 @@ export interface TopicOption {
 }
 
 export interface AuthoringCatalog {
-  domains: DomainOption[];
-  subAreas: SubAreaOption[];
+  lines: LineOption[];
+  scopes: ScopeOption[];
 
   /** Category names from the TopicCategory enum. A closed set — the studio picks, never types (see topic-editor). */
   categories: string[];
@@ -107,7 +107,7 @@ export interface StudioTopic {
   stableKey: string;
   slug: string;
   title: string;
-  domainName: string;
+  lineName: string;
 
   /** The theme's name, or null. A topic with no thread shows a dash — omission would read as "fine". */
   subAreaName: string | null;
@@ -161,10 +161,10 @@ export interface EditableTopic {
   id: string;
   stableKey: string;
   slug: string;
-  domainKey: string;
+  lineKey: string;
 
-  /** The theme key, or null (ADR-0023). Picked from the catalog's subAreas. */
-  subAreaKey: string | null;
+  /** The theme key, or null (ADR-0023). Picked from the catalog's scopes. */
+  scopeKey: string | null;
 
   category: string;
 
@@ -199,10 +199,10 @@ export interface SaveTopicRequest {
   id?: string | null;
   stableKey: string;
   slug: string;
-  domainKey: string;
+  lineKey: string;
 
   /** The theme key, or null for a topic with no thread (ADR-0023). */
-  subAreaKey: string | null;
+  scopeKey: string | null;
 
   category: string;
   archetype: string;
@@ -249,7 +249,7 @@ export interface EditableTerm {
 }
 
 /** A theme as the studio manages it (ADR-0023). `topicCount` is why a delete may be refused. */
-export interface EditableSubArea {
+export interface EditableScope {
   id: string;
   key: string;
   name: string;
@@ -299,15 +299,15 @@ export const authoringApi = {
   deleteTerm: (client: ApiClient, id: string) =>
     client.request<void>(`${BASE}/terms/${id}`, { method: 'DELETE' }),
 
-  subAreas: (client: ApiClient) => client.request<Single<EditableSubArea[]>>(`${BASE}/subareas`),
+  scopes: (client: ApiClient) => client.request<Single<EditableScope[]>>(`${BASE}/subareas`),
 
   /** The key is set on create and ignored on edit — it is the identity the roadmap slice groups on. */
-  saveSubArea: (client: ApiClient, subArea: { id?: string | null; key: string; name: string }) =>
-    client.request<Single<{ id: string }>>(`${BASE}/subareas`, { method: 'POST', body: subArea }),
+  saveSubArea: (client: ApiClient, scope: { id?: string | null; key: string; name: string }) =>
+    client.request<Single<{ id: string }>>(`${BASE}/subareas`, { method: 'POST', body: scope }),
 
   /** Rejected with a 409 (ApiError) if any topic still uses the theme — retag those first. */
   deleteSubArea: (client: ApiClient, id: string) =>
-    client.request<void>(`${BASE}/subareas/${id}`, { method: 'DELETE' }),
+    client.request<void>(`${BASE}/scopes/${id}`, { method: 'DELETE' }),
 };
 
 /**

@@ -47,7 +47,7 @@ export interface NextTopicView {
   slug: string;
   title: string;
   level: SkillLevel;
-  domainName: string;
+  lineName: string;
   estimatedReadingMinutes: number;
 }
 

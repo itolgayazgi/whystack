@@ -23,56 +23,97 @@ export type StationState = 'Done' | 'Current' | 'Next' | 'Ahead';
 export interface Transfer {
   slug: string;
   title: string;
-  domainName: string;
+  areaName: string;
+}
+
+/** A stop's place in a numbered chain: "Change Tracking II / III". Null for most (ADR-0027). */
+export interface Sequence {
+  group: string;
+  part: number;
+  of: number;
 }
 
 export interface Station {
   slug: string;
   title: string;
   level: SkillLevel;
-  subAreaName: string | null;
+
+  /** The neighbourhood this stop stands in: "EF Core". Null for a standalone stop (ADR-0027). */
+  scopeKey: string | null;
+  scopeName: string | null;
+
   estimatedReadingMinutes: number;
   state: StationState;
 
   /** 0–100, from the reader's furthest block. */
   percent: number;
 
-  /** Where this station meets another domain's line — the design's "⇄ Aktarma". Null for most. */
+  sequence: Sequence | null;
+
+  /** Where this station meets another AREA's line — the design's "⇄ Aktarma". Null for most. */
   transfer: Transfer | null;
 }
 
 export interface Roadmap {
   ecosystemKey: string;
   ecosystemName: string;
-  domainKey: string;
-  domainName: string;
+  lineKey: string;
+  lineName: string;
+
+  /** The line's colour, from the server. The map, the legend and the tab dot all read this one value. */
+  lineColor: string;
+
   stations: Station[];
 }
 
-/** One ecosystem tab. `isAvailable: false` is drawn greyed with "YAKINDA", never hidden. */
-export interface LineOption {
+/**
+ * One ecosystem tab — the network SWITCHER, not a route through it (ADR-0027).
+ *
+ * Choosing Java does not add a line beside .NET; it rebuilds the same lines in Java. `isAvailable: false`
+ * is drawn greyed with "YAKINDA", never hidden.
+ */
+export interface EcosystemOption {
   key: string;
   name: string;
   isAvailable: boolean;
   topicCount: number;
 }
 
+/**
+ * One line inside an area: B1 Dil & Runtime, B3 Veri Erişimi.
+ *
+ * The colour comes from the SERVER, not from a token file. A line is a row an editor can add, so its colour
+ * cannot live somewhere the editor has no access to — the palette it is drawn from is still the design
+ * system's, and the seed is what enforces that (ADR-0027).
+ */
+export interface LineOption {
+  key: string;
+  name: string;
+  color: string;
+  topicCount: number;
+}
+
 /** One entry in the sidebar's "Alanlar" rail. Shown even at zero — its shape must not follow the pipeline. */
-export interface DomainOption {
+export interface AreaOption {
   key: string;
   name: string;
   topicCount: number;
 }
 
 export const roadmapApi = {
-  get: (client: ApiClient, options: { ecosystem: string; domain: string; language?: string }) => {
-    const query = new URLSearchParams({ ecosystem: options.ecosystem, domain: options.domain });
+  get: (client: ApiClient, options: { ecosystem: string; line: string; language?: string }) => {
+    const query = new URLSearchParams({ ecosystem: options.ecosystem, line: options.line });
     if (options.language) query.set('language', options.language);
 
     return client.request<Single<Roadmap>>(`/api/v1/roadmap?${query}`);
   },
 
-  lines: (client: ApiClient) => client.request<Single<LineOption[]>>('/api/v1/lines'),
+  /** The tabs. An ecosystem is the network switcher (ADR-0027). */
+  ecosystems: (client: ApiClient) => client.request<Single<EcosystemOption[]>>('/api/v1/ecosystems'),
 
-  domains: (client: ApiClient) => client.request<Single<DomainOption[]>>('/api/v1/domains'),
+  /** The lines inside an area. An empty list is a real answer: Frontend has no lines written yet. */
+  lines: (client: ApiClient, area: string) =>
+    client.request<Single<LineOption[]>>(`/api/v1/areas/${encodeURIComponent(area)}/lines`),
+
+  areas: (client: ApiClient) => client.request<Single<AreaOption[]>>('/api/v1/areas'),
 };

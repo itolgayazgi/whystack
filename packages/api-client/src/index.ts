@@ -14,23 +14,23 @@ export type {
   AuthoringCatalog,
   BlockTypeOption,
   ContentProblem,
-  DomainOption,
   EcosystemOption,
   EditableBlock,
   EditableImplementation,
   EditableRelationship,
+  EditableScope,
   EditableSection,
-  EditableSubArea,
   EditableTerm,
   EditableTopic,
   EditableTranslation,
   LanguageOption,
+  LineOption,
   SaveTopicRequest,
   SaveTopicResult,
+  ScopeOption,
   SectionScope,
   SectionTypeOption,
   StudioTopic,
-  SubAreaOption,
   TopicOption,
 } from './authoring';
 export { authoringApi, canAuthor, EDITOR_ROLES } from './authoring';
@@ -51,10 +51,15 @@ export type {
 } from './progress';
 export { progressApi } from './progress';
 export { type RefreshTokenStore, type TokenPlatform, webRefreshTokenStore } from './refresh-token-store';
+// The roadmap's options are ALIASED because `authoring` exports the same words for different shapes: its
+// EcosystemOption/LineOption are dropdown entries for the studio, these carry the map's counts and colour.
+// Two shapes, one word, is how a caller ends up reading `.color` off something that never had one.
 export type {
-  DomainOption as RoadmapDomainOption,
-  LineOption,
+  AreaOption,
+  EcosystemOption as RoadmapEcosystemOption,
+  LineOption as RoadmapLineOption,
   Roadmap,
+  Sequence,
   Station,
   StationState,
   Transfer,

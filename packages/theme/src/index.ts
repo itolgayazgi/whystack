@@ -8,8 +8,6 @@ export {
   worstCaseSurface,
 } from './colors';
 export { AA, contrastRatio, meetsAA, relativeLuminance } from './contrast';
-export { type LineKey, lineColor, lineColors } from './lines';
-
 export {
   breakpoint,
   duration,
@@ -23,6 +21,7 @@ export {
   radius,
   space,
 } from './layout';
+export { isLineColor, lineColor, lineFallbackColor } from './lines';
 export {
   codeInlineScale,
   type Density,

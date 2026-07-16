@@ -1,36 +1,36 @@
 import { dark } from './colors';
 
 /**
- * The line colours: one per ecosystem, as the roadmap draws them.
+ * The fallback a line falls back to, and nothing else.
  *
- * <b>Not decoration — identity.</b> The map's whole idea is that a line is an ecosystem, so the colour has
- * to be the same on the tab, the legend, the SVG stroke and the transfer chip. One home for the fact; the
- * alternative is six near-identical greens diverging one file at a time.
+ * <b>This file used to hold a colour per ECOSYSTEM</b> — dotnet gold, java red, python blue — because the
+ * map's lines were ecosystems. ADR-0027 moved that: an ecosystem is the network SWITCHER, and the lines are
+ * B1..B8. A line is a ROW an editor can add, so its colour is data and travels with it from the server
+ * (`Line.Color`, seeded from the design's palette). A map of hardcoded keys here would be a map that cannot
+ * name a line nobody hardcoded.
  *
- * .NET reads the brand's own gold because it is the line we actually have. That is deliberate: the reader's
- * line looks like the product, and the ones we have not written yet recede.
- *
- * These are STROKE and DOT colours, never text on a surface — so they answer to WCAG's 3:1 bar for
- * non-text contrast rather than 4.5:1. Anything here that ends up as label text has to be re-checked
- * against `meetsAA`; `contrast.test.ts` covers the text tokens, not these.
+ * What survives is the one case the server cannot answer: a line whose colour is missing or unreadable.
  */
-export const lineColors = {
-  dotnet: dark.accent,
-  java: '#C96A5A',
-  node: '#6FAF8B',
-  python: dark.info,
-  go: '#5BB8C4',
-  rust: '#C98A5A',
-} as const;
-
-export type LineKey = keyof typeof lineColors;
 
 /**
- * An ecosystem we have no colour for still has to draw.
+ * A line with no usable colour recedes; it does not get promoted.
  *
- * Falling back to the border grey rather than to gold: gold means "your line", and handing it to an unknown
- * key would quietly promote whatever an editor typed into the reader's own line.
+ * The border grey rather than the accent, deliberately. Gold means "your line" on this product, and handing
+ * it to a row with a broken colour would make a data error look like the reader's own route.
  */
-export function lineColor(ecosystemKey: string): string {
-  return lineColors[ecosystemKey as LineKey] ?? dark.borderStrong;
+export const lineFallbackColor = dark.borderStrong;
+
+/** True for a value the map can actually stroke: `#RGB` or `#RRGGBB`. */
+export function isLineColor(value: string | null | undefined): value is string {
+  return typeof value === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value);
+}
+
+/**
+ * The colour to stroke a line with.
+ *
+ * Takes what the server sent. Guards the shape because this string goes straight into an SVG `stroke` and a
+ * CSS `background`, and both answer garbage the same way: by drawing nothing, silently.
+ */
+export function lineColor(color: string | null | undefined): string {
+  return isLineColor(color) ? color : lineFallbackColor;
 }

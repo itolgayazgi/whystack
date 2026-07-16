@@ -22,13 +22,20 @@ export interface TopicSummary {
   title: string;
   summary: string | null;
 
-  /** A topic belongs to a DOMAIN — Backend, Database — not to a language (ADR-0021). */
-  domainKey: string;
-  domainName: string;
+  /**
+   * The AREA — Backend, Database. Not a language (ADR-0021), and not stored on the topic: it follows from
+   * the line, which is what stops a B3 stop claiming to be Frontend (ADR-0027).
+   */
+  areaKey: string;
+  areaName: string;
 
-  /** The theme this topic threads through, or null (ADR-0023). What the roadmap slice groups on. */
-  subAreaKey: string | null;
-  subAreaName: string | null;
+  /** The LINE this stop sits on: "b3-data-access" / "Veri Erişimi" (ADR-0027). */
+  lineKey: string;
+  lineName: string;
+
+  /** The neighbourhood — "EF Core" — or null for a standalone stop. What the map's bracket groups on. */
+  scopeKey: string | null;
+  scopeName: string | null;
 
   category: string;
   level: SkillLevel;
@@ -233,7 +240,7 @@ export const topicsApi = {
     client: ApiClient,
     query: {
       language: string;
-      domain?: string;
+      line?: string;
       level?: SkillLevel;
       pageNumber?: number;
 
@@ -251,7 +258,7 @@ export const topicsApi = {
   ) => {
     const parameters = new URLSearchParams({ language: query.language });
 
-    if (query.domain) parameters.set('domain', query.domain);
+    if (query.line) parameters.set('line', query.line);
     if (query.level) parameters.set('level', query.level);
     if (query.pageNumber) parameters.set('pageNumber', String(query.pageNumber));
     if (query.pageSize) parameters.set('pageSize', String(query.pageSize));
