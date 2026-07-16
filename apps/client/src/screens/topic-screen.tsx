@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import type { TopicDetail, TopicImplementation, TopicLink } from '../api/topics';
+import { BlockFlow } from '../components/block-flow';
 import { EmptyState } from '../components/empty-state';
 import { LanguageFallbackNotice } from '../components/language-fallback-notice';
 import { Notice } from '../components/notice';
@@ -32,6 +33,7 @@ import { useTopic } from '../state/topics';
 export function TopicScreen({ slug }: { slug: string }) {
   const { t } = useLanguage();
   const { color, textStyle } = useTheme();
+  const router = useRouter();
   const { status, topic, reload } = useTopic(slug);
 
   if (status === 'loading') {
@@ -85,14 +87,27 @@ export function TopicScreen({ slug }: { slug: string }) {
         <GraphSection titleKey="topic.prerequisites" links={topic.graph.prerequisites} />
       ) : null}
 
-      {topic.sections.map((section) => (
-        <Section key={section.sectionType} type={section.sectionType} markdown={section.markdown} />
-      ))}
+      {/* The body is a BLOCK FLOW now (ADR-0024) — the same JSON the website renders, in smaller bites. The
+          API already merged the shared blocks with the chosen ecosystem's, so this renders what it is given.
 
-      {/* The panel behind the `[ .NET ▾ ]` control — and it is NOT rendered when there is nothing behind it.
-          A topic with no code ("what is a transaction?") has no implementation, and an empty panel would be
-          a promise the page cannot keep (ADR-0021, Decision 4). */}
-      {topic.implementations.length > 0 ? <Implementations implementations={topic.implementations} /> : null}
+          Sections and the `[ .NET ▾ ]` panel below are the retired model; they stay only until every topic is
+          blocks, and a topic that has blocks does not draw them. */}
+      {topic.blocks.length > 0 ? (
+        <BlockFlow
+          blocks={topic.blocks}
+          onTopicPress={(target) => router.push({ pathname: '/topics/[slug]', params: { slug: target } })}
+        />
+      ) : (
+        <>
+          {topic.sections.map((section) => (
+            <Section key={section.sectionType} type={section.sectionType} markdown={section.markdown} />
+          ))}
+
+          {topic.implementations.length > 0 ? (
+            <Implementations implementations={topic.implementations} />
+          ) : null}
+        </>
+      )}
 
       {topic.graph.related.length > 0 ? (
         <GraphSection titleKey="topic.related" links={topic.graph.related} />
