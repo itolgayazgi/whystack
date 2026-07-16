@@ -1,0 +1,294 @@
+/*
+  The "durak içi" reading screen — the approved design, in tokens.
+
+  Three columns: the block map (left), the flow (middle), the station's context (right). The middle column
+  is the product; the rails exist to keep the reader oriented without leaving it.
+*/
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 280px;
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+/* ── Left: the block map (scrollspy) ─────────────────────────────────────────────────────────────── */
+
+.outline {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: var(--space-4) 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+.back {
+  display: block;
+  padding: 0 var(--space-4) var(--space-4);
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--color-text-primary);
+}
+
+.outlineLabel {
+  padding: var(--space-2) var(--space-4);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.outItem {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.outItem:hover {
+  color: var(--color-text-primary);
+}
+
+/* The scrollspy's current block. Tracks the reader instead of making them count. */
+.outItemCurrent {
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  border-left-color: var(--color-accent);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ── Middle: the flow ────────────────────────────────────────────────────────────────────────────── */
+
+.content {
+  padding: var(--space-6) var(--space-6) var(--space-8);
+  max-width: 760px;
+}
+
+.head {
+  margin-bottom: var(--space-6);
+}
+
+.lineChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: 4px var(--space-3);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-small);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.lineChip::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.title {
+  margin-bottom: var(--space-2);
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.meta b {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+/* The language fallback, said out loud. A reader who asked for Turkish and got English must be told
+   (CLAUDE.md §1.7) — never a silent swap. */
+.fallback {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-small);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-warning);
+}
+
+/* ── Right: the station's context ────────────────────────────────────────────────────────────────── */
+
+.rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-4);
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+}
+
+.railLabel {
+  margin-bottom: var(--space-3);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px dashed var(--color-border);
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.kv b {
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+.links {
+  margin-top: var(--space-5);
+}
+
+.link {
+  display: block;
+  padding: var(--space-2) 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.link:hover {
+  color: var(--color-accent);
+}
+
+.ecoSwitch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.eco {
+  padding: 4px var(--space-2);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.ecoActive {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* ── States ──────────────────────────────────────────────────────────────────────────────────────── */
+
+.state {
+  padding: var(--space-8) var(--space-6);
+  max-width: 640px;
+  margin: 0 auto;
+  font-family: var(--font-ui);
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+.stateTitle {
+  margin-bottom: var(--space-2);
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--color-text-primary);
+}
+
+/* Skeletons, not a blank page: the shape arrives before the words do. */
+.skeleton {
+  height: 14px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-elevated);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeletonTitle {
+  height: 30px;
+  width: 60%;
+  margin-bottom: var(--space-4);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .rail {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .outline {
+    position: static;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .content {
+    padding: var(--space-4);
+  }
+
+  .title {
+    font-size: 24px;
+  }
+}
