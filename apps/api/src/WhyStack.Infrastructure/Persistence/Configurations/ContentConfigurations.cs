@@ -296,6 +296,40 @@ public class TopicSectionConfiguration : IEntityTypeConfiguration<TopicSection>
     }
 }
 
+public class TopicBlockConfiguration : IEntityTypeConfiguration<TopicBlock>
+{
+    public void Configure(EntityTypeBuilder<TopicBlock> builder)
+    {
+        builder.ToTable("TopicBlocks");
+        builder.HasKey(block => block.Id);
+
+        builder.Property(block => block.Type).HasConversion<string>().HasMaxLength(24).IsRequired();
+        builder.Property(block => block.LanguageCode).HasMaxLength(8).IsRequired();
+
+        // Nullable: null is a SHARED block — the hook, the why, written once (ADR-0024). A key marks a block
+        // that belongs to one ecosystem's treatment.
+        builder.Property(block => block.EcosystemKey).HasMaxLength(64);
+
+        // nvarchar(max). The block body is JSON shaped by its type, and it is the product; capping it would
+        // be a limit nobody chose, discovered mid-sentence.
+        builder.Property(block => block.DataJson).IsRequired();
+
+        // One block per position, per language. Shared and ecosystem-tagged blocks share the order space —
+        // the reader shows shared + the chosen ecosystem, merged by Order, so a global order per language
+        // keeps the merge unambiguous.
+        builder
+            .HasIndex(block => new { block.TopicVersionId, block.LanguageCode, block.Order })
+            .IsUnique()
+            .HasDatabaseName("UX_TopicBlocks_Version_Language_Order");
+
+        builder
+            .HasOne(block => block.TopicVersion)
+            .WithMany(version => version.Blocks)
+            .HasForeignKey(block => block.TopicVersionId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public class TopicImplementationConfiguration : IEntityTypeConfiguration<TopicImplementation>
 {
     public void Configure(EntityTypeBuilder<TopicImplementation> builder)

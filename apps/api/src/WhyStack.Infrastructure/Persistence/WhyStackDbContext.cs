@@ -26,6 +26,7 @@ public class WhyStackDbContext(DbContextOptions<WhyStackDbContext> options) : Db
     public DbSet<TopicVersion> TopicVersions => Set<TopicVersion>();
     public DbSet<TopicTranslation> TopicTranslations => Set<TopicTranslation>();
     public DbSet<TopicSection> TopicSections => Set<TopicSection>();
+    public DbSet<TopicBlock> TopicBlocks => Set<TopicBlock>();
     public DbSet<TopicImplementation> TopicImplementations => Set<TopicImplementation>();
     public DbSet<ImplementationSection> ImplementationSections => Set<ImplementationSection>();
     public DbSet<TopicReview> TopicReviews => Set<TopicReview>();
