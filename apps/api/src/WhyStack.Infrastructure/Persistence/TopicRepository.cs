@@ -22,9 +22,9 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
     {
         var topics = Readable(query.IncludeDrafts);
 
-        if (!string.IsNullOrWhiteSpace(query.Domain))
+        if (!string.IsNullOrWhiteSpace(query.Line))
         {
-            topics = topics.Where(topic => topic.Domain!.Key == query.Domain);
+            topics = topics.Where(topic => topic.Line!.Key == query.Line);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Level)
@@ -60,7 +60,7 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
         // show a title. Under ADR-0018 this was free — the text was in a file nobody loaded. Now it is a
         // column, and "SELECT *" on a content table is how a list screen becomes the slowest page in the app.
         var page = await topics
-            .OrderBy(topic => topic.Domain!.SortOrder)
+            .OrderBy(topic => topic.Line!.SortOrder)
             .ThenBy(topic => topic.DefaultLevel)
             .ThenBy(topic => topic.DefaultTitle)
             .Skip((query.PageNumber - 1) * query.PageSize)
@@ -70,10 +70,12 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
                 topic.Id,
                 topic.StableKey,
                 topic.Slug,
-                DomainKey = topic.Domain!.Key,
-                DomainName = topic.Domain.Name,
-                SubAreaKey = topic.SubArea == null ? null : topic.SubArea.Key,
-                SubAreaName = topic.SubArea == null ? null : topic.SubArea.Name,
+                AreaKey = topic.Line!.Area!.Key,
+                AreaName = topic.Line.Area.Name,
+                LineKey = topic.Line.Key,
+                LineName = topic.Line.Name,
+                ScopeKey = topic.Scope == null ? null : topic.Scope.Key,
+                ScopeName = topic.Scope == null ? null : topic.Scope.Name,
                 topic.Category,
                 topic.Archetype,
                 topic.DefaultLevel,
@@ -107,10 +109,12 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
                 topic.Id,
                 topic.StableKey,
                 topic.Slug,
-                topic.DomainKey,
-                topic.DomainName,
-                topic.SubAreaKey,
-                topic.SubAreaName,
+                topic.AreaKey,
+                topic.AreaName,
+                topic.LineKey,
+                topic.LineName,
+                topic.ScopeKey,
+                topic.ScopeName,
                 topic.Category.ToString(),
                 topic.Archetype.ToString(),
                 topic.DefaultLevel.ToString(),
@@ -145,8 +149,8 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
         CancellationToken cancellationToken)
     {
         var topic = await Readable(includeDrafts)
-            .Include(candidate => candidate.Domain)
-            .Include(candidate => candidate.SubArea)
+            .Include(candidate => candidate.Line).ThenInclude(line => line!.Area)
+            .Include(candidate => candidate.Scope)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Blocks)
             .Include(candidate => candidate.OutgoingRelationships)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Sections)
@@ -168,10 +172,12 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
             topic.Id,
             topic.StableKey,
             topic.Slug,
-            topic.Domain!.Key,
-            topic.Domain.Name,
-            topic.SubArea?.Key,
-            topic.SubArea?.Name,
+            topic.Line!.Area!.Key,
+            topic.Line.Area.Name,
+            topic.Line.Key,
+            topic.Line.Name,
+            topic.Scope?.Key,
+            topic.Scope?.Name,
             topic.Category.ToString(),
             topic.Archetype.ToString(),
             topic.DefaultLevel.ToString(),
@@ -253,17 +259,17 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
 
     public async Task<AuthoringCatalog> CatalogAsync(CancellationToken cancellationToken)
     {
-        var domains = await context.KnowledgeDomains
+        var domains = await context.Areas
             .AsNoTracking()
             .OrderBy(domain => domain.SortOrder)
-            .Select(domain => new DomainOption(domain.Key, domain.Name))
+            .Select(domain => new LineOption(domain.Key, domain.Name))
             .ToListAsync(cancellationToken);
 
-        var subAreas = await context.SubAreas
+        var subAreas = await context.Scopes
             .AsNoTracking()
-            .OrderBy(subArea => subArea.SortOrder)
-            .ThenBy(subArea => subArea.Name)
-            .Select(subArea => new SubAreaOption(subArea.Key, subArea.Name))
+            .OrderBy(scope => scope.SortOrder)
+            .ThenBy(scope => scope.Name)
+            .Select(scope => new ScopeOption(scope.Key, scope.Name))
             .ToListAsync(cancellationToken);
 
         // From the enums and BlockSkeletons — the one definition. A hardcoded copy in the studio would be a

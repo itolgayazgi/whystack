@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WhyStack.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using WhyStack.Infrastructure.Persistence;
 namespace WhyStack.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(WhyStackDbContext))]
-    partial class WhyStackDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260716151106_Schema_Area_Line_Scope")]
+    partial class Schema_Area_Line_Scope
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

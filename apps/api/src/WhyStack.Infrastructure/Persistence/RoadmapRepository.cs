@@ -6,71 +6,85 @@ namespace WhyStack.Infrastructure.Persistence;
 
 public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepository
 {
-    public async Task<IReadOnlyList<LineOption>> LinesAsync(CancellationToken cancellationToken) =>
+    /// <summary>Published stops, whichever line they are on. The shared filter for every count below.</summary>
+    private IQueryable<Topic> Published() =>
+        context.Topics.Where(topic =>
+            topic.Versions
+                .OrderByDescending(version => version.VersionNumber)
+                .Select(version => version.Status)
+                .First() == ContentStatus.Published);
+
+    public async Task<IReadOnlyList<EcosystemOption>> EcosystemsAsync(CancellationToken cancellationToken) =>
         await context.Ecosystems
             .AsNoTracking()
             .OrderBy(ecosystem => ecosystem.SortOrder)
-            .Select(ecosystem => new LineOption(
+            .Select(ecosystem => new EcosystemOption(
                 ecosystem.Key,
                 ecosystem.Name,
                 ecosystem.IsAvailable,
 
                 // Counted, not assumed. "Available" is the product's intent; the count is the truth, and a
-                // tab that promises a line with nothing on it is a tab that wastes a click.
-                context.Topics.Count(topic =>
+                // tab that promises a network with nothing on it is a tab that wastes a click.
+                Published().Count(topic =>
                     topic.Versions
-                        .OrderByDescending(version => version.VersionNumber)
-                        .Select(version => version.Status)
-                        .First() == ContentStatus.Published
-                    && topic.Versions
                         .OrderByDescending(version => version.VersionNumber)
                         .First()
                         .Implementations
                         .Any(implementation => implementation.Ecosystem!.Key == ecosystem.Key))))
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<DomainOption>> DomainsAsync(CancellationToken cancellationToken) =>
-        await context.KnowledgeDomains
+    public async Task<IReadOnlyList<AreaOption>> AreasAsync(CancellationToken cancellationToken) =>
+        await context.Areas
             .AsNoTracking()
-            .OrderBy(domain => domain.SortOrder)
-            .Select(domain => new DomainOption(
-                domain.Key,
-                domain.Name,
-                context.Topics.Count(topic =>
-                    topic.DomainId == domain.Id
-                    && topic.Versions
-                        .OrderByDescending(version => version.VersionNumber)
-                        .Select(version => version.Status)
-                        .First() == ContentStatus.Published)))
+            .OrderBy(area => area.SortOrder)
+            .Select(area => new AreaOption(
+                area.Key,
+                area.Name,
+
+                // Through the LINE, not from the topic. A topic has no area of its own (ADR-0027) — it has a
+                // line, and the line has an area. Storing it twice is how the two drift apart.
+                Published().Count(topic => topic.Line!.AreaId == area.Id)))
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<LineOption>> LinesAsync(string areaKey, CancellationToken cancellationToken) =>
+        await context.Lines
+            .AsNoTracking()
+            .Where(line => line.Area!.Key == areaKey)
+            .OrderBy(line => line.SortOrder)
+            .Select(line => new LineOption(
+                line.Key,
+                line.Name,
+                line.Color,
+                Published().Count(topic => topic.LineId == line.Id)))
             .ToListAsync(cancellationToken);
 
     public async Task<RoadmapView?> GetAsync(
         Guid userId,
         string ecosystemKey,
-        string domainKey,
+        string lineKey,
         string language,
         CancellationToken cancellationToken)
     {
-        var line = await context.Ecosystems
+        var ecosystem = await context.Ecosystems
             .AsNoTracking()
-            .Where(ecosystem => ecosystem.Key == ecosystemKey)
-            .Select(ecosystem => new { ecosystem.Key, ecosystem.Name })
+            .Where(candidate => candidate.Key == ecosystemKey)
+            .Select(candidate => new { candidate.Key, candidate.Name })
             .SingleOrDefaultAsync(cancellationToken);
 
-        var domain = await context.KnowledgeDomains
+        var line = await context.Lines
             .AsNoTracking()
-            .Where(candidate => candidate.Key == domainKey)
-            .Select(candidate => new { candidate.Id, candidate.Key, candidate.Name })
+            .Where(candidate => candidate.Key == lineKey)
+            .Select(candidate => new { candidate.Id, candidate.Key, candidate.Name, candidate.Color, candidate.AreaId })
             .SingleOrDefaultAsync(cancellationToken);
 
-        // Refused rather than answered with an empty line. An empty map and "no such ecosystem" look
-        // identical to a reader, and only one of them is worth telling them about.
-        if (line is null || domain is null) return null;
+        // Refused rather than answered with an empty map. An empty line and "no such line" look identical to
+        // a reader, and only one of them is worth telling them about.
+        if (ecosystem is null || line is null) return null;
 
         var stations = await context.Topics
             .AsNoTracking()
             .Where(topic =>
-                topic.DomainId == domain.Id
+                topic.LineId == line.Id
                 && topic.Versions
                     .OrderByDescending(version => version.VersionNumber)
                     .Select(version => version.Status)
@@ -82,7 +96,7 @@ public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepos
             // a confident-looking order that changes whenever an editor adds one edge. A wrong-but-stable
             // line is honest; a line that reshuffles under the reader is not.
             .OrderBy(topic => topic.DefaultLevel)
-            .ThenBy(topic => topic.SubArea!.SortOrder)
+            .ThenBy(topic => topic.Scope!.SortOrder)
             .ThenBy(topic => topic.DefaultTitle)
             .Select(topic => new
             {
@@ -90,7 +104,9 @@ public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepos
                 topic.Slug,
                 topic.DefaultTitle,
                 topic.DefaultLevel,
-                SubAreaName = topic.SubArea!.Name,
+                ScopeKey = topic.Scope!.Key,
+                ScopeName = topic.Scope.Name,
+                topic.Sequence,
 
                 Version = topic.Versions
                     .OrderByDescending(version => version.VersionNumber)
@@ -122,7 +138,7 @@ public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepos
                 Transfer = topic.OutgoingRelationships
                     .Where(edge =>
                         edge.Type == RelationshipType.Related
-                        && edge.ToTopic!.DomainId != domain.Id
+                        && edge.ToTopic!.Line!.AreaId != line.AreaId
                         && edge.ToTopic.Versions
                             .OrderByDescending(version => version.VersionNumber)
                             .Select(version => version.Status)
@@ -130,7 +146,7 @@ public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepos
                     .Select(edge => new TransferView(
                         edge.ToTopic!.Slug,
                         edge.ToTopic.DefaultTitle,
-                        edge.ToTopic.Domain!.Name))
+                        edge.ToTopic.Line!.Area!.Name))
                     .FirstOrDefault(),
             })
             .ToListAsync(cancellationToken);
@@ -164,14 +180,18 @@ public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepos
                     station.Slug,
                     station.Version.Title ?? station.DefaultTitle,
                     station.DefaultLevel.ToString(),
-                    station.SubAreaName,
+                    station.ScopeKey,
+                    station.ScopeName,
                     station.Version.EstimatedReadingMinutes,
                     state,
                     percent,
+                    station.Sequence is null
+                        ? null
+                        : new SequenceView(station.Sequence.Group, station.Sequence.Part, station.Sequence.Of),
                     station.Transfer);
             })
             .ToList();
 
-        return new RoadmapView(line.Key, line.Name, domain.Key, domain.Name, views);
+        return new RoadmapView(ecosystem.Key, ecosystem.Name, line.Key, line.Name, line.Color, views);
     }
 }

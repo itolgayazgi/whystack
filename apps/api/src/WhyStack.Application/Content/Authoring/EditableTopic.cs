@@ -16,10 +16,10 @@ public sealed record EditableTopic(
     Guid Id,
     string StableKey,
     string Slug,
-    string DomainKey,
+    string LineKey,
 
-    /// <summary>The theme key, or null (ADR-0023). The editor picks it from the catalog's SubArea list.</summary>
-    string? SubAreaKey,
+    /// <summary>The theme key, or null (ADR-0023). The editor picks it from the catalog's Scope list.</summary>
+    string? ScopeKey,
 
     string Category,
 
@@ -86,10 +86,10 @@ public sealed record StudioTopic(
     string StableKey,
     string Slug,
     string Title,
-    string DomainName,
+    string LineName,
 
     /// <summary>The theme's name, or null. A topic with no thread shows a dash, not a blank.</summary>
-    string? SubAreaName,
+    string? ScopeName,
 
     string Level,
     string Status,
@@ -119,9 +119,13 @@ public sealed record SaveTermCommand(
     IReadOnlyList<TermExplanationModel> Explanations);
 
 /// <summary>A theme, as the studio manages it (ADR-0023). One row: a stable key and a display name.</summary>
-public sealed record EditableSubArea(Guid Id, string Key, string Name, int TopicCount);
+public sealed record EditableScope(Guid Id, string Key, string Name, int TopicCount);
 
-public sealed record SaveSubAreaCommand(Guid? Id, string Key, string Name);
+/// <summary>
+/// Create or rename a scope. <c>LineKey</c> is required on create — a scope only means anything on a line
+/// (ADR-0027), and it is what lets the same word be two neighbourhoods on two routes.
+/// </summary>
+public sealed record SaveScopeCommand(Guid? Id, string Key, string Name, string LineKey);
 
 /// <summary>
 /// The result of trying to delete a theme.

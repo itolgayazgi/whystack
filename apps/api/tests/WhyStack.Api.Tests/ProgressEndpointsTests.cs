@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -273,7 +273,7 @@ public class ProgressEndpointsTests(WhyStackApiFactory factory) : IClassFixture<
             Id = Guid.CreateVersion7(),
             StableKey = key,
             Slug = slug,
-            DomainId = DeterministicId.For("domain:backend"),
+            LineId = DeterministicId.For("line:b1-language-runtime"),
             Category = TopicCategory.Concept,
             Archetype = Archetype.Concept,
             DefaultLevel = SkillLevel.Junior,

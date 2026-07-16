@@ -8,11 +8,11 @@ public sealed class GetRoadmapHandler(IRoadmapRepository repository)
     public async Task<Result<RoadmapView>> HandleAsync(
         Guid userId,
         string ecosystemKey,
-        string domainKey,
+        string lineKey,
         string language,
         CancellationToken cancellationToken)
     {
-        var roadmap = await repository.GetAsync(userId, ecosystemKey, domainKey, language, cancellationToken);
+        var roadmap = await repository.GetAsync(userId, ecosystemKey, lineKey, language, cancellationToken);
 
         return roadmap is null
             ? new Error(ErrorCodes.ResourceNotFound, "No such ecosystem, or no such domain.")
@@ -21,15 +21,28 @@ public sealed class GetRoadmapHandler(IRoadmapRepository repository)
 }
 
 /// <summary>The ecosystem tabs, unavailable ones included — the design shows them as "YAKINDA".</summary>
-public sealed class GetLinesHandler(IRoadmapRepository repository)
+public sealed class GetEcosystemsHandler(IRoadmapRepository repository)
 {
-    public Task<IReadOnlyList<LineOption>> HandleAsync(CancellationToken cancellationToken) =>
-        repository.LinesAsync(cancellationToken);
+    public Task<IReadOnlyList<EcosystemOption>> HandleAsync(CancellationToken cancellationToken) =>
+        repository.EcosystemsAsync(cancellationToken);
 }
 
-/// <summary>The sidebar's domain rail.</summary>
-public sealed class GetDomainsHandler(IRoadmapRepository repository)
+/// <summary>The sidebar's area rail: Backend, Frontend, Database, DevOps.</summary>
+public sealed class GetAreasHandler(IRoadmapRepository repository)
 {
-    public Task<IReadOnlyList<DomainOption>> HandleAsync(CancellationToken cancellationToken) =>
-        repository.DomainsAsync(cancellationToken);
+    public Task<IReadOnlyList<AreaOption>> HandleAsync(CancellationToken cancellationToken) =>
+        repository.AreasAsync(cancellationToken);
+}
+
+/// <summary>
+/// The lines inside one area — B1..B8 for Backend.
+/// </summary>
+/// <remarks>
+/// An empty list is a real answer, not a 404: Frontend exists and has no lines written yet (ADR-0027). The
+/// sidebar shows the area with nothing under it, which is the truth.
+/// </remarks>
+public sealed class GetLinesHandler(IRoadmapRepository repository)
+{
+    public Task<IReadOnlyList<LineOption>> HandleAsync(string areaKey, CancellationToken cancellationToken) =>
+        repository.LinesAsync(areaKey, cancellationToken);
 }

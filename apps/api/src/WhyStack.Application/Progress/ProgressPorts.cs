@@ -69,5 +69,5 @@ public sealed record NextTopicView(
     string Slug,
     string Title,
     string Level,
-    string DomainName,
+    string LineName,
     int EstimatedReadingMinutes);

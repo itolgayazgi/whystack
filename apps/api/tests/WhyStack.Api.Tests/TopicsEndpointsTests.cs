@@ -246,7 +246,7 @@ public class TopicsEndpointsTests(WhyStackApiFactory factory) : IClassFixture<Wh
             Slug = slug,
 
             // Backend, not C#. A topic belongs to a domain (ADR-0021).
-            DomainId = DeterministicId.For("domain:backend"),
+            LineId = DeterministicId.For("line:b1-language-runtime"),
 
             Category = TopicCategory.Concept,
             DefaultLevel = SkillLevel.Junior,

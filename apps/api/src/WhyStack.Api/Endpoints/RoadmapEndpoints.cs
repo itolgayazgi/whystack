@@ -20,13 +20,22 @@ public static class RoadmapEndpoints
                 "State is a SUGGESTION, not a gate: 'Ahead' stations are dimmed in the UI and remain fully "
                 + "readable. This API enforces no prerequisite, because the product imposes no order.");
 
-        roadmap.MapGet("/lines", LinesAsync)
-            .WithName("GetLines")
-            .WithSummary("The ecosystem tabs, including the ones with no content yet.");
+        roadmap.MapGet("/ecosystems", EcosystemsAsync)
+            .WithName("GetEcosystems")
+            .WithSummary("The tabs, including the ones with no content yet.")
+            .WithDescription(
+                "An ecosystem is the network SWITCHER, not a route through it (ADR-0027). Choosing Java does "
+                + "not add a line beside .NET — it rebuilds the same lines in Java.");
 
-        roadmap.MapGet("/domains", DomainsAsync)
-            .WithName("GetDomains")
-            .WithSummary("The sidebar's domain rail: Backend, Frontend, Database, DevOps.");
+        roadmap.MapGet("/areas", AreasAsync)
+            .WithName("GetAreas")
+            .WithSummary("The sidebar's areas: Backend, Frontend, Database, DevOps.");
+
+        roadmap.MapGet("/areas/{area}/lines", LinesAsync)
+            .WithName("GetLines")
+            .WithSummary("The lines inside an area — B1..B8 for Backend.")
+            .WithDescription(
+                "An empty list is a real answer, not a 404: Frontend exists and has no lines written yet.");
 
         return app;
     }
@@ -37,36 +46,43 @@ public static class RoadmapEndpoints
         HttpContext http,
         CancellationToken cancellationToken,
         string? ecosystem = null,
-        string? domain = null,
+        string? line = null,
         string? language = null)
     {
-        if (string.IsNullOrWhiteSpace(ecosystem) || string.IsNullOrWhiteSpace(domain))
+        if (string.IsNullOrWhiteSpace(ecosystem) || string.IsNullOrWhiteSpace(line))
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status422UnprocessableEntity,
                 title: "Validation failed",
-                detail: "Both `ecosystem` and `domain` are required — a line is one ecosystem through one domain.");
+                detail: "Both `ecosystem` and `line` are required — the map is one line, in one ecosystem.");
         }
 
         var result = await handler.HandleAsync(
-            principal.Id(), ecosystem, domain, language ?? "en", cancellationToken);
+            principal.Id(), ecosystem, line, language ?? "en", cancellationToken);
 
         return result.IsSuccess
             ? Results.Ok(new { data = result.Value, metadata = Metadata(http) })
             : result.Error!.ToProblem(http);
     }
 
-    private static async Task<IResult> LinesAsync(
-        GetLinesHandler handler,
+    private static async Task<IResult> EcosystemsAsync(
+        GetEcosystemsHandler handler,
         HttpContext http,
         CancellationToken cancellationToken) =>
         Results.Ok(new { data = await handler.HandleAsync(cancellationToken), metadata = Metadata(http) });
 
-    private static async Task<IResult> DomainsAsync(
-        GetDomainsHandler handler,
+    private static async Task<IResult> AreasAsync(
+        GetAreasHandler handler,
         HttpContext http,
         CancellationToken cancellationToken) =>
         Results.Ok(new { data = await handler.HandleAsync(cancellationToken), metadata = Metadata(http) });
+
+    private static async Task<IResult> LinesAsync(
+        string area,
+        GetLinesHandler handler,
+        HttpContext http,
+        CancellationToken cancellationToken) =>
+        Results.Ok(new { data = await handler.HandleAsync(area, cancellationToken), metadata = Metadata(http) });
 
     private static object Metadata(HttpContext http) => new
     {

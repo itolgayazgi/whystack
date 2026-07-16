@@ -1,4 +1,4 @@
-namespace WhyStack.Domain.Content;
+﻿namespace WhyStack.Domain.Content;
 
 /// <summary>
 /// A runtime ecosystem: .NET, Java, Node.js, PHP (ADR-0021).
@@ -59,18 +59,23 @@ public class ProgrammingLanguage
 }
 
 /// <summary>
-/// The domain a CONCEPT belongs to: Backend, Database, Networking (ADR-0021, Decision 1).
+/// An AREA of engineering: Backend, Frontend, Database, DevOps (ADR-0027).
 /// </summary>
 /// <remarks>
-/// A topic belongs to a domain, not to a language. `Connection Pooling` is Backend — it is Backend in .NET
-/// and it is Backend in Java, and the reason it exists is the same in both. That sentence is the product,
-/// and until this table existed the model could not express it.
+/// The outermost thing a topic belongs to, and it is not a language. `Connection Pooling` is Backend — it
+/// is Backend in .NET and it is Backend in Java, and the reason it exists is the same in both (ADR-0021).
+///
+/// Was <c>Area</c>, and it held two different ideas at once: `backend` was an area while
+/// `language` and `security` were LINES inside it, so the same column answered a different question
+/// depending on the row. ADR-0027 split them. The rename to Area is part of that: this codebase's innermost
+/// layer is already called Domain, and a "Area" that no longer means what it says, next to a
+/// <c>WhyStack.Domain</c> that means something else, is two traps for the price of one.
 /// </remarks>
-public class KnowledgeDomain
+public class Area
 {
     public Guid Id { get; init; }
 
-    /// <summary>"backend", "database", "networking".</summary>
+    /// <summary>"backend", "frontend", "database", "devops".</summary>
     public required string Key { get; init; }
 
     public required string Name { get; set; }
@@ -79,27 +84,74 @@ public class KnowledgeDomain
 }
 
 /// <summary>
-/// A THEME a topic optionally belongs to: async, memory-management, error-handling (ADR-0023).
+/// A LINE through an area: B1 Dil &amp; Runtime, B3 Veri Erişimi (ADR-0027).
 /// </summary>
 /// <remarks>
-/// Orthogonal to Domain, Category and Level. `async/await` is "usage" at Junior, "deadlocks" at Mid,
-/// "ValueTask/Channels" at Senior — one thread getting deeper, scattered across level buckets until a field
-/// held it together. This is that field.
-///
-/// A controlled vocabulary, not free text, because its entire purpose is grouping: "show async from Junior to
-/// Expert" needs a stable key, and `async` vs `asenkron` vs `asynchrony` would split the thread in silence.
-/// Curated in the studio — themes are data that grows with the corpus, not code — the same way the
-/// terminology dictionary is.
+/// The map's line, and the thing an ECOSYSTEM is not. Selecting Java does not add a line beside .NET — it
+/// rebuilds the same eight lines in Java. The ecosystem is which network you are looking at; the line is a
+/// route through it. The content model already worked this way (ADR-0021: the concept is written once, only
+/// the implementation slice changes), so this is the metaphor catching up with the data.
 /// </remarks>
-public class SubArea
+public class Line
 {
     public Guid Id { get; init; }
 
-    /// <summary>Stable. Every tagged topic and every future roadmap slice groups on this: "async", "linq".</summary>
+    /// <summary>Stable: "b1-language-runtime", "b3-data-access".</summary>
     public required string Key { get; init; }
 
-    /// <summary>What an editor and a reader see: "Async / Await", "Bellek Yönetimi".</summary>
+    /// <summary>What the map's legend shows: "Dil &amp; Runtime".</summary>
     public required string Name { get; set; }
 
+    public required Guid AreaId { get; init; }
+
+    /// <summary>
+    /// The line's colour on the map, as a hex string.
+    /// </summary>
+    /// <remarks>
+    /// DATA, not a token — and this is the one place that is right. A line is a row an editor can add, so
+    /// its colour cannot live in a TypeScript file the editor has no access to; the palette a colour must be
+    /// drawn FROM is still the design system's (CLAUDE.md §1.8), and the seed uses it.
+    /// </remarks>
+    public required string Color { get; set; }
+
     public int SortOrder { get; set; }
+
+    public Area? Area { get; init; }
+}
+
+/// <summary>
+/// A SCOPE — a neighbourhood of 3-10 stops on a line: EF Core, Async / Await (ADR-0027).
+/// </summary>
+/// <remarks>
+/// Was <c>Scope</c> (ADR-0023). One axis, one name: the owner's kapsam design and ADR-0023's theme axis
+/// turned out to be the same idea described twice, and two names for one thing is how they both stay alive.
+///
+/// <b>Metadata, never a menu level.</b> EF Core is not one stop and it is not a tier of navigation — it is
+/// eight stops spread across zones (Junior 2, Mid 4, Senior 2), drawn as a bracket over the line. Making it
+/// a tier would take the reader from four taps to six.
+///
+/// <b>A scope is 3-10 stops.</b> Fewer and it is a stop, not a neighbourhood; more and it splits in two.
+///
+/// It lives on a LINE, and that is what lets the same word mean two things honestly: B1's "Eşzamanlılık" is
+/// the language's threads and locks; B3's "Transaction &amp; Eşzamanlılık" is isolation levels and
+/// deadlocks. Two neighbourhoods, two lines — not a duplicate to be tidied away.
+///
+/// A controlled vocabulary, curated in the studio, because its entire purpose is grouping: `async` vs
+/// `asenkron` vs `asynchrony` would split the neighbourhood in silence.
+/// </remarks>
+public class Scope
+{
+    public Guid Id { get; init; }
+
+    /// <summary>Stable. Every tagged topic and every roadmap slice groups on this: "ef-core", "async".</summary>
+    public required string Key { get; init; }
+
+    /// <summary>What an editor and a reader see: "EF Core", "Async / Await".</summary>
+    public required string Name { get; set; }
+
+    public required Guid LineId { get; init; }
+
+    public int SortOrder { get; set; }
+
+    public Line? Line { get; init; }
 }

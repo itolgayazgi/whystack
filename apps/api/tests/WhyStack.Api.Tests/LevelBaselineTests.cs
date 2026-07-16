@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -31,9 +31,9 @@ public class LevelBaselineTests(WhyStackApiFactory factory) : IClassFixture<WhyS
     public async Task Publishing_a_new_stop_does_not_take_a_finished_reader_backwards()
     {
         var (client, _) = await ReaderAsync();
-        var domain = await DomainAsync();
+        var line = await LineAsync();
 
-        var first = await SeedAsync(domain, publishedDaysAgo: 10);
+        var first = await SeedAsync(line, publishedDaysAgo: 10);
 
         // Arriving stamps the baseline: this is the corpus the reader's percentage is measured against.
         await client.PostAsJsonAsync("/api/v1/progress", new { slug = first, lastBlockOrder = 1 });
@@ -47,7 +47,7 @@ public class LevelBaselineTests(WhyStackApiFactory factory) : IClassFixture<WhyS
         Assert.Equal(1, before.GetProperty("completed").GetInt32());
 
         // We publish. The reader did nothing.
-        await SeedAsync(domain, publishedDaysAgo: 0);
+        await SeedAsync(line, publishedDaysAgo: 0);
 
         var after = Rung(await HomeAsync(client), "Senior");
 
@@ -71,10 +71,10 @@ public class LevelBaselineTests(WhyStackApiFactory factory) : IClassFixture<WhyS
     public async Task A_reader_who_has_never_been_to_a_level_sees_all_of_it()
     {
         var (client, _) = await ReaderAsync();
-        var domain = await DomainAsync();
+        var line = await LineAsync();
 
-        await SeedAsync(domain, publishedDaysAgo: 5);
-        await SeedAsync(domain, publishedDaysAgo: 1);
+        await SeedAsync(line, publishedDaysAgo: 5);
+        await SeedAsync(line, publishedDaysAgo: 1);
 
         var rung = Rung(await HomeAsync(client), "Senior");
 
@@ -91,14 +91,14 @@ public class LevelBaselineTests(WhyStackApiFactory factory) : IClassFixture<WhyS
     public async Task The_baseline_is_stamped_once_and_never_moves()
     {
         var (client, userId) = await ReaderAsync();
-        var domain = await DomainAsync();
+        var line = await LineAsync();
 
-        var first = await SeedAsync(domain, publishedDaysAgo: 10);
+        var first = await SeedAsync(line, publishedDaysAgo: 10);
         await client.PostAsJsonAsync("/api/v1/progress", new { slug = first, lastBlockOrder = 1 });
 
         var stamped = await BaselineAsync(userId);
 
-        await SeedAsync(domain, publishedDaysAgo: 0);
+        await SeedAsync(line, publishedDaysAgo: 0);
 
         // Reading again, AFTER we published. If the baseline moved to now, the new stop would fall inside it
         // and the protection would evaporate on the reader's very next visit — which is every reader, always.
@@ -128,7 +128,17 @@ public class LevelBaselineTests(WhyStackApiFactory factory) : IClassFixture<WhyS
         return (await context.UserLevelBaselines.SingleAsync(b => b.UserId == userId)).EnteredAtUtc;
     }
 
-    private async Task<string> DomainAsync()
+        /// <summary>
+    /// A line of this test's own, so the map contains this test's stations and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// Not fussiness. "Next" is the first UNSTARTED station on the whole line — a fact about the line, not
+    /// about a topic — so a sibling test seeding one more stop on a shared line silently moves it.
+    ///
+    /// Its AREA is the real seeded `backend`: the isolation this needs is at the line, and inventing an area
+    /// too would make the fixture less like the thing it is testing.
+    /// </remarks>
+    private async Task<string> LineAsync()
     {
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<WhyStackDbContext>();
@@ -136,10 +146,19 @@ public class LevelBaselineTests(WhyStackApiFactory factory) : IClassFixture<WhyS
         var id = Guid.CreateVersion7();
         var key = $"apitest-{id:N}";
 
-        context.KnowledgeDomains.Add(new KnowledgeDomain { Id = id, Key = key, Name = "Test", SortOrder = 99 });
+        context.Lines.Add(new Line
+        {
+            Id = id,
+            Key = key,
+            Name = "Test Line",
+            AreaId = DeterministicId.For("area:backend"),
+            Color = "#C9A227",
+            SortOrder = 99,
+        });
+
         await context.SaveChangesAsync();
 
-        factory.TrackDomain(id);
+        factory.TrackLine(id);
 
         return key;
     }
@@ -188,12 +207,12 @@ public class LevelBaselineTests(WhyStackApiFactory factory) : IClassFixture<WhyS
     /// The `total` assertions would survive either way — a frozen denominator is frozen against everybody —
     /// but a test that is only half robust teaches you to distrust it when it goes red.
     /// </remarks>
-    private async Task<string> SeedAsync(string domain, int publishedDaysAgo)
+    private async Task<string> SeedAsync(string line, int publishedDaysAgo)
     {
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<WhyStackDbContext>();
 
-        var domainId = await context.KnowledgeDomains.Where(d => d.Key == domain).Select(d => d.Id).SingleAsync();
+        var lineId = await context.Lines.Where(candidate => candidate.Key == line).Select(candidate => candidate.Id).SingleAsync();
 
         var key = $"apitest.{Guid.CreateVersion7():N}";
         var slug = key.Replace('.', '-');
@@ -203,7 +222,7 @@ public class LevelBaselineTests(WhyStackApiFactory factory) : IClassFixture<WhyS
             Id = Guid.CreateVersion7(),
             StableKey = key,
             Slug = slug,
-            DomainId = domainId,
+            LineId = lineId,
             Category = TopicCategory.Concept,
             Archetype = Archetype.Concept,
             DefaultLevel = SkillLevel.Senior,

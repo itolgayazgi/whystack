@@ -216,8 +216,9 @@ public static class DependencyInjection
         services.AddScoped<RecordProgressHandler>();
         services.AddScoped<GetHomeHandler>();
         services.AddScoped<GetRoadmapHandler>();
+        services.AddScoped<GetEcosystemsHandler>();
+        services.AddScoped<GetAreasHandler>();
         services.AddScoped<GetLinesHandler>();
-        services.AddScoped<GetDomainsHandler>();
         services.AddScoped<TransitionTopicHandler>();
         services.AddScoped<ValidateTopicHandler>();
     }

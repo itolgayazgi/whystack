@@ -1,4 +1,4 @@
-using WhyStack.Domain.Users;
+﻿using WhyStack.Domain.Users;
 
 namespace WhyStack.Domain.Content;
 
@@ -27,8 +27,17 @@ public class Topic
     /// <summary>The URL segment. May be corrected; <see cref="StableKey"/> absorbs the consequences.</summary>
     public required string Slug { get; set; }
 
-    /// <summary>Backend, Database, Networking… The concept's home. NOT a language (ADR-0021).</summary>
-    public required Guid DomainId { get; set; }
+    /// <summary>
+    /// The LINE this stop sits on: B1 Dil &amp; Runtime, B3 Veri Erişimi (ADR-0027).
+    /// </summary>
+    /// <remarks>
+    /// Was <c>DomainId</c>, which answered two questions at once: `backend` was an area, `security` was a
+    /// line inside it, and the column meant whichever the row happened to be.
+    ///
+    /// The AREA is not stored here. It is the line's area — asked through the join, never duplicated, so a
+    /// topic cannot end up on the B3 line while claiming to be in Frontend.
+    /// </remarks>
+    public required Guid LineId { get; set; }
 
     public required TopicCategory Category { get; set; }
 
@@ -40,11 +49,16 @@ public class Topic
     public Archetype Archetype { get; set; } = Archetype.Concept;
 
     /// <summary>
-    /// The theme this topic belongs to, or null (ADR-0023). Orthogonal to <see cref="Category"/> and
-    /// <see cref="DefaultLevel"/>: Category is what KIND of topic it is, this is which recurring THREAD it
-    /// deepens. Null is normal — a standalone topic belongs to no thread, and that is a fact, not a gap.
+    /// The SCOPE — the neighbourhood of 3-10 stops this one belongs to, or null (ADR-0027).
     /// </summary>
-    public Guid? SubAreaId { get; set; }
+    /// <remarks>
+    /// Orthogonal to <see cref="Category"/> and <see cref="DefaultLevel"/>: Category is what KIND of topic
+    /// it is, this is which neighbourhood of the line it stands in. Null is normal — a standalone stop
+    /// belongs to no neighbourhood, and that is a fact rather than a gap.
+    ///
+    /// Was <c>ScopeId</c> (ADR-0023's theme). ADR-0027 found the two were one axis under two names.
+    /// </remarks>
+    public Guid? ScopeId { get; set; }
 
     /// <summary>
     /// The same four levels a learner states about themselves (`07` — TopicLevels: "These levels are
@@ -56,13 +70,25 @@ public class Topic
     /// <summary>The canonical (English) title, so a topic can be listed without loading a translation.</summary>
     public required string DefaultTitle { get; set; }
 
+    /// <summary>
+    /// Where this stop sits in a numbered chain: Change Tracking I / II / III. Null for most (ADR-0027).
+    /// </summary>
+    /// <remarks>
+    /// A subject that will not fit in 20-25 minutes is not compressed — it is split. Three finishable stops
+    /// beat one 45-minute page, for the reading and for the streak alike.
+    ///
+    /// An owned value, not three loose columns: `part` without `of` is meaningless, and a shape that can
+    /// express "2 of null" is a shape somebody will eventually store.
+    /// </remarks>
+    public TopicSequence? Sequence { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAtUtc { get; init; }
     public DateTime? UpdatedAtUtc { get; set; }
 
-    public KnowledgeDomain? Domain { get; init; }
-    public SubArea? SubArea { get; init; }
+    public Line? Line { get; init; }
+    public Scope? Scope { get; init; }
     public ICollection<TopicVersion> Versions { get; init; } = [];
     public ICollection<TopicRelationship> OutgoingRelationships { get; init; } = [];
 }
@@ -89,3 +115,13 @@ public enum TopicCategory
     Interview = 17,
     CaseStudy = 18,
 }
+
+/// <summary>
+/// A stop's place in a numbered chain: "Change Tracking II / III" (ADR-0027).
+/// </summary>
+/// <remarks>
+/// <c>Group</c> is what ties the chain together — the parts share it. The prerequisite edges (I → II → III)
+/// already exist as relationships; this is what the badge beside the title reads from, and what a
+/// "kapsam tamamlandı" celebration counts.
+/// </remarks>
+public sealed record TopicSequence(string Group, int Part, int Of);

@@ -32,12 +32,12 @@ public sealed record TopicSummary(
     string Slug,
     string Title,
     string? Summary,
-    string DomainKey,
-    string DomainName,
+    string LineKey,
+    string LineName,
 
     /// <summary>The theme this topic threads through, or null (ADR-0023). What the roadmap slice groups on.</summary>
-    string? SubAreaKey,
-    string? SubAreaName,
+    string? ScopeKey,
+    string? ScopeName,
 
     string Category,
     string Level,
@@ -52,8 +52,8 @@ public sealed record TopicDetail(
     string StableKey,
     string Slug,
     string Title,
-    string DomainKey,
-    string DomainName,
+    string LineKey,
+    string LineName,
     string Category,
 
     /// <summary>"Konu tipi" in the design's künye: the explanation's shape (ADR-0024).</summary>

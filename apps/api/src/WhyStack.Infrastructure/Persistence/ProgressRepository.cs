@@ -287,7 +287,7 @@ public sealed class ProgressRepository(WhyStackDbContext context, TimeProvider c
                 topic.Slug,
                 topic.DefaultTitle,
                 topic.DefaultLevel,
-                DomainName = topic.Domain!.Name,
+                LineName = topic.Line!.Name,
                 Version = topic.Versions
                     .OrderByDescending(version => version.VersionNumber)
                     .Select(version => new
@@ -319,7 +319,7 @@ public sealed class ProgressRepository(WhyStackDbContext context, TimeProvider c
                     topic.Slug,
                     topic.Version.Title ?? topic.DefaultTitle,
                     topic.DefaultLevel.ToString(),
-                    topic.DomainName,
+                    topic.LineName,
                     topic.Version.EstimatedReadingMinutes)),
             ]);
     }

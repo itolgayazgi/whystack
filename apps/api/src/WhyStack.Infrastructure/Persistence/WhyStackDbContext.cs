@@ -21,8 +21,9 @@ public class WhyStackDbContext(DbContextOptions<WhyStackDbContext> options) : Db
     public DbSet<UserStreak> UserStreaks => Set<UserStreak>();
     public DbSet<UserLevelBaseline> UserLevelBaselines => Set<UserLevelBaseline>();
 
-    public DbSet<KnowledgeDomain> KnowledgeDomains => Set<KnowledgeDomain>();
-    public DbSet<SubArea> SubAreas => Set<SubArea>();
+    public DbSet<Area> Areas => Set<Area>();
+    public DbSet<Line> Lines => Set<Line>();
+    public DbSet<Scope> Scopes => Set<Scope>();
     public DbSet<Ecosystem> Ecosystems => Set<Ecosystem>();
     public DbSet<ProgrammingLanguage> ProgrammingLanguages => Set<ProgrammingLanguage>();
     public DbSet<Topic> Topics => Set<Topic>();

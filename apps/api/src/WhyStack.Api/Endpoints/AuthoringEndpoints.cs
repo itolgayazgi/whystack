@@ -14,8 +14,8 @@ public sealed record SaveTopicRequest(
     Guid? Id,
     string? StableKey,
     string? Slug,
-    string? DomainKey,
-    string? SubAreaKey,
+    string? LineKey,
+    string? ScopeKey,
     string? Category,
     string? Archetype,
     string? Level,
@@ -40,7 +40,8 @@ public sealed record SaveTermRequest(
     IReadOnlyList<string>? ForbiddenTranslations,
     IReadOnlyList<TermExplanationModel>? Explanations);
 
-public sealed record SaveSubAreaRequest(Guid? Id, string? Key, string? Name);
+/// <summary>Create or rename a scope. <c>LineKey</c> is required on create — a scope lives on a line.</summary>
+public sealed record SaveScopeRequest(Guid? Id, string? Key, string? Name, string? LineKey);
 
 public static class AuthoringEndpoints
 {
@@ -113,19 +114,19 @@ public static class AuthoringEndpoints
             .WithName("DeleteTerm")
             .WithSummary("Remove a term from the dictionary.");
 
-        authoring.MapGet("/subareas", SubAreasAsync)
+        authoring.MapGet("/scopes", SubAreasAsync)
             .WithName("ListSubAreas")
             .WithSummary("The themes a topic may be tagged with (ADR-0023).")
             .WithDescription("Each carries a topicCount — how many topics use it, which is why a delete may be refused.");
 
-        authoring.MapPost("/subareas", SaveSubAreaAsync)
+        authoring.MapPost("/scopes", SaveScopeAsync)
             .WithName("SaveSubArea")
             .WithSummary("Create or rename a theme.")
             .WithDescription(
                 "The key is set once and never changes — tagged topics and roadmap slices resolve through it. "
                 + "An edit changes only the display name.");
 
-        authoring.MapDelete("/subareas/{id:guid}", DeleteSubAreaAsync)
+        authoring.MapDelete("/subareas/{id:guid}", DeleteScopeAsync)
             .WithName("DeleteSubArea")
             .WithSummary("Remove a theme — refused if any topic still uses it.")
             .WithDescription(
@@ -283,8 +284,8 @@ public static class AuthoringEndpoints
             metadata = Metadata(http),
         });
 
-    private static async Task<IResult> SaveSubAreaAsync(
-        SaveSubAreaRequest request,
+    private static async Task<IResult> SaveScopeAsync(
+        SaveScopeRequest request,
         IContentAuthoringRepository repository,
         HttpContext http,
         CancellationToken cancellationToken)
@@ -294,33 +295,58 @@ public static class AuthoringEndpoints
             return Results.Problem(
                 statusCode: StatusCodes.Status422UnprocessableEntity,
                 title: "Validation failed",
-                detail: "A theme needs a display name.");
+                detail: "A scope needs a display name.");
         }
 
-        // The key is required on create and IGNORED on edit (the repository does not touch it). A new theme
-        // with no key would be a theme nothing could resolve.
+        // The key is required on create and IGNORED on edit (the repository does not touch it). A new scope
+        // with no key would be a scope nothing could resolve.
         if (request.Id is null && !IsKey(request.Key))
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status422UnprocessableEntity,
                 title: "Validation failed",
-                detail: "A theme key is lowercase letters, digits and hyphens — for example \"async\". It is "
-                    + "set once and never changes.");
+                detail: "A scope key is lowercase letters, digits and hyphens — for example \"ef-core\". It "
+                    + "is set once and never changes.");
         }
 
-        var id = await repository.SaveSubAreaAsync(
-            new SaveSubAreaCommand(request.Id, (request.Key ?? string.Empty).Trim(), request.Name.Trim()),
+        // Required on create, because a scope only means something on a line (ADR-0027): B1's "Eşzamanlılık"
+        // and B3's "Transaction & Eşzamanlılık" are two neighbourhoods, and without the line there is no way
+        // to say which one this is.
+        if (request.Id is null && string.IsNullOrWhiteSpace(request.LineKey))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status422UnprocessableEntity,
+                title: "Validation failed",
+                detail: "A scope needs the line it lives on — for example \"b3-data-access\".");
+        }
+
+        var id = await repository.SaveScopeAsync(
+            new SaveScopeCommand(
+                request.Id,
+                (request.Key ?? string.Empty).Trim(),
+                request.Name.Trim(),
+                (request.LineKey ?? string.Empty).Trim()),
             cancellationToken);
+
+        // Guid.Empty is the repository refusing a line it could not find. A 200 carrying an empty id would be
+        // the studio believing it saved something that does not exist.
+        if (id == Guid.Empty)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status422UnprocessableEntity,
+                title: "Validation failed",
+                detail: $"No line \"{request.LineKey}\".");
+        }
 
         return Results.Ok(new { data = new { id }, metadata = Metadata(http) });
     }
 
-    private static async Task<IResult> DeleteSubAreaAsync(
+    private static async Task<IResult> DeleteScopeAsync(
         Guid id,
         IContentAuthoringRepository repository,
         CancellationToken cancellationToken)
     {
-        var outcome = await repository.DeleteSubAreaAsync(id, cancellationToken);
+        var outcome = await repository.DeleteScopeAsync(id, cancellationToken);
 
         if (!outcome.Deleted && outcome.InUseCount > 0)
         {
@@ -350,11 +376,11 @@ public static class AuthoringEndpoints
         // have different types. Naming them makes that impossible.
         StableKey: request.StableKey ?? string.Empty,
         Slug: request.Slug ?? string.Empty,
-        DomainKey: request.DomainKey ?? string.Empty,
+        LineKey: request.LineKey ?? string.Empty,
 
         // Trimmed to null: an empty string from a "— no theme —" dropdown selection means "no theme", not a
         // theme whose key is the empty string.
-        SubAreaKey: string.IsNullOrWhiteSpace(request.SubAreaKey) ? null : request.SubAreaKey.Trim(),
+        ScopeKey: string.IsNullOrWhiteSpace(request.ScopeKey) ? null : request.ScopeKey.Trim(),
 
         Category: request.Category ?? "Concept",
 

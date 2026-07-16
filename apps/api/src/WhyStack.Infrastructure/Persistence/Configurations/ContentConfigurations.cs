@@ -13,69 +13,143 @@ namespace WhyStack.Infrastructure.Persistence.Configurations;
 /// concept, and a migration that reorders an enum turns every stored 3 into a different meaning — silently,
 /// in data nobody re-reads.
 /// </remarks>
-public class KnowledgeDomainConfiguration : IEntityTypeConfiguration<KnowledgeDomain>
+public class AreaConfiguration : IEntityTypeConfiguration<Area>
 {
-    public void Configure(EntityTypeBuilder<KnowledgeDomain> builder)
+    public void Configure(EntityTypeBuilder<Area> builder)
     {
-        builder.ToTable("KnowledgeDomains");
-        builder.HasKey(domain => domain.Id);
+        builder.ToTable("Areas");
+        builder.HasKey(area => area.Id);
 
-        builder.Property(domain => domain.Key).HasMaxLength(64).IsRequired();
-        builder.Property(domain => domain.Name).HasMaxLength(128).IsRequired();
+        builder.Property(area => area.Key).HasMaxLength(64).IsRequired();
+        builder.Property(area => area.Name).HasMaxLength(128).IsRequired();
 
-        builder.HasIndex(domain => domain.Key).IsUnique().HasDatabaseName("UX_KnowledgeDomains_Key");
+        builder.HasIndex(area => area.Key).IsUnique().HasDatabaseName("UX_Areas_Key");
 
+        // AREAS ONLY (ADR-0027). The old KnowledgeDomains seed mixed these with lines — `backend` was an
+        // area while `language` and `security` were lines inside it, so the column meant whichever the row
+        // happened to be.
         builder.HasData(
             Seed("backend", "Backend", 1),
-            Seed("database", "Database", 2),
-            Seed("language", "Language", 3),
-            Seed("architecture", "Architecture", 4),
-            Seed("networking", "Networking", 5),
-            Seed("devops", "DevOps", 6),
-            Seed("security", "Security", 7),
-            Seed("testing", "Testing", 8));
+            Seed("frontend", "Frontend", 2),
+            Seed("database", "Database", 3),
+            Seed("devops", "DevOps", 4));
     }
 
     // Deterministic ids. A Guid.NewGuid() in a seed produces a DIFFERENT migration on every developer's
     // machine, and the second one to run it wipes the first one's rows.
-    private static KnowledgeDomain Seed(string key, string name, int order) => new()
+    private static Area Seed(string key, string name, int order) => new()
     {
-        Id = DeterministicId.For($"domain:{key}"),
+        Id = DeterministicId.For($"area:{key}"),
         Key = key,
         Name = name,
         SortOrder = order,
     };
 }
 
-public class SubAreaConfiguration : IEntityTypeConfiguration<SubArea>
+/// <summary>
+/// The eight lines of Backend (ADR-0027, from the owner's taxonomy).
+/// </summary>
+/// <remarks>
+/// Seeded for Backend only, and deliberately: the taxonomy defines B1-B8 for Backend. Frontend, Database
+/// and DevOps get their lines when their taxonomy is written — an empty area is honest; a guessed line is
+/// content nobody agreed to.
+/// </remarks>
+public class LineConfiguration : IEntityTypeConfiguration<Line>
 {
-    public void Configure(EntityTypeBuilder<SubArea> builder)
+    public void Configure(EntityTypeBuilder<Line> builder)
     {
-        builder.ToTable("SubAreas");
-        builder.HasKey(subArea => subArea.Id);
+        builder.ToTable("Lines");
+        builder.HasKey(line => line.Id);
 
-        builder.Property(subArea => subArea.Key).HasMaxLength(64).IsRequired();
-        builder.Property(subArea => subArea.Name).HasMaxLength(128).IsRequired();
+        builder.Property(line => line.Key).HasMaxLength(64).IsRequired();
+        builder.Property(line => line.Name).HasMaxLength(128).IsRequired();
+        builder.Property(line => line.Color).HasMaxLength(7).IsRequired();
 
-        builder.HasIndex(subArea => subArea.Key).IsUnique().HasDatabaseName("UX_SubAreas_Key");
+        builder.HasIndex(line => line.Key).IsUnique().HasDatabaseName("UX_Lines_Key");
 
-        // A STARTER set, not the vocabulary. Themes are curated in the studio (ADR-0023) — these are here so
-        // the first author is not staring at an empty dropdown, and every one of them is editable and
-        // deletable from the studio like any theme created there.
+        // Restrict, not Cascade. Deleting an area must not silently take eight lines and every topic on them
+        // with it — the same call ADR-0023 made for a theme in use.
+        builder
+            .HasOne(line => line.Area)
+            .WithMany()
+            .HasForeignKey(line => line.AreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // The colours are the taxonomy's names, resolved against the design's own palette
+        // (docs/design-system/mockups/whystack-renk-sistemi-v2.html). The taxonomy names them — Altın,
+        // Turuncu, Mavi… — and does not give hexes, so these are the palette's nearest member rather than
+        // an invention. Every one clears WCAG's 3:1 non-text bar on the surface it is drawn on; the theme's
+        // line test enforces that, and a line the reader cannot see is not a line.
         builder.HasData(
-            Seed("async", "Async / Await", 1),
-            Seed("memory-management", "Bellek Yönetimi", 2),
-            Seed("collections", "Koleksiyonlar", 3),
-            Seed("error-handling", "Hata Yönetimi", 4),
-            Seed("dependency-injection", "Dependency Injection", 5),
-            Seed("concurrency", "Eşzamanlılık", 6));
+            Seed("b1-language-runtime", "Dil & Runtime", "#C9A227", 1),          // Altın — the main line
+            Seed("b2-web-api", "Web API & Framework", "#C98A5A", 2),             // Turuncu
+            Seed("b3-data-access", "Veri Erişimi", "#6C9BD1", 3),                // Mavi
+            Seed("b4-architecture", "Mimari & Tasarım", "#A98BC9", 4),           // Mor
+            Seed("b5-messaging", "Mesajlaşma & Dağıtık", "#8FBF9F", 5),          // Yeşil
+            Seed("b6-security", "Güvenlik & Kimlik", "#D96A5F", 6),              // Kırmızı
+            Seed("b7-testing", "Test & Kalite", "#5BB8C4", 7),                   // Turkuaz
+            Seed("b8-performance", "Performans & Gözlemlenebilirlik", "#B07A4A", 8)); // Bakır
     }
 
-    private static SubArea Seed(string key, string name, int order) => new()
+    private static Line Seed(string key, string name, string color, int order) => new()
     {
-        Id = DeterministicId.For($"subarea:{key}"),
+        Id = DeterministicId.For($"line:{key}"),
         Key = key,
         Name = name,
+        AreaId = DeterministicId.For("area:backend"),
+        Color = color,
+        SortOrder = order,
+    };
+}
+
+public class ScopeConfiguration : IEntityTypeConfiguration<Scope>
+{
+    public void Configure(EntityTypeBuilder<Scope> builder)
+    {
+        builder.ToTable("Scopes");
+        builder.HasKey(scope => scope.Id);
+
+        builder.Property(scope => scope.Key).HasMaxLength(64).IsRequired();
+        builder.Property(scope => scope.Name).HasMaxLength(128).IsRequired();
+
+        // Unique per LINE, not globally.
+        //
+        // This is what lets B1's "Eşzamanlılık" and B3's "Transaction & Eşzamanlılık" both exist: a scope is
+        // only meaningful inside its line (ADR-0027). A global unique key would have forced one of them to
+        // be renamed to something nobody says out loud.
+        builder
+            .HasIndex(scope => new { scope.LineId, scope.Key })
+            .IsUnique()
+            .HasDatabaseName("UX_Scopes_LineId_Key");
+
+        builder
+            .HasOne(scope => scope.Line)
+            .WithMany()
+            .HasForeignKey(scope => scope.LineId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // A STARTER set, not the vocabulary. Scopes are curated in the studio — these are here so the first
+        // author is not staring at an empty dropdown.
+        //
+        // Re-parented, not re-cut (ADR-0027): these are the ADR-0023 seeds, which were never wrong — they
+        // were homeless. What was missing was which line they live on.
+        builder.HasData(
+            Seed("async", "Async / Await", "b1-language-runtime", 1),
+            Seed("memory-management", "Bellek Yönetimi", "b1-language-runtime", 2),
+            Seed("collections", "Koleksiyonlar", "b1-language-runtime", 3),
+            Seed("error-handling", "Hata Yönetimi", "b1-language-runtime", 4),
+            Seed("concurrency", "Eşzamanlılık", "b1-language-runtime", 5),
+            Seed("dependency-injection", "Dependency Injection", "b4-architecture", 1));
+    }
+
+    private static Scope Seed(string key, string name, string line, int order) => new()
+    {
+        // Keyed by line AND key: the id has to survive the same word appearing on two lines, which is the
+        // whole point of the composite index above.
+        Id = DeterministicId.For($"scope:{line}:{key}"),
+        Key = key,
+        Name = name,
+        LineId = DeterministicId.For($"line:{line}"),
         SortOrder = order,
     };
 }
@@ -191,35 +265,44 @@ public class TopicConfiguration : IEntityTypeConfiguration<Topic>
         // held 0 — a value Archetype does not define — so the wire was serving "0" as a topic's type.
         builder.Property(topic => topic.Archetype).HasConversion<string>().HasMaxLength(24).IsRequired();
 
-        // Restrict, not Cascade. Deleting a domain that still has topics in it should FAIL — the topics are
-        // the asset, and a foreign key is the last thing standing between a careless DELETE and the corpus.
+        // Restrict, not Cascade. Deleting a line that still has stops on it should FAIL — the topics are the
+        // asset, and a foreign key is the last thing standing between a careless DELETE and the corpus.
         builder
-            .HasOne(topic => topic.Domain)
+            .HasOne(topic => topic.Line)
             .WithMany()
-            .HasForeignKey(topic => topic.DomainId)
+            .HasForeignKey(topic => topic.LineId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Nullable, and Restrict (ADR-0023). Null is a topic with no theme — normal. Restrict, not SetNull,
-        // because deleting a theme that still tags topics would silently UNTAG them: a data loss dressed as a
-        // tidy-up. The delete fails, the editor is told how many topics use it, and retags them first.
+        // Nullable, and Restrict (ADR-0027). Null is a stop in no neighbourhood — normal. Restrict, not
+        // SetNull, because deleting a scope that still tags topics would silently UNTAG them: a data loss
+        // dressed as a tidy-up. The delete fails, the editor is told how many topics use it, and retags first.
         builder
-            .HasOne(topic => topic.SubArea)
+            .HasOne(topic => topic.Scope)
             .WithMany()
-            .HasForeignKey(topic => topic.SubAreaId)
+            .HasForeignKey(topic => topic.ScopeId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // "Every published Backend topic for a Junior" is the query behind the roadmap and the topic list,
-        // and it is the first one that will be slow.
-        builder
-            .HasIndex(topic => new { topic.DomainId, topic.DefaultLevel })
-            .HasDatabaseName("IX_Topics_DomainId_DefaultLevel");
+        // Owned, not three columns. `Part` without `Of` is meaningless, and a shape that can express
+        // "2 of null" is a shape somebody will eventually store (ADR-0027).
+        builder.OwnsOne(topic => topic.Sequence, sequence =>
+        {
+            sequence.Property(part => part.Group).HasColumnName("SequenceGroup").HasMaxLength(64);
+            sequence.Property(part => part.Part).HasColumnName("SequencePart");
+            sequence.Property(part => part.Of).HasColumnName("SequenceOf");
+        });
 
-        // The theme cross-section — "async from Junior to Expert" (ADR-0023, Sprint 5). Filtered so the index
+        // "Every published stop on B3 for a Junior" is the query behind the roadmap and the topic list, and
+        // it is the first one that will be slow.
+        builder
+            .HasIndex(topic => new { topic.LineId, topic.DefaultLevel })
+            .HasDatabaseName("IX_Topics_LineId_DefaultLevel");
+
+        // The neighbourhood cross-section — "EF Core from Junior to Senior" (ADR-0027). Filtered so the index
         // holds only tagged topics; the many nulls stay out of it.
         builder
-            .HasIndex(topic => new { topic.SubAreaId, topic.DefaultLevel })
-            .HasFilter("[SubAreaId] IS NOT NULL")
-            .HasDatabaseName("IX_Topics_SubAreaId_DefaultLevel");
+            .HasIndex(topic => new { topic.ScopeId, topic.DefaultLevel })
+            .HasFilter("[ScopeId] IS NOT NULL")
+            .HasDatabaseName("IX_Topics_ScopeId_DefaultLevel");
     }
 }
 

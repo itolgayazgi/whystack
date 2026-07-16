@@ -1,4 +1,4 @@
-using WhyStack.Application.Common;
+﻿using WhyStack.Application.Common;
 using WhyStack.Application.Content.Validation;
 
 namespace WhyStack.Application.Content.Authoring;
@@ -32,12 +32,12 @@ public interface IContentAuthoringRepository
     Task<bool> DeleteTermAsync(Guid termId, CancellationToken cancellationToken);
 
     /// <summary>The themes, each with a count of how many topics use it (ADR-0023).</summary>
-    Task<IReadOnlyList<EditableSubArea>> SubAreasAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<EditableScope>> SubAreasAsync(CancellationToken cancellationToken);
 
-    Task<Guid> SaveSubAreaAsync(SaveSubAreaCommand command, CancellationToken cancellationToken);
+    Task<Guid> SaveScopeAsync(SaveScopeCommand command, CancellationToken cancellationToken);
 
     /// <summary>Refuses to delete a theme that still tags topics — it would silently untag them (ADR-0023).</summary>
-    Task<DeleteSubAreaOutcome> DeleteSubAreaAsync(Guid subAreaId, CancellationToken cancellationToken);
+    Task<DeleteSubAreaOutcome> DeleteScopeAsync(Guid subAreaId, CancellationToken cancellationToken);
 }
 
 public sealed record SaveOutcome(
@@ -155,8 +155,8 @@ public sealed class SaveTopicHandler(
             "A slug is lowercase letters, digits and hyphens. It is the URL.");
 
         Require(
-            !string.IsNullOrWhiteSpace(command.DomainKey),
-            "domainKey",
+            !string.IsNullOrWhiteSpace(command.LineKey),
+            "lineKey",
             "A topic belongs to a domain — Backend, Database — not to a language (ADR-0021).");
 
         Require(

@@ -33,10 +33,15 @@ public sealed record TopicRecord(
     Guid Id,
     string StableKey,
     string Slug,
-    string DomainKey,
-    string DomainName,
-    string? SubAreaKey,
-    string? SubAreaName,
+    /// <summary>The AREA the line belongs to: "backend". Asked through the line, never stored twice.</summary>
+    string AreaKey,
+    string AreaName,
+
+    /// <summary>The LINE this stop sits on: "b3-data-access" / "Veri Erişimi" (ADR-0027).</summary>
+    string LineKey,
+    string LineName,
+    string? ScopeKey,
+    string? ScopeName,
     string Category,
 
     /// <summary>The shape of the explanation — Mechanism, Comparison… (ADR-0024).</summary>
@@ -89,7 +94,8 @@ public sealed record TopicEdge(string Type, Guid ToTopicId);
 /// corpus to grow — and CLAUDE.md §4 forbids the unbounded query outright.
 /// </summary>
 public sealed record TopicQuery(
-    string? Domain,
+    /// <summary>The LINE key: "b3-data-access" (ADR-0027). Was Domain, which meant two things at once.</summary>
+    string? Line,
     string? Level,
     int PageNumber,
     int PageSize,
@@ -100,14 +106,14 @@ public sealed record TopicQuery(
 
 /// <summary>The lists the authoring form is built from. All of them are reference data; none is user input.</summary>
 public sealed record AuthoringCatalog(
-    IReadOnlyList<DomainOption> Domains,
-    IReadOnlyList<SubAreaOption> SubAreas,
+    IReadOnlyList<LineOption> Domains,
+    IReadOnlyList<ScopeOption> Scopes,
 
     /// <summary>
     /// The category names, straight from the <c>TopicCategory</c> enum.
     /// </summary>
     /// <remarks>
-    /// A CLOSED classification (unlike SubArea), so the studio must offer these as a dropdown — a free
+    /// A CLOSED classification (unlike Scope), so the studio must offer these as a dropdown — a free
     /// textbox lets an editor type "Perfromance" and turns a typo into a failed save. The list comes from the
     /// enum rather than a hardcoded copy in the client, so adding a member cannot leave the two out of step.
     /// </remarks>
@@ -135,10 +141,10 @@ public sealed record ArchetypeOption(string Key, IReadOnlyList<string> Skeleton)
 
 public sealed record BlockTypeOption(string Key, bool IsMandatory);
 
-public sealed record DomainOption(string Key, string Name);
+public sealed record LineOption(string Key, string Name);
 
 /// <summary>A theme a topic may be tagged with (ADR-0023). Curated in the studio.</summary>
-public sealed record SubAreaOption(string Key, string Name);
+public sealed record ScopeOption(string Key, string Name);
 
 public sealed record EcosystemOption(
     string Key,

@@ -17,13 +17,15 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
     {
         var now = clock.GetUtcNow().UtcDateTime;
 
-        var domain = await context.KnowledgeDomains
-            .SingleOrDefaultAsync(candidate => candidate.Key == command.DomainKey, cancellationToken);
+        // The LINE, not the area (ADR-0027). A stop is authored onto a route; its area follows from the
+        // route and is never a field an author sets — which is what stops a B3 topic claiming to be Frontend.
+        var line = await context.Lines
+            .SingleOrDefaultAsync(candidate => candidate.Key == command.LineKey, cancellationToken);
 
-        if (domain is null)
+        if (line is null)
         {
             return new SaveOutcome(
-                Guid.Empty, string.Empty, string.Empty, false, $"No domain \"{command.DomainKey}\".", "domainKey");
+                Guid.Empty, string.Empty, string.Empty, false, $"No line \"{command.LineKey}\".", "lineKey");
         }
 
         // A theme is OPTIONAL (null is fine), but a non-null one must exist. This is the gate: the studio
@@ -31,19 +33,19 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
         // foreign key would reject it anyway. Resolving it here turns that into a clear 422 instead of a 500.
         Guid? subAreaId = null;
 
-        if (!string.IsNullOrWhiteSpace(command.SubAreaKey))
+        if (!string.IsNullOrWhiteSpace(command.ScopeKey))
         {
-            var subArea = await context.SubAreas
-                .SingleOrDefaultAsync(candidate => candidate.Key == command.SubAreaKey, cancellationToken);
+            var scope = await context.Scopes
+                .SingleOrDefaultAsync(candidate => candidate.Key == command.ScopeKey, cancellationToken);
 
-            if (subArea is null)
+            if (scope is null)
             {
                 return new SaveOutcome(
                     Guid.Empty, string.Empty, string.Empty, false,
-                    $"No theme \"{command.SubAreaKey}\". Themes are managed in the studio.", "subAreaKey");
+                    $"No theme \"{command.ScopeKey}\". Themes are managed in the studio.", "subAreaKey");
             }
 
-            subAreaId = subArea.Id;
+            subAreaId = scope.Id;
         }
 
         // Category and level are CLOSED enums, and the studio offers them as dropdowns — so from the UI these
@@ -96,8 +98,8 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 Id = Guid.CreateVersion7(),
                 StableKey = command.StableKey,
                 Slug = command.Slug,
-                DomainId = domain.Id,
-                SubAreaId = subAreaId,
+                LineId = line.Id,
+                ScopeId = subAreaId,
                 Category = category,
                 Archetype = archetype,
                 DefaultLevel = level,
@@ -141,8 +143,8 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             }
 
             topic.Slug = command.Slug;
-            topic.DomainId = domain.Id;
-            topic.SubAreaId = subAreaId;
+            topic.LineId = line.Id;
+            topic.ScopeId = subAreaId;
             topic.Category = category;
             topic.Archetype = archetype;
             topic.DefaultLevel = level;
@@ -467,8 +469,9 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 topic.StableKey,
                 topic.Slug,
                 topic.DefaultTitle,
-                DomainName = topic.Domain!.Name,
-                SubAreaName = topic.SubArea == null ? null : topic.SubArea.Name,
+                LineName = topic.Line!.Name,
+                AreaName = topic.Line.Area!.Name,
+                ScopeName = topic.Scope == null ? null : topic.Scope.Name,
                 topic.DefaultLevel,
                 topic.UpdatedAtUtc,
 
@@ -493,8 +496,8 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 row.StableKey,
                 row.Slug,
                 row.DefaultTitle,
-                row.DomainName,
-                row.SubAreaName,
+                row.LineName,
+                row.ScopeName,
                 row.DefaultLevel.ToString(),
                 row.Version.Status.ToString(),
                 row.UpdatedAtUtc,
@@ -513,8 +516,8 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
     {
         var topic = await context.Topics
             .AsNoTracking()
-            .Include(candidate => candidate.Domain)
-            .Include(candidate => candidate.SubArea)
+            .Include(candidate => candidate.Line).ThenInclude(line => line!.Area)
+            .Include(candidate => candidate.Scope)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Blocks)
             .Include(candidate => candidate.OutgoingRelationships).ThenInclude(edge => edge.ToTopic)
             .Include(candidate => candidate.Versions).ThenInclude(version => version.Sections)
@@ -536,8 +539,8 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             topic.Id,
             topic.StableKey,
             topic.Slug,
-            topic.Domain!.Key,
-            topic.SubArea?.Key,
+            topic.Line!.Key,
+            topic.Scope?.Key,
             topic.Category.ToString(),
             topic.Archetype.ToString(),
             topic.DefaultLevel.ToString(),
@@ -661,74 +664,85 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
         return deleted > 0;
     }
 
-    public async Task<IReadOnlyList<EditableSubArea>> SubAreasAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<EditableScope>> SubAreasAsync(CancellationToken cancellationToken)
     {
         // The topic count travels with the theme, so the studio can say "used by 7 topics" — the number that
         // turns a refused delete into an explanation the editor can act on.
-        var rows = await context.SubAreas
+        var rows = await context.Scopes
             .AsNoTracking()
-            .OrderBy(subArea => subArea.SortOrder)
-            .ThenBy(subArea => subArea.Name)
-            .Select(subArea => new EditableSubArea(
-                subArea.Id,
-                subArea.Key,
-                subArea.Name,
-                context.Topics.Count(topic => topic.SubAreaId == subArea.Id)))
+            .OrderBy(scope => scope.SortOrder)
+            .ThenBy(scope => scope.Name)
+            .Select(scope => new EditableScope(
+                scope.Id,
+                scope.Key,
+                scope.Name,
+                context.Topics.Count(topic => topic.ScopeId == scope.Id)))
             .ToListAsync(cancellationToken);
 
         return rows;
     }
 
-    public async Task<Guid> SaveSubAreaAsync(SaveSubAreaCommand command, CancellationToken cancellationToken)
+    public async Task<Guid> SaveScopeAsync(SaveScopeCommand command, CancellationToken cancellationToken)
     {
-        var subArea = command.Id is null
+        var scope = command.Id is null
             ? null
-            : await context.SubAreas.SingleOrDefaultAsync(candidate => candidate.Id == command.Id, cancellationToken);
+            : await context.Scopes.SingleOrDefaultAsync(candidate => candidate.Id == command.Id, cancellationToken);
 
-        if (subArea is null)
+        if (scope is null)
         {
             // SortOrder after the current last, so a new theme lands at the end rather than fighting for an
             // existing slot. Themes are ordered for the dropdown, not ranked.
-            var nextOrder = await context.SubAreas
+            // A scope lives ON a line (ADR-0027) — that is what lets B1's "Eşzamanlılık" and B3's
+            // "Transaction & Eşzamanlılık" both exist without one of them being renamed.
+            var scopeLine = await context.Lines
+                .SingleOrDefaultAsync(candidate => candidate.Key == command.LineKey, cancellationToken);
+
+            if (scopeLine is null) return Guid.Empty;
+
+            // SortOrder after the line's current last, so a new scope lands at the end of ITS line rather
+            // than at the end of every line's shared list.
+            var nextOrder = await context.Scopes
+                .Where(existing => existing.LineId == scopeLine.Id)
                 .Select(existing => (int?)existing.SortOrder)
                 .MaxAsync(cancellationToken) ?? 0;
 
-            subArea = new SubArea
+            scope = new Scope
             {
                 Id = Guid.CreateVersion7(),
                 Key = command.Key,
                 Name = command.Name,
+                LineId = scopeLine.Id,
                 SortOrder = nextOrder + 1,
             };
 
-            context.SubAreas.Add(subArea);
+            context.Scopes.Add(scope);
         }
         else
         {
             // The KEY is deliberately NOT updated on an edit. Tagged topics and future roadmap slices resolve
             // through it; renaming the key would orphan them exactly as renaming a topic's stable key would.
             // The display name is free to change.
-            subArea.Name = command.Name;
+            scope.Name = command.Name;
         }
 
         await context.SaveChangesAsync(cancellationToken);
 
-        return subArea.Id;
+        return scope.Id;
     }
 
-    public async Task<DeleteSubAreaOutcome> DeleteSubAreaAsync(Guid subAreaId, CancellationToken cancellationToken)
+    public async Task<DeleteSubAreaOutcome> DeleteScopeAsync(Guid subAreaId, CancellationToken cancellationToken)
     {
         // Counted BEFORE the delete, not caught as an FK violation after. A refused delete with a number is an
         // instruction ("retag these 7 first"); a caught database exception is a 500 that tells nobody anything.
-        var inUse = await context.Topics.CountAsync(topic => topic.SubAreaId == subAreaId, cancellationToken);
+        var inUse = await context.Topics.CountAsync(topic => topic.ScopeId == subAreaId, cancellationToken);
 
         if (inUse > 0)
         {
             return new DeleteSubAreaOutcome(Deleted: false, InUseCount: inUse);
         }
 
-        var deleted = await context.SubAreas
-            .Where(subArea => subArea.Id == subAreaId)
+        var deleted = await context.Scopes
+            .Where(scope => scope.Id == subAreaId)
             .ExecuteDeleteAsync(cancellationToken);
 
         return new DeleteSubAreaOutcome(Deleted: deleted > 0, InUseCount: 0);

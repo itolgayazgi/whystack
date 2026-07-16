@@ -1,4 +1,4 @@
-using WhyStack.Application.Content.Authoring;
+﻿using WhyStack.Application.Content.Authoring;
 using WhyStack.Application.Content.Blocks;
 using WhyStack.Infrastructure.Persistence;
 
@@ -17,8 +17,8 @@ public sealed class BlockAuthoringTests(DatabaseFixture fixture)
         Id: null,
         StableKey: $"backend.block-test-{suffix}",
         Slug: $"block-test-{suffix}",
-        DomainKey: "backend",
-        SubAreaKey: null,
+        LineKey: "b1-language-runtime",
+        ScopeKey: null,
         Category: "Concept",
         Archetype: "Mechanism",
         Level: "MidLevel",

@@ -105,7 +105,7 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
 
     public void TrackUser(Guid id) => _seededUsers.Add(id);
 
-    public void TrackDomain(Guid id) => _seededDomains.Add(id);
+    public void TrackLine(Guid id) => _seededDomains.Add(id);
 
     public override async ValueTask DisposeAsync()
     {
@@ -136,8 +136,8 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
         await context.Topics.Where(topic => topics.Contains(topic.Id)).ExecuteDeleteAsync();
         await context.Users.Where(user => users.Contains(user.Id)).ExecuteDeleteAsync();
 
-        // After the topics that sit in them, for the same reason.
-        await context.KnowledgeDomains.Where(domain => domains.Contains(domain.Id)).ExecuteDeleteAsync();
+        // After the topics that sit ON them, for the same reason.
+        await context.Lines.Where(line => domains.Contains(line.Id)).ExecuteDeleteAsync();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

@@ -6,7 +6,7 @@ using WhyStack.Infrastructure.Persistence;
 namespace WhyStack.Infrastructure.Tests;
 
 /// <summary>
-/// The theme (SubArea) axis, against a real SQL Server (ADR-0023).
+/// The theme (Scope) axis, against a real SQL Server (ADR-0023).
 /// </summary>
 /// <remarks>
 /// Every test runs inside a transaction that is never committed, so the shared dev database is left exactly
@@ -14,17 +14,24 @@ namespace WhyStack.Infrastructure.Tests;
 /// in-memory provider would verify none of them.
 /// </remarks>
 [Collection(DatabaseCollection.Name)]
-public sealed class SubAreaAuthoringTests(DatabaseFixture fixture)
+public sealed class ScopeAuthoringTests(DatabaseFixture fixture)
 {
-    private const string BackendDomain = "backend";
+        /// <summary>
+    /// A real seeded LINE, not an area.
+    /// </summary>
+    /// <remarks>
+    /// This said "backend" until ADR-0027, and it was right to: `backend` was a domain that stood in for
+    /// both. Now a stop is authored onto a route, and Backend is the network the route runs through.
+    /// </remarks>
+    private const string TestLine = "b1-language-runtime";
     private const string SeededTheme = "async"; // seeded in ContentConfigurations
 
     private static SaveTopicCommand Topic(string suffix, string? subAreaKey) => new(
         Id: null,
         StableKey: $"backend.subarea-test-{suffix}",
         Slug: $"subarea-test-{suffix}",
-        DomainKey: BackendDomain,
-        SubAreaKey: subAreaKey,
+        LineKey: TestLine,
+        ScopeKey: subAreaKey,
         Category: "Concept",
         Archetype: "Concept",
         Level: "MidLevel",
@@ -52,7 +59,7 @@ public sealed class SubAreaAuthoringTests(DatabaseFixture fixture)
 
         var editable = await repository.EditableAsync(outcome.Id, default);
 
-        Assert.Equal(SeededTheme, editable!.SubAreaKey);
+        Assert.Equal(SeededTheme, editable!.ScopeKey);
     }
 
     /// <summary>
@@ -96,7 +103,7 @@ public sealed class SubAreaAuthoringTests(DatabaseFixture fixture)
 
         var editable = await repository.EditableAsync(outcome.Id, default);
 
-        Assert.Null(editable!.SubAreaKey);
+        Assert.Null(editable!.ScopeKey);
     }
 
     /// <summary>
@@ -144,14 +151,24 @@ public sealed class SubAreaAuthoringTests(DatabaseFixture fixture)
         var repository = new ContentAuthoringRepository(context, TimeProvider.System);
 
         // A theme of our own, so the count is exactly what we tagged and not whatever the seed themes carry.
-        var theme = new SubArea { Id = Guid.CreateVersion7(), Key = "subarea-test-theme", Name = "Fixture Theme", SortOrder = 900 };
-        context.SubAreas.Add(theme);
+        var theme = new Scope
+        {
+            Id = Guid.CreateVersion7(),
+            Key = "scope-test-fixture",
+            Name = "Fixture Scope",
+
+            // On a real seeded line (ADR-0027): a scope only exists on one, and the composite unique index
+            // is (LineId, Key) — so a fixture with no line would not even be insertable.
+            LineId = DeterministicId.For("line:b1-language-runtime"),
+            SortOrder = 900,
+        };
+        context.Scopes.Add(theme);
         await context.SaveChangesAsync();
 
         var saved = await repository.SaveAsync(Topic("tagged", theme.Key), Guid.CreateVersion7(), default);
         Assert.Null(saved.Error);
 
-        var blocked = await repository.DeleteSubAreaAsync(theme.Id, default);
+        var blocked = await repository.DeleteScopeAsync(theme.Id, default);
 
         Assert.False(blocked.Deleted);
         Assert.Equal(1, blocked.InUseCount);
@@ -163,7 +180,7 @@ public sealed class SubAreaAuthoringTests(DatabaseFixture fixture)
             Guid.CreateVersion7(),
             default);
 
-        var allowed = await repository.DeleteSubAreaAsync(theme.Id, default);
+        var allowed = await repository.DeleteScopeAsync(theme.Id, default);
 
         Assert.True(allowed.Deleted);
         Assert.Equal(0, allowed.InUseCount);
@@ -178,11 +195,18 @@ public sealed class SubAreaAuthoringTests(DatabaseFixture fixture)
 
         var repository = new ContentAuthoringRepository(context, TimeProvider.System);
 
-        var theme = new SubArea { Id = Guid.CreateVersion7(), Key = "subarea-test-unused", Name = "Unused", SortOrder = 901 };
-        context.SubAreas.Add(theme);
+        var theme = new Scope
+        {
+            Id = Guid.CreateVersion7(),
+            Key = "scope-test-unused",
+            Name = "Unused",
+            LineId = DeterministicId.For("line:b1-language-runtime"),
+            SortOrder = 901,
+        };
+        context.Scopes.Add(theme);
         await context.SaveChangesAsync();
 
-        var outcome = await repository.DeleteSubAreaAsync(theme.Id, default);
+        var outcome = await repository.DeleteScopeAsync(theme.Id, default);
 
         Assert.True(outcome.Deleted);
         Assert.Equal(0, outcome.InUseCount);
