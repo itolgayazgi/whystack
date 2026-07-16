@@ -40,6 +40,16 @@ export type { SkillLevel, ThemeMode, UserPreferences } from './preferences';
 export { preferencesApi } from './preferences';
 export type { ProblemDetails } from './problem';
 export { ApiError, ErrorCode, NetworkError, toApiError } from './problem';
+export type {
+  ContinueView,
+  HomeSnapshot,
+  LevelProgressView,
+  NextTopicView,
+  RecordProgressRequest,
+  RecordProgressResult,
+  StreakView,
+} from './progress';
+export { progressApi } from './progress';
 export { type RefreshTokenStore, type TokenPlatform, webRefreshTokenStore } from './refresh-token-store';
 export type {
   BlockType,

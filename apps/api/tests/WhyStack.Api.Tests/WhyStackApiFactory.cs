@@ -1,10 +1,13 @@
+﻿using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
 using WhyStack.Application.Abstractions;
+using WhyStack.Infrastructure.Persistence;
 
 namespace WhyStack.Api.Tests;
 
@@ -80,6 +83,54 @@ public class WhyStackApiFactory : WebApplicationFactory<Program>
     /// budget, and they fail for a reason that has nothing to do with what they assert.
     /// </summary>
     protected virtual int AuthPermitLimit => 10_000;
+
+    /// <summary>
+    /// Every topic and user a test seeded, so the run can put the database back the way it found it.
+    /// </summary>
+    /// <remarks>
+    /// These tests run against the REAL development database — that is deliberate; an in-memory provider
+    /// would not have caught a single one of the FK and index defects this suite has caught. The price is
+    /// that anything a test writes is still there afterwards, and published `apitest-*` topics were showing
+    /// up in the reader's topic list on the developer's own machine after every run. A test that leaves
+    /// fake content in a real database is a test that lies to the next person who opens the app.
+    ///
+    /// Tracked ids rather than "delete everything matching apitest.%": each test CLASS gets its own factory
+    /// instance, so a blanket sweep on teardown would delete rows another class is still using.
+    /// </remarks>
+    private readonly ConcurrentBag<Guid> _seededTopics = [];
+    private readonly ConcurrentBag<Guid> _seededUsers = [];
+
+    public void TrackTopic(Guid id) => _seededTopics.Add(id);
+
+    public void TrackUser(Guid id) => _seededUsers.Add(id);
+
+    public override async ValueTask DisposeAsync()
+    {
+        await PurgeAsync();
+        await base.DisposeAsync();
+    }
+
+    private async Task PurgeAsync()
+    {
+        var topics = _seededTopics.ToArray();
+        var users = _seededUsers.ToArray();
+
+        if (topics.Length == 0 && users.Length == 0) return;
+
+        using var scope = Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<WhyStackDbContext>();
+
+        // Progress first, and not because of tidiness: UserTopicProgress -> Topic is Restrict on purpose
+        // (ADR-0025), so the delete would fail rather than quietly take a reader's history with it. The
+        // teardown has to unwind in the same order the constraint demands.
+        await context.UserTopicProgress
+            .Where(progress => topics.Contains(progress.TopicId) || users.Contains(progress.UserId))
+            .ExecuteDeleteAsync();
+
+        await context.UserStreaks.Where(streak => users.Contains(streak.UserId)).ExecuteDeleteAsync();
+        await context.Topics.Where(topic => topics.Contains(topic.Id)).ExecuteDeleteAsync();
+        await context.Users.Where(user => users.Contains(user.Id)).ExecuteDeleteAsync();
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

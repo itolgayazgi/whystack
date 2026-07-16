@@ -1,10 +1,11 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using WhyStack.Application.Abstractions;
 using WhyStack.Application.Content;
+using WhyStack.Application.Progress;
 using WhyStack.Application.Content.Authoring;
 using WhyStack.Application.Identity.Confirmation;
 using WhyStack.Application.Identity.Login;
@@ -96,6 +97,7 @@ public static class DependencyInjection
         // no cache keyed by a content hash — the row IS the content.
         services.AddScoped<ITopicRepository, TopicRepository>();
         services.AddScoped<IContentAuthoringRepository, ContentAuthoringRepository>();
+        services.AddScoped<IProgressRepository, ProgressRepository>();
     }
 
     private static void AddMaintenance(IServiceCollection services, IConfiguration configuration)
@@ -209,6 +211,8 @@ public static class DependencyInjection
         services.AddScoped<ListTopicsHandler>();
         services.AddScoped<GetTopicHandler>();
         services.AddScoped<SaveTopicHandler>();
+        services.AddScoped<RecordProgressHandler>();
+        services.AddScoped<GetHomeHandler>();
         services.AddScoped<TransitionTopicHandler>();
         services.AddScoped<ValidateTopicHandler>();
     }

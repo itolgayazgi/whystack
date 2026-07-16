@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -232,6 +232,7 @@ app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapTopicEndpoints();
 app.MapAuthoringEndpoints();
+app.MapProgressEndpoints();
 
 app.Run();
 
