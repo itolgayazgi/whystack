@@ -59,8 +59,18 @@
   text-decoration: none;
 }
 
-/* Only the word warms up. The mark's own colours are the brand's, and a hover that repaints them would be
-   the rail deciding the logo is a control. */
+/*
+  The lockup is a raster, so it gets a max-width rather than a fixed one: at 232px the rail is fixed, but the
+  shell collapses to one column under 860px and a logo that cannot shrink is a logo that pushes the page
+  sideways.
+*/
+.lockup {
+  max-width: 100%;
+  height: auto;
+}
+
+/* The logo does not light up on hover. Its colours are the brand's, and a rail that repaints them is a rail
+   deciding the logo is a control. */
 
 .brand:focus-visible {
   outline: 2px solid var(--color-focus-ring);

@@ -27,15 +27,23 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => search,
 }));
 
+// Forwards every prop, deliberately. A mock that only passes `href` silently drops aria-label, className
+// and aria-current — and then a test asserting any of them fails against the MOCK rather than the code.
 vi.mock('next/link', async () => {
   const { createElement } = await import('react');
   return {
-    default: ({ children, href }: { children: React.ReactNode; href: string }) =>
-      createElement('a', { href }, children),
+    default: ({ children, ...props }: { children: React.ReactNode }) => createElement('a', props, children),
   };
 });
 
-vi.mock('@/components/wordmark', () => ({ Wordmark: () => null }));
+// next/image needs a loader and a real <img>; a plain img keeps the test about the rail rather than about
+// Next's image pipeline.
+vi.mock('next/image', async () => {
+  const { createElement } = await import('react');
+  return {
+    default: ({ src, alt }: { src: string; alt: string }) => createElement('img', { src, alt }),
+  };
+});
 
 beforeEach(() => {
   areas.mockReset();
@@ -123,5 +131,16 @@ describe('the sidebar', () => {
       'href',
       expect.stringContaining('line=b1-language-runtime'),
     );
+  });
+
+  it('names the logo once, on the link rather than the image', async () => {
+    render(<LearnLayout>{null}</LearnLayout>);
+
+    // The lockup IS the wordmark, so an alt of "WhyStack" plus a link label would announce it twice. The
+    // link carries the name and the destination; the image is the same fact, drawn.
+    const brand = await screen.findByRole('link', { name: /WhyStack/ });
+
+    expect(brand).toHaveAttribute('href', '/learn');
+    expect(brand.querySelector('img')).toHaveAttribute('alt', '');
   });
 });

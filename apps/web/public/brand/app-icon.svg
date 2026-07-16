@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="whystack ikon">
+  <rect width="512" height="512" rx="115" fill="#0B1B12"/>
+  <rect x="106" y="236" width="150" height="150" rx="34" fill="#1A3626" stroke="#274736" stroke-width="8"/>
+  <rect x="238" y="112" width="172" height="274" rx="34" fill="#C9A227"/>
+  <path d="M20 498H154L211 184H215L305 498H425L508 184H512L575 498H709L580 0H457L365 336H361L263 0H140Z" fill="#EFE9D9" transform="translate(132.00,350.00) scale(0.112000,-0.112000)"/>
+  <path d="M50 108V208H184V149L217 116H424L458 150V266L425 299H160L52 407V592L160 700H476L584 592V491H450V551L417 584H219L186 551V448L219 415H484L592 307V110L482 0H158Z" fill="#0E2016" transform="translate(278.00,316.00) scale(0.152000,-0.152000)"/>
+</svg>

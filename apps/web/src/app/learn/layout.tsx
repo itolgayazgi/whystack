@@ -2,11 +2,11 @@
 
 import { type AreaOption, canAuthor, type RoadmapLineOption, roadmapApi } from '@whystack/api-client';
 import { lineColor } from '@whystack/theme';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type ReactNode, Suspense, useEffect, useRef, useState } from 'react';
 import { AreaIcon } from '@/components/learn/area-icon';
-import { Wordmark } from '@/components/wordmark';
 import { useSession } from '@/lib/session';
 import styles from './learn.module.css';
 
@@ -61,6 +61,17 @@ export default function LearnLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+/**
+ * The lockup, at the rail's own width.
+ *
+ * The source is 600x244. The height is derived rather than typed, so the day a new export changes the
+ * artboard there is one number to update and no chance of a squashed logo — the kind of wrong that reads as
+ * "the brand looks off today" and never as "somebody typed 76".
+ */
+const LOCKUP = { source: { width: 600, height: 244 }, width: 168 } as const;
+
+const LOCKUP_HEIGHT = Math.round((LOCKUP.width * LOCKUP.source.height) / LOCKUP.source.width);
 
 function Rail() {
   const { client, status, user, signOut } = useSession();
@@ -148,14 +159,25 @@ function Rail() {
   return (
     <aside className={styles.side}>
       {/*
-        The mark carries the word now (anchor-logo variant 01), so the separate "whystack" caption that used
-        to sit under it is gone — it was saying the name twice, to the eye and to a screen reader alike.
+        The real lockup, as a file — not a reconstruction.
 
-        27 is the size the study drew the sidebar mark at. Rendering it at anything else would be second-
-        guessing the one measurement he actually fitted to this column.
+        This replaced a hand-built SVG of the mark. A logo should be the designer's; every version an
+        engineer rebuilds from a mockup is a version that is slightly wrong in a way nobody can name, and the
+        one that stood here leaned on Chakra Petch's metrics to put the step in the right place.
+
+        Rendered at the column's own width (232 minus its 22px gutters), so it fits the rail rather than the
+        rail accommodating it. `priority` because it is the first thing above the fold on every signed-in
+        page — lazily loading the logo means the app opens with a hole where it goes.
       */}
-      <Link href="/learn" className={styles.brand}>
-        <Wordmark size={27} />
+      <Link href="/learn" className={styles.brand} aria-label="WhyStack — ana sayfa">
+        <Image
+          src="/brand/lockup.png"
+          alt=""
+          width={LOCKUP.width}
+          height={LOCKUP_HEIGHT}
+          priority
+          className={styles.lockup}
+        />
       </Link>
 
       <nav aria-label="Alanlar">
