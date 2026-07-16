@@ -98,9 +98,13 @@ jobs:
       # It is signed with the React Native template's debug keystore, which is why this needs no secrets
       # and no Google Play account. It is also why it can only ever be a development build — that
       # keystore is public and identical for every React Native project on earth.
+      # `--stacktrace` is not noise here, it is the difference between a fixable failure and a wasted
+      # afternoon. Without it Gradle prints its wrapper — "a failure occurred while executing
+      # PackageAndroidArtifact$IncrementalSplitterRunnable" — and swallows the exception that says WHY. This
+      # build takes seventeen minutes; a failure nobody can read costs seventeen more to ask again.
       - name: Build the APK
         working-directory: apps/client/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Name it something a human can find
         run: |
