@@ -1,12 +1,12 @@
 # ADR-0027 — Hat, Kapsam and Sequence: the content taxonomy
 
-- **Status:** **Proposed — awaiting the owner's approval. No code has been written against it.**
+- **Status:** **Accepted** — 2026-07-16, with both open questions closed by the owner (see *Resolutions*).
 - **Date:** 2026-07-16
 - **Deciders:** Tolga Yazgı (owner)
 - **Derived from:** the owner's `whystack-backend-taksonomi.md` and `whystack-kapsam-katmani.md`
   (vendored at `docs/design-system/mockups/`)
-- **Supersedes:** the `KnowledgeDomain` axis as currently seeded. **Amends ADR-0023 (SubArea) — see the
-  open question, which must be answered before this is implemented.**
+- **Supersedes:** the `KnowledgeDomain` axis as currently seeded. **Supersedes ADR-0023: its `SubArea`
+  becomes this ADR's `Scope`. One axis, one name.**
 - **Related:** ADR-0021 (concept vs implementation), ADR-0024 (blocks), ADR-0025 (progress)
 
 ---
@@ -111,15 +111,69 @@ So `Topic.DomainId` currently answers two different questions depending on the r
 both are archived.** Every month of content makes this migration more expensive and the taxonomy less
 true. Now is the moment.
 
-Proposed: `KnowledgeDomain` is re-seeded as **Alan only** (Backend, Database, …), and `Line` becomes a new
-table (`Key`, `Name`, `DomainId`, `Colour`, `SortOrder`) holding B1–B8. `Topic.LineId` replaces the
-overloaded domain link.
+`KnowledgeDomain` becomes **`Area`** — areas only (Backend, Frontend, Database, DevOps) — and `Line` is a
+new table (`Key`, `Name`, `AreaId`, `Color`, `SortOrder`) holding B1–B8. `Topic.LineId` replaces the
+overloaded domain link; a topic's area is its line's area, asked once rather than stored twice.
+
+Renamed rather than re-seeded in place: "Domain" is already the name of the innermost layer of this
+codebase (`WhyStack.Domain`), and a `KnowledgeDomain` that no longer means what it says, sitting next to a
+`Domain` namespace that means something else entirely, is two traps for the price of one.
 
 ---
 
-## OPEN QUESTION — must be answered before any code
+## Resolutions — 2026-07-16
 
-**Is `Kapsam` the same axis as ADR-0023's `SubArea`?**
+Both questions below were put to the owner before any code was written. His answers, and the reasoning he
+gave, are recorded here because they are the decision:
+
+**1. Kapsam and SubArea are one axis.** In his own words:
+
+> *kusur benim dokümanımda: "kapsam" katmanını tasarlarken kod tabanında zaten SubArea ekseninin var
+> olduğunu bilmiyordum ve aynı granülerlikte ikinci bir eksen icat etmiş oldum.*
+
+The axis is named **`Scope` in code, "Kapsam" in the UI.** `SubArea` is retired outright — not aliased —
+so two names for one thing cannot both stay alive. The kapsam document's rules bind here: the 3–10 rule,
+the badge, the notification, the "7→8" counter, and ADR-0025's level-baseline snapshot.
+
+**The existing seeds were not wrong — they were homeless.** They are scopes; what was missing was which
+line they live on. They are re-parented rather than re-cut:
+
+| Seed | Line |
+|---|---|
+| Async / Await, Bellek Yönetimi, Koleksiyonlar, Hata Yönetimi, Eşzamanlılık | B1 Dil & Runtime |
+| Dependency Injection | B4 Mimari & Tasarım |
+
+**The nuance that survives the merge, and why it matters.** Merging the *axis* does not merge the two
+concurrency scopes. B1's **"Eşzamanlılık"** (the language's tools: threads, locks, async primitives) and
+B3's **"Transaction & Eşzamanlılık"** (the data world: isolation levels, deadlocks) are different
+neighbourhoods on different lines. They read like a duplicate and are not one.
+
+This is written down so the question — *"neden iki yerde eşzamanlılık var?"* — has an answer the first time
+somebody asks it, rather than a tidy-up that quietly destroys the distinction. A scope is only meaningful
+inside its line: the same word in two contexts is two neighbourhoods, exactly as "Index" means one thing on
+B3 and another in the Database area.
+
+**2. `KnowledgeDomain` splits into Area + Line, this sprint.** The mapping is the owner's:
+
+| Today | Becomes |
+|---|---|
+| backend, database | **Area** (with frontend, devops) |
+| language | **B1** (Area = backend) |
+| architecture | **B4** (Area = backend) |
+| security | **B6** (Area = backend) |
+| testing | **B7** (Area = backend) |
+
+The sidebar follows: areas at the top, lines inside the area.
+
+> `networking` has no home in this mapping and none in the taxonomy document. No topic uses it, so it is
+> dropped with the old seed rather than guessed at. If it should be a line (B2's HTTP territory?) or an
+> area, that is a decision still to make, and dropping it costs nothing today.
+
+---
+
+## The question this replaced (kept for the record)
+
+**Was `Kapsam` the same axis as ADR-0023's `SubArea`?**
 
 The owner's reasoning when choosing a new axis was that they differ in granularity:
 
@@ -148,9 +202,9 @@ If they are one axis, ADR-0023's `SubAreas` table is renamed and gains the 3–1
 changes. If they are two, a topic carries both a theme and a scope, and we owe an answer to the question
 every editor will ask: *"which one does EF Core go in?"*
 
-**Recommendation: one axis.** `SubArea` becomes `Scope`, keeps its Restrict FK and its studio management,
-and gains the size rule. Two axes at the same granularity is a choice an editor has to make correctly on
-every topic, forever, with nothing to tell them how.
+**Recommendation: one axis** — accepted. `SubArea` becomes `Scope`, keeps its Restrict FK and its studio
+management, and gains the size rule. Two axes at the same granularity is a choice an editor has to make
+correctly on every topic, forever, with nothing to tell them how.
 
 ---
 
