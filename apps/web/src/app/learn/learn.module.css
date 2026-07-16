@@ -848,3 +848,34 @@
   line-height: 1.5;
   margin: 0;
 }
+
+/* The area name takes the row's spare width, so the chevron sits hard against the right edge and every
+   area's chevron lines up — a column of them at ragged x reads as noise. */
+.areaName {
+  flex: 1;
+}
+
+.chevron {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* Rotated, not swapped for a second glyph: the direction it turns is what tells the reader which way this
+   is about to go. */
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+/* An idle transform is exactly what somebody with a vestibular disorder turned this setting off for. The
+   chevron still points the right way; it just gets there instantly. */
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}

@@ -1,6 +1,6 @@
-import type { TopicBlock } from '@whystack/api-client';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { TopicBlock } from '@whystack/api-client';
 import { describe, expect, it, vi } from 'vitest';
 import { BlockFlow } from '@/components/reader/block-flow';
 

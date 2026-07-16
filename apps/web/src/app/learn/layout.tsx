@@ -66,7 +66,16 @@ function Rail() {
   const { client, status, user, signOut } = useSession();
   const search = useSearchParams();
   const [areas, setAreas] = useState<AreaOption[]>([]);
-  const [lines, setLines] = useState<RoadmapLineOption[]>([]);
+
+  // Lines PER AREA, fetched when an area is opened.
+  //
+  // Not all four up front: three of them are rows nobody is looking at, and an area's line list is its own
+  // (ADR-0027) so there is nothing shared to amortise. Undefined means "never opened"; an empty array means
+  // "opened, and it genuinely has none" — the rail says different things for those, so they cannot collapse
+  // into one value.
+  const [linesByArea, setLinesByArea] = useState<Record<string, RoadmapLineOption[]>>({});
+
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -84,17 +93,31 @@ function Rail() {
       .catch(() => setAreas([]));
   }, [client, status]);
 
+  // The area the reader is actually in opens itself. Arriving on a B3 topic with every area shut would make
+  // them hunt for where they already are.
+  useEffect(() => {
+    setExpanded((current) => (current.has(activeArea) ? current : new Set(current).add(activeArea)));
+  }, [activeArea]);
+
   useEffect(() => {
     if (status !== 'signed-in') return;
 
-    // The lines of the OPEN area only. Fetching all four areas' lines to show one area's would be three
-    // requests for rows nobody is looking at — and the taxonomy says an area's line list is its own
-    // (ADR-0027), so there is nothing to share.
-    roadmapApi
-      .lines(client, activeArea)
-      .then((response) => setLines(response.data))
-      .catch(() => setLines([]));
-  }, [client, status, activeArea]);
+    // Only what is open, and only once. `linesByArea` is checked BEFORE the request rather than after, so
+    // collapsing and re-opening an area is free — the rail is navigation, and navigation that costs a round
+    // trip every time somebody changes their mind is navigation people stop using.
+    for (const area of expanded) {
+      if (linesByArea[area] !== undefined) continue;
+
+      roadmapApi
+        .lines(client, area)
+        .then((response) => setLinesByArea((current) => ({ ...current, [area]: response.data })))
+
+        // An empty array on failure, deliberately. The rail is not worth an error state — a red banner over
+        // a navigation list is louder than what it costs — and "no lines" is a state this UI already draws
+        // honestly. It retries on the next expand, because the key is only set on success.
+        .catch(() => setLinesByArea((current) => ({ ...current, [area]: [] })));
+    }
+  }, [client, status, expanded, linesByArea]);
 
   // An open menu must close the two ways every open menu on every platform closes: click away, or Escape. A
   // menu you can only close by clicking the exact button that opened it is a trap, and a keyboard user has
@@ -132,27 +155,45 @@ function Rail() {
         <p className={styles.sideLabel}>Alanlar</p>
 
         {areas.map((area) => {
-          const open = area.key === activeArea;
+          const open = expanded.has(area.key);
+          const lines = linesByArea[area.key];
 
           return (
             <div key={area.key}>
-              <Link
-                href={`/learn?area=${area.key}${ecosystem ? `&eco=${ecosystem}` : ''}`}
-                className={`${styles.navItem} ${open ? styles.navItemActive : ''}`}
-                aria-current={open ? 'page' : undefined}
+              {/*
+                A BUTTON, not a link — and that is the taxonomy showing through (ADR-0027).
+
+                An area is a grouping, not a destination: you do not read Backend, you read a stop on one of
+                its lines. Making the row navigate would have to pick a line on the reader's behalf, and
+                every reader would arrive somewhere they did not choose.
+              */}
+              <button
+                type="button"
+                className={`${styles.navItem} ${area.key === activeArea ? styles.navItemActive : ''}`}
+                aria-expanded={open}
+                onClick={() =>
+                  setExpanded((current) => {
+                    const next = new Set(current);
+                    next.has(area.key) ? next.delete(area.key) : next.add(area.key);
+                    return next;
+                  })
+                }
               >
                 <AreaIcon areaKey={area.key} />
-                {area.name}
-              </Link>
+                <span className={styles.areaName}>{area.name}</span>
 
-              {/*
-                The lines, nested under the OPEN area only (ADR-0027).
+                {/* Rotated with a transform rather than swapped for a second glyph, so the direction it
+                    turns tells the reader which way this is going. */}
+                <svg
+                  className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+              </button>
 
-                Areas and lines are not peers — B3 is a route through Backend, not a sibling of it — and the
-                old rail listed them side by side because the model conflated them. Rendering every area's
-                lines at once would put 30 rows in a 232px column and lose the one thing the nesting says.
-              */}
-              {open && lines.length > 0 ? (
+              {open && lines !== undefined && lines.length > 0 ? (
                 <div className={styles.lineList}>
                   {lines.map((line) => {
                     const query = new URLSearchParams({ area: area.key, line: line.key });
@@ -177,9 +218,11 @@ function Rail() {
                 </div>
               ) : null}
 
-              {/* An area with no lines is a real state, not a gap: Frontend exists and has none written
-                  yet. Saying so beats an area that opens onto nothing. */}
-              {open && lines.length === 0 ? (
+              {/* Three different sentences, because they are three different facts. Collapsing them into one
+                  blank would make "still loading" and "Frontend has no lines yet" look identical — and the
+                  second is a real answer the reader deserves rather than a gap. */}
+              {open && lines === undefined ? <p className={styles.lineEmpty}>Yükleniyor…</p> : null}
+              {open && lines?.length === 0 ? (
                 <p className={styles.lineEmpty}>Bu alanda henüz hat yok.</p>
               ) : null}
             </div>

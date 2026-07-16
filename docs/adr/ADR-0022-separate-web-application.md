@@ -118,3 +118,28 @@ before.
 - ADR-0001 (superseded), ADR-0009 (superseded), ADR-0016 (React Native — unchanged for mobile)
 - ADR-0020 (database is the source of truth — the reason the studio exists), ADR-0021
 - `02` Principle 31 · `06` · `09` · `13` Objective 03
+
+---
+
+## Amendment — 2026-07-16: the studio is web-only
+
+**Status:** Accepted · **Decider:** Tolga Yazgı (owner)
+
+> *mobil tarafta Studio diye bir alanımız olmayacak. O kısım sadece Web'e özel.*
+
+The mobile app has no studio: no route, no `canAuthor` check, no tab. This is already true — the amendment
+is here so it stays true rather than surviving on nobody having thought about it.
+
+**Why it is the right shape, not just the current one.** Authoring is a keyboard job on a wide screen. The
+studio's own design is three columns at 1360px — a queue, a block editor and a publish panel — and there is
+no honest reduction of that to 375px. A phone-shaped studio would be a worse studio and a distraction in an
+app whose whole surface is `Bugün / Hattım / Keşfet / Profil`.
+
+**What this means in practice:**
+
+- `apps/client/src/config/product-areas.ts` stays at four reader areas. A fifth entry for authoring is the
+  thing this amendment forbids.
+- The mobile app does not need to know what an editor is. `canAuthor` and the role names belong to
+  `apps/web`; importing them into the client would be the seam leaking.
+- The server does not change. Roles and the authoring endpoints are enforced server-side regardless of who
+  is asking (CLAUDE.md §6) — this is about which surface offers the door, never about who may open it.
