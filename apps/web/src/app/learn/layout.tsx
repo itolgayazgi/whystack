@@ -147,8 +147,15 @@ function Rail() {
 
   return (
     <aside className={styles.side}>
+      {/*
+        The mark, and the word under it — the mockup's own lockup, centred.
+
+        The mark is aria-hidden because the word beside it already says the name; two labels for one lockup
+        makes a screen reader stutter where the eye sees one thing.
+      */}
       <Link href="/learn" className={styles.brand}>
-        <Wordmark size={22} />
+        <Wordmark size={20} decorative />
+        <span className={styles.brandWord}>whystack</span>
       </Link>
 
       <nav aria-label="Alanlar">

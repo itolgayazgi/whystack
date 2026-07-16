@@ -17,8 +17,26 @@
  * Inline SVG rather than a file: it inherits the theme's tokens, so it is correct in light and dark without
  * a second asset, and it costs no request. When the brand SVG lands it replaces this — a mark should be the
  * designer's, not an engineer's reconstruction of one.
+ *
+ * <b>The DISPLAY face, not the UI one.</b> Every mockup draws the logo in Chakra Petch; this was reaching
+ * for `--font-ui` (Inter), so the mark was set in the body face while the design's own `.logo` rule was not.
+ * It is the kind of wrong that reads as "slightly off" and never as "wrong font" — which is why it survived
+ * this long.
  */
-export function Wordmark({ size = 56 }: { size?: number }) {
+export function Wordmark({
+  size = 56,
+  decorative = false,
+}: {
+  size?: number;
+
+  /**
+   * Hide the mark from assistive tech, for when the word "whystack" is already written beside it.
+   *
+   * Without this the rail announces "WhyStack" twice — once for the mark's label and once for the text — and
+   * a screen reader user hears a stutter where a sighted one sees one lockup.
+   */
+  decorative?: boolean;
+}) {
   const rule = Math.max(2, Math.round(size * 0.06));
   const rise = Math.round(size * 0.42);
 
@@ -36,8 +54,9 @@ export function Wordmark({ size = 56 }: { size?: number }) {
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      role="img"
-      aria-label="WhyStack"
+      role={decorative ? undefined : 'img'}
+      aria-hidden={decorative || undefined}
+      aria-label={decorative ? undefined : 'WhyStack'}
       style={{ display: 'block' }}
     >
       {/* The W, sitting on the lower tread. */}
@@ -46,7 +65,7 @@ export function Wordmark({ size = 56 }: { size?: number }) {
         y={lowerBaseline - rule}
         fontSize={size}
         fontWeight={700}
-        fontFamily="var(--font-ui)"
+        fontFamily="var(--font-display)"
         fill="var(--color-text-primary)"
       >
         W
@@ -70,7 +89,7 @@ export function Wordmark({ size = 56 }: { size?: number }) {
         y={upperBaseline - rule}
         fontSize={size}
         fontWeight={700}
-        fontFamily="var(--font-ui)"
+        fontFamily="var(--font-display)"
         fill="var(--color-accent)"
       >
         S
