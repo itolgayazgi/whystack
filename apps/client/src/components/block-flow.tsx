@@ -2,8 +2,9 @@ import type { TopicBlock } from '@whystack/api-client';
 import { parse } from '@whystack/markdown-renderer';
 import { MarkdownView } from '@whystack/markdown-renderer/native';
 import { fontFamily } from '@whystack/theme';
-import { useMemo, useState } from 'react';
+import { Component, type ReactNode, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SvgXml } from 'react-native-svg';
 import { useTheme } from '../state/theme';
 
 /**
@@ -166,15 +167,7 @@ function BlockBody({ block, onTopicPress }: { block: TopicBlock; onTopicPress?: 
       );
 
     case 'Diagram':
-      // Rendering an SVG needs react-native-svg — a native dependency, and adding one forces every tester to
-      // reinstall the dev build. Deliberately deferred, and said out loud rather than shown blank.
-      return (
-        <View style={[styles.block, { borderColor: color.border }]}>
-          <Text style={{ color: color.textMuted }}>
-            {block.data.caption ?? 'Diyagram — mobilde henüz gösterilmiyor.'}
-          </Text>
-        </View>
-      );
+      return <Diagram data={block.data} />;
 
     default: {
       const never: never = block;
@@ -191,6 +184,52 @@ function Prose({ markdown, onTopicPress }: { markdown: string; onTopicPress?: (s
   const tree = useMemo(() => parse(markdown), [markdown]);
 
   return <MarkdownView blocks={tree} theme={{ color, textStyle }} onTopicPress={onTopicPress} />;
+}
+
+/**
+ * A diagram — the authored SVG, rendered natively.
+ *
+ * `SvgXml` parses the markup at runtime, which is why the diagram is one string in the block's data rather
+ * than a component: the same string the website drops into the DOM (ADR-0022 — one JSON, two platforms).
+ *
+ * A malformed SVG throws inside the parser, and a diagram must not take the topic down around it — so it is
+ * caught, and the caption is shown instead. Silence would leave a hole nobody could explain.
+ */
+function Diagram({ data }: { data: Extract<TopicBlock, { type: 'Diagram' }>['data'] }) {
+  const { color } = useTheme();
+
+  return (
+    <View style={[styles.diagram, { backgroundColor: color.surface, borderColor: color.border }]}>
+      <SvgBoundary
+        fallback={
+          <Text style={{ color: color.textMuted }}>{data.caption ?? 'Bu diyagram gösterilemedi.'}</Text>
+        }
+      >
+        <SvgXml xml={data.svg} width="100%" />
+      </SvgBoundary>
+
+      {data.caption ? <Text style={[styles.caption, { color: color.textMuted }]}>{data.caption}</Text> : null}
+    </View>
+  );
+}
+
+/**
+ * A real error boundary, because a try/catch around JSX is not one.
+ *
+ * `SvgXml` parses the markup DURING RENDER, so a malformed diagram throws inside React's render pass — where
+ * a try/catch in the parent never sees it, and where an uncaught throw unmounts the whole topic. Only a class
+ * component with `getDerivedStateFromError` can stop it at this block.
+ */
+class SvgBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
 }
 
 function CodeBlock({ data }: { data: Extract<TopicBlock, { type: 'Code' }>['data'] }) {
@@ -330,6 +369,9 @@ const styles = StyleSheet.create({
   summaryItem: { fontSize: 13, lineHeight: 21, flex: 1 },
 
   next: { borderWidth: 1, borderRadius: 10, padding: 14, marginTop: 12 },
+
+  diagram: { borderWidth: 1, borderRadius: 10, padding: 14, alignItems: 'center' },
+  caption: { fontSize: 11.5, marginTop: 10, textAlign: 'center' },
   nextLabel: { fontSize: 13.5, fontWeight: '600' },
   nextMeta: { fontSize: 11.5, marginTop: 2 },
 });
