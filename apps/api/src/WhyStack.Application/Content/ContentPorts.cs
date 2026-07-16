@@ -1,4 +1,4 @@
-using WhyStack.Domain.Content;
+﻿using WhyStack.Domain.Content;
 
 namespace WhyStack.Application.Content;
 
@@ -38,6 +38,10 @@ public sealed record TopicRecord(
     string? SubAreaKey,
     string? SubAreaName,
     string Category,
+
+    /// <summary>The shape of the explanation — Mechanism, Comparison… (ADR-0024).</summary>
+    string Archetype,
+
     string Level,
     string Status,
     string DefaultTitle,

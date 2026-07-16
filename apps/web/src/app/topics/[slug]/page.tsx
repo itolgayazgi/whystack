@@ -4,13 +4,23 @@ import { ApiError, NetworkError, type TopicDetail, topicsApi } from '@whystack/a
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { anchorOf, BlockFlow, labelOf } from '@/components/reader/block-flow';
+import { anchorOf, BlockFlow, codeOf, labelOf } from '@/components/reader/block-flow';
 import { useSession } from '@/lib/session';
 import styles from './reader.module.css';
 
 type Load = 'loading' | 'ready' | 'missing' | 'unreachable' | 'failed';
 
 const CONTENT_LANGUAGE = 'tr';
+
+/** The archetype, in the reader's words. "Konu tipi" in the künye (ADR-0024). */
+const ARCHETYPE: Record<string, string> = {
+  Concept: 'Kavram',
+  Mechanism: 'Mekanizma',
+  Comparison: 'Karşılaştırma',
+  Incident: 'Production olayı',
+  Pattern: 'Pattern',
+  Workshop: 'Atölye',
+};
 
 /**
  * The "durak içi" reading screen — a topic, as its block flow (ADR-0024).
@@ -125,13 +135,17 @@ export default function TopicPage() {
   }
 
   const ecosystems = topic.implementations.map((implementation) => implementation.ecosystemKey);
+  const checkpoints = topic.blocks.filter((block) => block.type === 'Checkpoint').length;
+  const terms = topic.blocks.filter((block) => block.type === 'Term').map((block) => block.data.term);
 
   return (
     <div className={styles.shell}>
       {/* ── The block map ─────────────────────────────────────────────────────────────────────────── */}
       <nav className={styles.outline} aria-label="Bu durağın haritası">
+        {/* The line you came in on. Until the roadmap engine exists there is no line to return to, so this
+            says where it actually goes — the catalogue — rather than promising a screen that is not built. */}
         <Link href="/learn" className={styles.back}>
-          ← Katalog
+          ← <b>{topic.domainName}</b> kataloğu
         </Link>
 
         <p className={styles.outlineLabel}>Bu durağın haritası</p>
@@ -142,6 +156,7 @@ export default function TopicPage() {
             href={`#${anchorOf(block)}`}
             className={`${styles.outItem} ${current === block.order ? styles.outItemCurrent : ''}`}
           >
+            <span className={styles.bt}>{codeOf(block)}</span>
             {labelOf(block)}
           </a>
         ))}
@@ -161,11 +176,13 @@ export default function TopicPage() {
               Süre <b>~{topic.estimatedReadingMinutes} dk</b>
             </span>
             <span>
-              Blok <b>{topic.blocks.length}</b>
+              Tip <b>{ARCHETYPE[topic.archetype] ?? topic.archetype}</b>
             </span>
-            <span>
-              Kategori <b>{topic.category}</b>
-            </span>
+            {topic.graph.prerequisites.length > 0 ? (
+              <span>
+                Önkoşul <b>{topic.graph.prerequisites.map((link) => link.title).join(', ')}</b>
+              </span>
+            ) : null}
           </div>
         </header>
 
@@ -193,17 +210,42 @@ export default function TopicPage() {
           <b>{topic.level}</b>
         </div>
         <div className={styles.kv}>
-          <span>Alan</span>
-          <b>{topic.domainName}</b>
+          <span>Konu tipi</span>
+          <b>{ARCHETYPE[topic.archetype] ?? topic.archetype}</b>
         </div>
         <div className={styles.kv}>
           <span>Blok sayısı</span>
           <b>{topic.blocks.length}</b>
         </div>
+        <div className={styles.kv}>
+          <span>Checkpoint</span>
+          <b>{checkpoints === 0 ? '—' : `${checkpoints} soru`}</b>
+        </div>
+        {topic.subAreaName ? (
+          <div className={styles.kv}>
+            <span>Tema</span>
+            <b>{topic.subAreaName}</b>
+          </div>
+        ) : null}
         {topic.supportedVersions.length > 0 ? (
           <div className={styles.kv}>
             <span>Sürümler</span>
             <b>{topic.supportedVersions.join(', ')}</b>
+          </div>
+        ) : null}
+
+        {/* The terms this station teaches, pulled from its own Term blocks — not a guess, and not a list
+            somebody has to maintain twice. */}
+        {terms.length > 0 ? (
+          <div className={styles.links}>
+            <p className={styles.railLabel}>Bu duraktaki terimler</p>
+            <div className={styles.termChips}>
+              {terms.map((term) => (
+                <span key={term} className={styles.termChip}>
+                  {term}
+                </span>
+              ))}
+            </div>
           </div>
         ) : null}
 

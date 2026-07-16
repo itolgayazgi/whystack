@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using WhyStack.Application.Content;
 using WhyStack.Application.Content.Validation;
 using WhyStack.Domain.Content;
@@ -57,6 +57,7 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
                 SubAreaKey = topic.SubArea == null ? null : topic.SubArea.Key,
                 SubAreaName = topic.SubArea == null ? null : topic.SubArea.Name,
                 topic.Category,
+                topic.Archetype,
                 topic.DefaultLevel,
                 topic.DefaultTitle,
 
@@ -93,6 +94,7 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
                 topic.SubAreaKey,
                 topic.SubAreaName,
                 topic.Category.ToString(),
+                topic.Archetype.ToString(),
                 topic.DefaultLevel.ToString(),
                 topic.Version.Status.ToString(),
                 topic.DefaultTitle,
@@ -153,6 +155,7 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
             topic.SubArea?.Key,
             topic.SubArea?.Name,
             topic.Category.ToString(),
+            topic.Archetype.ToString(),
             topic.DefaultLevel.ToString(),
             version.Status.ToString(),
             topic.DefaultTitle,

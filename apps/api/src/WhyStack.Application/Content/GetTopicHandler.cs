@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using WhyStack.Application.Common;
 
 namespace WhyStack.Application.Content;
@@ -41,6 +41,7 @@ public sealed class GetTopicHandler(ITopicRepository repository)
             topic.DomainKey,
             topic.DomainName,
             topic.Category,
+            topic.Archetype,
             topic.Level,
             topic.SupportedVersions,
             topic.EstimatedReadingMinutes,
@@ -105,7 +106,11 @@ public sealed class GetTopicHandler(ITopicRepository repository)
     {
         if (requested == topic.CanonicalLanguage) return LanguageResolution.Exact(requested);
 
-        var hasTranslation = topic.Sections.Any(section => section.LanguageCode == requested);
+        // Blocks are the model (ADR-0024); sections are the retired one and are still consulted only so a
+        // topic that has not been converted yet does not report a fallback it is not making.
+        var hasTranslation =
+            topic.Blocks.Any(block => block.LanguageCode == requested)
+            || topic.Sections.Any(section => section.LanguageCode == requested);
 
         return hasTranslation
             ? LanguageResolution.Exact(requested)

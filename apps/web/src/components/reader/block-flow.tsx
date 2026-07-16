@@ -17,7 +17,7 @@ import styles from './blocks.module.css';
 
 /** The label above each block. Says which BEAT this is — the block model, made visible to the reader. */
 const LABEL: Record<TopicBlock['type'], string> = {
-  Hook: 'Kanca',
+  Hook: 'Kanca — Neden var?',
   Story: 'Problem hikâyesi',
   Concept: 'Kavram — zihinsel model',
   Code: 'Kod',
@@ -27,9 +27,34 @@ const LABEL: Record<TopicBlock['type'], string> = {
   Checkpoint: 'Checkpoint',
   Prod: 'Production notu',
   Term: 'Terim',
-  Summary: 'Özet',
+  Summary: 'Özet + sonraki durak',
   Next: 'Sonraki durak',
 };
+
+/**
+ * The three-letter code the block map shows beside each beat.
+ *
+ * Monospaced and fixed-width, so the map reads as a column of codes rather than ragged prose — the reader
+ * learns the shape of a topic at a glance, which is the block model doing its job in the margin.
+ */
+const CODE: Record<TopicBlock['type'], string> = {
+  Hook: 'KNC',
+  Story: 'HKY',
+  Concept: 'KVR',
+  Code: 'KOD',
+  Diagram: 'DYG',
+  Compare: 'KRŞ',
+  Myth: 'YNL',
+  Checkpoint: 'CHK',
+  Prod: 'PRD',
+  Term: 'TRM',
+  Summary: 'ÖZT',
+  Next: 'SNR',
+};
+
+export function codeOf(block: TopicBlock) {
+  return CODE[block.type];
+}
 
 export function BlockFlow({ blocks }: { blocks: TopicBlock[] }) {
   return (

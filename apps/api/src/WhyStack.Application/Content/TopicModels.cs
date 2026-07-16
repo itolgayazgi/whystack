@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace WhyStack.Application.Content;
 
@@ -55,6 +55,10 @@ public sealed record TopicDetail(
     string DomainKey,
     string DomainName,
     string Category,
+
+    /// <summary>"Konu tipi" in the design's künye: the explanation's shape (ADR-0024).</summary>
+    string Archetype,
+
     string Level,
     IReadOnlyList<string> SupportedVersions,
     int EstimatedReadingMinutes,

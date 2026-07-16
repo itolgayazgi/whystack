@@ -177,6 +177,10 @@ public class TopicConfiguration : IEntityTypeConfiguration<Topic>
         builder.Property(topic => topic.Category).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(topic => topic.DefaultLevel).HasConversion<string>().HasMaxLength(16).IsRequired();
 
+        // A STRING, like every other enum here. Stored as an int it was worse than ugly: the column already
+        // held 0 — a value Archetype does not define — so the wire was serving "0" as a topic's type.
+        builder.Property(topic => topic.Archetype).HasConversion<string>().HasMaxLength(24).IsRequired();
+
         // Restrict, not Cascade. Deleting a domain that still has topics in it should FAIL — the topics are
         // the asset, and a foreign key is the last thing standing between a careless DELETE and the corpus.
         builder

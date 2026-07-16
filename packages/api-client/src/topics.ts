@@ -188,6 +188,9 @@ export interface TopicImplementation {
 }
 
 export interface TopicDetail extends Omit<TopicSummary, 'language'> {
+  /** "Konu tipi" in the künye: the shape of the explanation — Mechanism, Comparison… (ADR-0024). */
+  archetype: string;
+
   lastReviewedOn: string;
   language: LanguageResolution;
 
