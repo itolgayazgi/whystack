@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from '@/app/studio/studio.module.css';
 import { BlockEditor, emptyBlockData } from '@/components/studio/block-editor';
+import { PublishPanel } from '@/components/studio/publish-panel';
 import { useSession } from '@/lib/session';
 
 /**
@@ -27,6 +28,14 @@ import { useSession } from '@/lib/session';
  * has drifted from the English, or that a technical term was translated away. You cannot notice a difference
  * you are not looking at.
  */
+/**
+ * The language a topic is WRITTEN in before it is translated.
+ *
+ * The same constant the server's ValidateTopicHandler holds. It is named here rather than typed as 'en' in
+ * three places, so the day it becomes a per-topic choice there is one thing to change and not a hunt.
+ */
+const CANONICAL_LANGUAGE = 'en';
+
 const LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'tr', name: 'Türkçe' },
@@ -770,28 +779,16 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
           </section>
         </div>
 
-        {/* ── Sorunlar ────────────────────────────────────────────────────────────────────────────── */}
-        <aside className={styles.rail2} aria-live="polite">
-          <h2 className={styles.panelTitle}>Sorunlar</h2>
-          <p className={styles.panelHint}>
-            Bu bir REDDEDİŞ değil, yapılacaklar listesi. Taslak eksik olabilir; yazarın elinden çıkan konu
-            olamaz.
-          </p>
-
-          {problems.length === 0 ? (
-            <p className={styles.clean}>
-              Taslak kuralları temiz. İncelemeye göndermek için ayrıca zorunlu bölümlerin ve çevirilerin
-              tamamlanması gerekiyor.
-            </p>
-          ) : (
-            problems.map((problem) => (
-              <div key={`${problem.field}-${problem.rule}-${problem.message}`} className={styles.problem}>
-                <code className={styles.problemRule}>{problem.rule}</code>
-                <p className={styles.problemMessage}>{problem.message}</p>
-              </div>
-            ))
-          )}
-        </aside>
+        {/* ── Yayın paneli ────────────────────────────────────────────────────────────────────────── */}
+        <div className={styles.rail2} aria-live="polite">
+          <PublishPanel
+            catalog={catalog}
+            blocks={form.blocks}
+            problems={problems}
+            canonicalLanguage={CANONICAL_LANGUAGE}
+            onPreview={() => window.open(`/topics/${form.slug}`, '_blank', 'noopener')}
+          />
+        </div>
       </div>
     </>
   );
