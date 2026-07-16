@@ -2,7 +2,7 @@
 // workspace's TypeScript sources. It reads the tokens straight from JSON so the splash and
 // adaptive-icon backgrounds stay design tokens rather than hardcoded hex (CLAUDE.md 1.8).
 
-const { light } = require('@whystack/theme/src/palettes.json');
+const { dark, light } = require('@whystack/theme/src/palettes.json');
 
 /**
  * The end-to-end runs, and ONLY those, talk to a stub API over plain HTTP on the loopback address.
@@ -70,9 +70,19 @@ module.exports = {
     [
       'expo-splash-screen',
       {
-        backgroundColor: light.background,
-        image: './src/assets/images/splash-icon.png',
-        imageWidth: 76,
+        // The DARK surface, not the light one — and not a preference.
+        //
+        // The lockup's "tack" and its line are gold, and gold on #FAF8F3 is a smudge. The designer's own
+        // app-icon.svg paints itself onto #0B1B12; this is the same choice, for the same reason. The splash
+        // is the brand's first frame and the brand lives on dark green.
+        backgroundColor: dark.surfaceMuted,
+
+        // The real lockup, not the Expo template's leftover square.
+        image: './src/assets/images/splash-lockup.png',
+
+        // 220 of a 600-wide source: a downscale, so it stays crisp on a 3x screen. 76 was sized for a square
+        // icon — a 2.46:1 lockup at that width is 31px tall and unreadable.
+        imageWidth: 220,
       },
     ],
 

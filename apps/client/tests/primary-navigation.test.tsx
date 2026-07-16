@@ -67,4 +67,23 @@ describe('PrimaryNavigation', () => {
     expect(selected).toHaveLength(1);
     expect(selected[0]?.textContent).toContain('Today');
   });
+
+  it('gives every tab a glyph, not just a word', () => {
+    renderWithProviders(<PrimaryNavigation />, VIEWPORT.compact);
+
+    // The bar had labels and no icons. That is not a smaller version of the design — it is a different
+    // control: the mockup's bar is four SHAPES with words under them, which is what a thumb already in
+    // motion can scan. Four words in a row is a menu.
+    expect(screen.getAllByTestId('svg')).toHaveLength(PRODUCT_AREAS.length);
+  });
+
+  it('draws something for an area nobody has drawn yet', () => {
+    // PRODUCT_AREAS is a list somebody edits. An icon set that renders nothing for a new key collapses that
+    // tab's height and leaves the bar visibly uneven — which reads as a layout bug, not a missing icon.
+    renderWithProviders(<PrimaryNavigation />, VIEWPORT.compact);
+
+    for (const svg of screen.getAllByTestId('svg')) {
+      expect(svg.children.length).toBeGreaterThan(0);
+    }
+  });
 });

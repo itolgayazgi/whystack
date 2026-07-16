@@ -1,5 +1,6 @@
 import { space } from '@whystack/theme';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Notice } from '../components/notice';
 import { StationRail } from '../components/station-rail';
 import { useHome } from '../state/home';
@@ -16,13 +17,19 @@ import { useTheme } from '../state/theme';
  */
 export function LineScreen() {
   const { color, textStyle } = useTheme();
+  const insets = useSafeAreaInsets();
+
   const { t } = useLanguage();
   const { status, roadmap, reload } = useHome();
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: color.background }}
-      contentContainerStyle={{ padding: space[20], paddingBottom: space[32] }}
+      contentContainerStyle={{
+        paddingHorizontal: space[20],
+        paddingTop: insets.top + space[12],
+        paddingBottom: insets.bottom + space[32],
+      }}
       refreshControl={
         <RefreshControl
           refreshing={status === 'loading'}

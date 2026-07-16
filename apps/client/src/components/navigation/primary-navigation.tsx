@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PRODUCT_AREAS, type ProductArea } from '../../config/product-areas';
 import { useLanguage } from '../../state/language';
 import { useTheme } from '../../state/theme';
+import { NavIcon } from './nav-icon';
 
 // One navigation, two presentations. 09 Principle 05: "Web may use sidebar navigation. Mobile may use
 // bottom navigation. The product meaning remains consistent. The presentation may adapt."
@@ -41,22 +42,44 @@ function NavItem({ area, orientation }: { area: ProductArea; orientation: 'row' 
         aria-selected={active}
         style={({ pressed }) => [
           {
-            flexDirection: 'row',
+            /*
+              The bottom bar stacks: glyph, then word. The sidebar keeps them side by side.
+
+              That is the design's own split, and it is not decoration. A thumb scanning four SHAPES is
+              faster than a thumb reading four words, and a phone has the height to spare where it has no
+              width. A sidebar has the opposite budget.
+            */
+            flexDirection: orientation === 'row' ? 'column' : 'row',
             alignItems: 'center',
             justifyContent: orientation === 'row' ? 'center' : 'flex-start',
+            gap: space[4],
+
             // 09 Compact rules: large tap targets. 44 is the smallest a finger reliably hits.
             minHeight: 44,
             paddingHorizontal: space[12],
             paddingVertical: space[8],
             borderRadius: radius.medium,
-            backgroundColor: active ? color.surfaceMuted : 'transparent',
+
+            // The bottom bar tints the glyph and nothing else — the design gives the active tab gold, not a
+            // filled pill. A pill on a bar this small reads as a button somebody is holding down.
+            backgroundColor:
+              orientation === 'row' ? 'transparent' : active ? color.surfaceMuted : 'transparent',
             opacity: pressed ? 0.7 : 1,
             flex: orientation === 'row' ? 1 : undefined,
           },
         ]}
       >
+        <NavIcon areaKey={area.key} color={active ? color.accent : color.textMuted} />
+
         <Text
-          style={[textStyle('label'), { color: active ? color.accent : color.textSecondary }]}
+          style={[
+            orientation === 'row'
+              ? // 10px, the design's own. Small on purpose: the glyph carries the meaning and the word
+                // confirms it — a label competing with the icon makes the reader read both.
+                { fontSize: 10 }
+              : textStyle('label'),
+            { color: active ? color.accent : color.textMuted },
+          ]}
           numberOfLines={1}
         >
           {t(area.labelKey)}
@@ -76,13 +99,23 @@ function BottomNavigation() {
       accessibilityRole="tablist"
       style={{
         flexDirection: 'row',
-        gap: space[8],
+
+        // space-around, not a gap: the design spaces the four tabs across the bar so each glyph sits at the
+        // centre of its own quarter. A gap packs them and leaves the outer two closer to the edges than to
+        // each other, which the thumb notices even when the eye does not.
+        justifyContent: 'space-around',
+
         paddingHorizontal: space[12],
-        paddingTop: space[8],
+        paddingTop: space[12],
+
         // The home indicator on an iPhone sits exactly where a bottom bar wants to be. Without the
         // inset, the last few pixels of every tab are untappable and nobody can explain why.
         paddingBottom: insets.bottom + space[8],
-        backgroundColor: color.surface,
+
+        // surfaceMuted, the design's #0B1B12 — a shade DARKER than the page it sits under. `surface` is a
+        // lift, and a bar that lifts off the background floats; this one is meant to sit beneath it.
+        backgroundColor: color.surfaceMuted,
+
         borderTopWidth: 1,
         borderTopColor: color.border,
       }}

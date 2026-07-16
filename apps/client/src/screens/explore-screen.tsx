@@ -2,6 +2,7 @@ import { radius, space } from '@whystack/theme';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError, NetworkError } from '../api/problem';
 import { type TopicSummary, topicsApi } from '../api/topics';
 import { LanguageFallbackNotice } from '../components/language-fallback-notice';
@@ -30,6 +31,8 @@ const MIN_QUERY = 3;
  */
 export function ExploreScreen() {
   const { color, textStyle } = useTheme();
+  const insets = useSafeAreaInsets();
+
   const { t } = useLanguage();
   const { client, status: session } = useAuth();
   const { preferences } = usePreferences();
@@ -88,7 +91,11 @@ export function ExploreScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: color.background }}
-      contentContainerStyle={{ padding: space[20], paddingBottom: space[32] }}
+      contentContainerStyle={{
+        paddingHorizontal: space[20],
+        paddingTop: insets.top + space[12],
+        paddingBottom: insets.bottom + space[32],
+      }}
       keyboardShouldPersistTaps="handled"
     >
       <Text style={[textStyle('pageTitle'), { color: color.textPrimary, marginBottom: space[16] }]}>

@@ -1,6 +1,7 @@
 import { radius, space } from '@whystack/theme';
 import { Link } from 'expo-router';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Notice } from '../components/notice';
 import { StationRail } from '../components/station-rail';
 import { useAuth } from '../state/auth';
@@ -25,6 +26,8 @@ const LEVEL_LABEL: Record<string, string> = {
  */
 export function HomeScreen() {
   const { color, textStyle } = useTheme();
+  const insets = useSafeAreaInsets();
+
   const { t } = useLanguage();
   const { user } = useAuth();
   const { status, home, roadmap, reload } = useHome();
@@ -36,7 +39,17 @@ export function HomeScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: color.background }}
-      contentContainerStyle={{ padding: space[20], paddingBottom: space[32] }}
+      contentContainerStyle={{
+        paddingHorizontal: space[20],
+
+        // The notch, the status bar, the home indicator.
+        //
+        // ReadingCanvas does this for the reading screens; these ones open their own ScrollView and so have
+        // to ask themselves. Without it "Tekrar hoş geldin" sits UNDER the status bar — the greeting is the
+        // first thing a reader sees every launch, and it was half behind the clock.
+        paddingTop: insets.top + space[12],
+        paddingBottom: insets.bottom + space[32],
+      }}
       refreshControl={
         <RefreshControl
           refreshing={status === 'loading'}
