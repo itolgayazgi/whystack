@@ -6,6 +6,7 @@ import {
   authoringApi,
   type ContentProblem,
   type ContentStatus,
+  type EditableBlock,
   type EditableSection,
   ErrorCode,
   NetworkError,
@@ -16,6 +17,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from '@/app/studio/studio.module.css';
+import { BlockEditor, emptyBlockData } from '@/components/studio/block-editor';
 import { useSession } from '@/lib/session';
 
 /**
@@ -31,6 +33,16 @@ const LANGUAGES = [
 ];
 
 const LEVELS: SkillLevel[] = ['Junior', 'MidLevel', 'Senior', 'Expert'];
+
+/** The archetype, in the author's words (ADR-0024). */
+const ARCHETYPE_LABEL: Record<string, string> = {
+  Concept: 'Kavram — "X neden var?"',
+  Mechanism: 'Mekanizma — "X perde arkasında nasıl çalışır?"',
+  Comparison: 'Karşılaştırma — "X mi Y mi, ne zaman?"',
+  Incident: 'Production olayı — "sahada ne patladı?"',
+  Pattern: 'Pattern — "bu problemi nasıl organize ederiz?"',
+  Workshop: 'Atölye — "hadi birlikte kuralım"',
+};
 
 const RELATIONSHIP_TYPES = [
   { value: 'Prerequisite', label: 'Ön koşul' },
@@ -77,6 +89,8 @@ interface Form {
   subAreaKey: string;
 
   category: string;
+  archetype: string;
+  blocks: EditableBlock[];
   level: SkillLevel;
   estimatedReadingMinutes: number;
   supportedVersions: string;
@@ -110,6 +124,8 @@ const EMPTY: Form = {
   domainKey: '',
   subAreaKey: '',
   category: 'Concept',
+  archetype: 'Concept',
+  blocks: [],
   level: 'MidLevel',
   estimatedReadingMinutes: 8,
   supportedVersions: '',
@@ -143,6 +159,37 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
     setSaved(undefined);
   }, []);
 
+  /**
+   * Choosing an archetype scaffolds its flow — but only into an EMPTY topic.
+   *
+   * Rebuilding the skeleton over existing blocks would delete what the author wrote, in a dropdown, with no
+   * undo. So on a topic that already has blocks the archetype is just relabelled; the flow is theirs.
+   */
+  const chooseArchetype = useCallback(
+    (key: string) => {
+      const skeleton = catalog?.archetypes.find((archetype) => archetype.key === key)?.skeleton ?? [];
+
+      if (form.blocks.length > 0 || skeleton.length === 0) {
+        update({ archetype: key });
+        return;
+      }
+
+      update({
+        archetype: key,
+        blocks: LANGUAGES.flatMap(({ code }) =>
+          skeleton.map((type, index) => ({
+            order: index + 1,
+            type,
+            languageCode: code,
+            ecosystemKey: null,
+            dataJson: emptyBlockData(type),
+          })),
+        ),
+      });
+    },
+    [catalog, form.blocks.length, update],
+  );
+
   // ── Load ────────────────────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -173,6 +220,8 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
             domainKey: topic.domainKey,
             subAreaKey: topic.subAreaKey ?? '',
             category: topic.category,
+            archetype: topic.archetype,
+            blocks: topic.blocks,
             level: topic.level,
             estimatedReadingMinutes: topic.estimatedReadingMinutes,
             supportedVersions: topic.supportedVersions.join(', '),
@@ -252,6 +301,8 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
       domainKey: form.domainKey,
       subAreaKey: form.subAreaKey || null,
       category: form.category.trim(),
+      archetype: form.archetype,
+      blocks: form.blocks,
       level: form.level,
       estimatedReadingMinutes: form.estimatedReadingMinutes,
       supportedVersions: versions,
@@ -360,21 +411,7 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
 
   // ── Derived ─────────────────────────────────────────────────────────────────────────────────────
 
-  const conceptTypes = useMemo(
-    () =>
-      (catalog?.sectionTypes ?? [])
-        .filter((type) => type.scope === 'Concept' && !type.isGraphDerived)
-        .sort((a, b) => a.sortOrder - b.sortOrder),
-    [catalog],
-  );
-
-  const implementationTypes = useMemo(
-    () =>
-      (catalog?.sectionTypes ?? [])
-        .filter((type) => type.scope === 'Implementation')
-        .sort((a, b) => a.sortOrder - b.sortOrder),
-    [catalog],
-  );
+  // The section-type lists are gone with the panels they fed: a topic's body is blocks now (ADR-0024).
 
   const rung = LADDER.indexOf(form.status);
   const nextStatus = rung >= 0 && rung < LADDER.length - 1 ? LADDER[rung + 1] : null;
@@ -493,6 +530,24 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
                     </option>
                   ))}
                 </select>
+              </label>
+
+              <label className={styles.field}>
+                <span className={styles.label}>Arketip — anlatımın şekli</span>
+                <select
+                  className={styles.select}
+                  value={form.archetype}
+                  onChange={(event) => chooseArchetype(event.target.value)}
+                >
+                  {catalog.archetypes.map((archetype) => (
+                    <option key={archetype.key} value={archetype.key}>
+                      {ARCHETYPE_LABEL[archetype.key] ?? archetype.key}
+                    </option>
+                  ))}
+                </select>
+                <span className={styles.hint}>
+                  Hangi blokların açılacağını belirler. Kategori konunun ÖZNESİ, arketip anlatımın ŞEKLİ.
+                </span>
               </label>
 
               <label className={styles.field}>
@@ -623,190 +678,17 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
             </div>
           </section>
 
-          {/* ── Kavram ──────────────────────────────────────────────────────────────────────────── */}
-          <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>Kavram</h2>
-            <p className={styles.panelHint}>
-              Bir kez yazılır, her ekosistemde doğrudur. Önce PROBLEM, sonra kavram (ADR-0019) — tablo
-              hücreleri paragraf değil, olgu taşır.
-            </p>
-
-            {conceptTypes.map((type) => (
-              <div key={type.key}>
-                <div className={styles.sectionHead}>
-                  <span className={styles.sectionName}>{type.key}</span>
-                  {type.isMandatory ? <span className={styles.mandatory}>zorunlu</span> : null}
-                </div>
-
-                <div className={styles.bilingual}>
-                  {LANGUAGES.map(({ code, name }) => (
-                    <div key={code}>
-                      <span className={styles.langTag}>{name}</span>
-                      <textarea
-                        className={styles.textarea}
-                        value={form.sections[cell(type.key, code)] ?? ''}
-                        onChange={(event) =>
-                          update({
-                            sections: {
-                              ...form.sections,
-                              [cell(type.key, code)]: event.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </section>
-
-          {/* ── Implementasyon ──────────────────────────────────────────────────────────────────── */}
-          <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>Implementasyon</h2>
-            <p className={styles.panelHint}>
-              Sadece KOD varsa. "Transaction nedir?" düz metindir ve hiçbir ekosisteme ihtiyaç duymaz — boş
-              bırakmak normaldir, eksiklik değildir (ADR-0021).
-            </p>
-
-            {form.implementations.map((implementation, index) => {
-              const ecosystem = catalog.ecosystems.find((e) => e.key === implementation.ecosystemKey);
-
-              return (
-                <div key={implementation.ecosystemKey} className={styles.implementation}>
-                  <div className={styles.implementationHead}>
-                    <div className={styles.sectionHead}>
-                      <span className={styles.sectionName}>
-                        {ecosystem?.name ?? implementation.ecosystemKey}
-                      </span>
-                      {ecosystem && !ecosystem.isAvailable ? (
-                        <span className={styles.mandatory}>yakında</span>
-                      ) : null}
-                    </div>
-
-                    <button
-                      type="button"
-                      className={styles.ghost}
-                      onClick={() =>
-                        update({
-                          implementations: form.implementations.filter((_, i) => i !== index),
-                        })
-                      }
-                    >
-                      Kaldır
-                    </button>
-                  </div>
-
-                  <div className={styles.grid}>
-                    <label className={styles.field}>
-                      <span className={styles.label}>Programlama dili</span>
-                      <select
-                        className={styles.select}
-                        value={implementation.programmingLanguageKey ?? ''}
-                        onChange={(event) =>
-                          update({
-                            implementations: form.implementations.map((item, i) =>
-                              i === index
-                                ? { ...item, programmingLanguageKey: event.target.value || null }
-                                : item,
-                            ),
-                          })
-                        }
-                      >
-                        <option value="">—</option>
-                        {(ecosystem?.languages ?? []).map((language) => (
-                          <option key={language.key} value={language.key}>
-                            {language.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className={styles.field}>
-                      <span className={styles.label}>Sürümler</span>
-                      <input
-                        className={styles.input}
-                        value={implementation.supportedVersions}
-                        placeholder="8, 9"
-                        onChange={(event) =>
-                          update({
-                            implementations: form.implementations.map((item, i) =>
-                              i === index ? { ...item, supportedVersions: event.target.value } : item,
-                            ),
-                          })
-                        }
-                      />
-                    </label>
-                  </div>
-
-                  {implementationTypes.map((type) => (
-                    <div key={type.key}>
-                      <div className={styles.sectionHead}>
-                        <span className={styles.sectionName}>{type.key}</span>
-                      </div>
-
-                      <div className={styles.bilingual}>
-                        {LANGUAGES.map(({ code, name }) => (
-                          <div key={code}>
-                            <span className={styles.langTag}>{name}</span>
-                            <textarea
-                              className={styles.textarea}
-                              value={implementation.sections[cell(type.key, code)] ?? ''}
-                              onChange={(event) =>
-                                update({
-                                  implementations: form.implementations.map((item, i) =>
-                                    i === index
-                                      ? {
-                                          ...item,
-                                          sections: {
-                                            ...item.sections,
-                                            [cell(type.key, code)]: event.target.value,
-                                          },
-                                        }
-                                      : item,
-                                  ),
-                                })
-                              }
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-
-            <select
-              className={styles.select}
-              value=""
-              onChange={(event) => {
-                if (!event.target.value) return;
-
-                update({
-                  implementations: [
-                    ...form.implementations,
-                    {
-                      ecosystemKey: event.target.value,
-                      programmingLanguageKey: null,
-                      supportedVersions: '',
-                      sections: {},
-                    },
-                  ],
-                });
-              }}
-            >
-              <option value="">+ Ekosistem ekle</option>
-              {catalog.ecosystems
-                .filter((e) => !form.implementations.some((i) => i.ecosystemKey === e.key))
-                .map((ecosystem) => (
-                  <option key={ecosystem.key} value={ecosystem.key}>
-                    {ecosystem.name}
-                    {ecosystem.isAvailable ? '' : ' (yakında)'}
-                  </option>
-                ))}
-            </select>
-          </section>
+          {/* ── Bloklar — konunun gövdesi (ADR-0024) ────────────────────────────────────────────── */}
+          {LANGUAGES.map(({ code }) => (
+            <BlockEditor
+              key={code}
+              blocks={form.blocks}
+              blockTypes={catalog.blockTypes}
+              ecosystems={catalog.ecosystems}
+              language={code}
+              onChange={(blocks) => update({ blocks })}
+            />
+          ))}
 
           {/* ── İlişkiler ───────────────────────────────────────────────────────────────────────── */}
           <section className={styles.panel}>

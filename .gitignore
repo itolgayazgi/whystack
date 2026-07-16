@@ -80,3 +80,6 @@ tests/content-validation/dist/
 
 # Next.js build output.
 .next/
+
+# Personal Claude Code settings — permissions are per-machine, not per-team.
+.claude/settings.local.json

@@ -110,9 +110,27 @@ public sealed record AuthoringCatalog(
     /// </remarks>
     IReadOnlyList<string> Categories,
 
+    /// <summary>The archetypes and the block skeleton each one scaffolds (ADR-0024).</summary>
+    IReadOnlyList<ArchetypeOption> Archetypes,
+
+    /// <summary>Every block type the editor may add, and whether it is one of the four required beats.</summary>
+    IReadOnlyList<BlockTypeOption> BlockTypes,
+
     IReadOnlyList<EcosystemOption> Ecosystems,
     IReadOnlyList<SectionTypeOption> SectionTypes,
     IReadOnlyList<TopicOption> Topics);
+
+/// <summary>
+/// An archetype and the flow it starts from (ADR-0024).
+/// </summary>
+/// <remarks>
+/// The skeleton is a SUGGESTION the editor reshapes — sending it from the server rather than hardcoding it in
+/// the studio keeps one definition of "what a Mechanism looks like", which is the whole reason the section
+/// template was abandoned for something the author can bend.
+/// </remarks>
+public sealed record ArchetypeOption(string Key, IReadOnlyList<string> Skeleton);
+
+public sealed record BlockTypeOption(string Key, bool IsMandatory);
 
 public sealed record DomainOption(string Key, string Name);
 

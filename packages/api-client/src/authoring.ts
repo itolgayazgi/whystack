@@ -1,6 +1,6 @@
 import type { ApiClient } from './client';
 import type { SkillLevel } from './preferences';
-import type { ContentStatus } from './topics';
+import type { BlockType, ContentStatus } from './topics';
 
 /**
  * The authoring contract — "İçerik Üret".
@@ -72,9 +72,33 @@ export interface AuthoringCatalog {
   /** Category names from the TopicCategory enum. A closed set — the studio picks, never types (see topic-editor). */
   categories: string[];
 
+  /** The archetypes and the block flow each one scaffolds (ADR-0024). */
+  archetypes: ArchetypeOption[];
+
+  /** Every block the editor may add, and whether it is one of the four required beats. */
+  blockTypes: BlockTypeOption[];
+
   ecosystems: EcosystemOption[];
   sectionTypes: SectionTypeOption[];
   topics: TopicOption[];
+}
+
+/**
+ * An archetype and the flow it starts from (ADR-0024).
+ *
+ * The skeleton is a SUGGESTION the editor reshapes — it comes from the server so "what a Mechanism looks
+ * like" has one definition, rather than one here and one in the API that drift apart.
+ */
+export interface ArchetypeOption {
+  key: string;
+  skeleton: BlockType[];
+}
+
+export interface BlockTypeOption {
+  key: BlockType;
+
+  /** One of the four beats a topic cannot publish without: hook, checkpoint, summary, next. */
+  isMandatory: boolean;
 }
 
 /** One row on the workbench. This is the ONE list that shows drafts. */
@@ -122,6 +146,17 @@ export interface EditableRelationship {
   toTitle: string;
 }
 
+/** One block as the editor holds it. `dataJson` is raw — the studio owns the per-type form. */
+export interface EditableBlock {
+  order: number;
+  type: BlockType;
+  languageCode: string;
+
+  /** Null = SHARED (the why, written once). A key = one ecosystem's treatment (ADR-0024). */
+  ecosystemKey: string | null;
+  dataJson: string;
+}
+
 export interface EditableTopic {
   id: string;
   stableKey: string;
@@ -132,6 +167,12 @@ export interface EditableTopic {
   subAreaKey: string | null;
 
   category: string;
+
+  /** The shape of the explanation — decides the skeleton the editor starts from (ADR-0024). */
+  archetype: string;
+
+  /** The block flow, exactly as stored. The editor reshapes it and sends the whole thing back. */
+  blocks: EditableBlock[];
   level: SkillLevel;
   status: ContentStatus;
   estimatedReadingMinutes: number;
@@ -164,6 +205,10 @@ export interface SaveTopicRequest {
   subAreaKey: string | null;
 
   category: string;
+  archetype: string;
+
+  /** The whole flow. A full replacement — a block left out of this list is deleted. */
+  blocks: EditableBlock[];
   level: SkillLevel;
   estimatedReadingMinutes: number;
   supportedVersions: string[];

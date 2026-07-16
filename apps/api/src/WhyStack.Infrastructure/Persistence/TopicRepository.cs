@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WhyStack.Application.Content;
+using Blocks = WhyStack.Application.Content.Blocks;
 using WhyStack.Application.Content.Validation;
 using WhyStack.Domain.Content;
 
@@ -248,6 +249,18 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
             .Select(subArea => new SubAreaOption(subArea.Key, subArea.Name))
             .ToListAsync(cancellationToken);
 
+        // From the enums and BlockSkeletons — the one definition. A hardcoded copy in the studio would be a
+        // second one, and the two would disagree the day an archetype is added.
+        var archetypes = Enum.GetValues<Archetype>()
+            .Select(archetype => new ArchetypeOption(
+                archetype.ToString(),
+                [.. Blocks.BlockSkeletons.For(archetype).Select(block => block.ToString())]))
+            .ToList();
+
+        var blockTypes = Enum.GetValues<BlockType>()
+            .Select(type => new BlockTypeOption(type.ToString(), Blocks.BlockSkeletons.Mandatory.Contains(type)))
+            .ToList();
+
         var ecosystems = await context.Ecosystems
             .AsNoTracking()
             .OrderBy(ecosystem => ecosystem.SortOrder)
@@ -281,7 +294,8 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
         // from what the save will accept.
         var categories = Enum.GetNames<TopicCategory>();
 
-        return new AuthoringCatalog(domains, subAreas, categories, ecosystems, sections, topics);
+        return new AuthoringCatalog(
+            domains, subAreas, categories, archetypes, blockTypes, ecosystems, sections, topics);
     }
 
     public async Task<IReadOnlyCollection<TerminologyEntry>> TerminologyAsync(CancellationToken cancellationToken)

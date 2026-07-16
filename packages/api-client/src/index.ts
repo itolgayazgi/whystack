@@ -10,10 +10,13 @@
 export type { AcceptedMessage, AuthResponse, CurrentUser } from './auth';
 export { authApi } from './auth';
 export type {
+  ArchetypeOption,
   AuthoringCatalog,
+  BlockTypeOption,
   ContentProblem,
   DomainOption,
   EcosystemOption,
+  EditableBlock,
   EditableImplementation,
   EditableRelationship,
   EditableSection,
