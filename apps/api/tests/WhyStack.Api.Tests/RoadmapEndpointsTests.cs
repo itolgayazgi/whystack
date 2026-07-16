@@ -133,12 +133,16 @@ public class RoadmapEndpointsTests(WhyStackApiFactory factory) : IClassFixture<W
             (await client.GetAsync("/api/v1/roadmap?line=b1-language-runtime")).StatusCode);
     }
 
+    /// <summary>
+    /// The tabs belong to an AREA (ADR-0027): Backend's ecosystems are languages, Frontend's are frameworks.
+    /// A flat list would offer .NET on the Frontend tab strip.
+    /// </summary>
     [Fact]
     public async Task The_tabs_show_the_ecosystems_we_have_not_written_yet()
     {
         var (client, _) = await ReaderAsync();
 
-        var lines = (await DataOf(await client.GetAsync("/api/v1/ecosystems"))).EnumerateArray().ToList();
+        var lines = (await DataOf(await client.GetAsync("/api/v1/areas/backend/ecosystems"))).EnumerateArray().ToList();
 
         Assert.Contains(lines, line => line.GetProperty("key").GetString() == "dotnet");
 

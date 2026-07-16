@@ -23,6 +23,22 @@ public class Ecosystem
     public required string Name { get; set; }
 
     /// <summary>
+    /// The AREA whose network this ecosystem rebuilds (ADR-0027).
+    /// </summary>
+    /// <remarks>
+    /// The axis means a different thing in each area, and that is the taxonomy's own table: Backend's
+    /// ecosystems are languages (.NET, Java), Frontend's are frameworks (React, Vue), Database's are engines
+    /// (PostgreSQL, MongoDB), DevOps' are clouds.
+    ///
+    /// Without this the table is flat, so `.NET` is an ecosystem of EVERYTHING — the tab strip on Frontend
+    /// would offer .NET, Java and PHP. Nothing breaks today because Backend is the only area with lines,
+    /// which is exactly the kind of bug that waits for the second area and then looks like a UI mistake.
+    /// </remarks>
+    public required Guid AreaId { get; init; }
+
+    public Area? Area { get; init; }
+
+    /// <summary>
     /// False for an ecosystem the product intends to cover and does not cover yet.
     /// </summary>
     /// <remarks>

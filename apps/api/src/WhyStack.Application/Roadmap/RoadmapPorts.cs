@@ -18,8 +18,14 @@ public interface IRoadmapRepository
         string language,
         CancellationToken cancellationToken);
 
-    /// <summary>The tabs: every ecosystem, including the ones with nothing on them yet.</summary>
-    Task<IReadOnlyList<EcosystemOption>> EcosystemsAsync(CancellationToken cancellationToken);
+    /// <summary>
+    /// The tabs for ONE area, including the ones with nothing on them yet.
+    /// </summary>
+    /// <remarks>
+    /// Per area, because the axis means a different thing in each (ADR-0027): Backend's ecosystems are
+    /// languages, Frontend's are frameworks. A flat list would offer .NET on the Frontend tab strip.
+    /// </remarks>
+    Task<IReadOnlyList<EcosystemOption>> EcosystemsAsync(string areaKey, CancellationToken cancellationToken);
 
     /// <summary>The sidebar's areas: Backend, Frontend, Database, DevOps.</summary>
     Task<IReadOnlyList<AreaOption>> AreasAsync(CancellationToken cancellationToken);

@@ -14,9 +14,12 @@ public sealed class RoadmapRepository(WhyStackDbContext context) : IRoadmapRepos
                 .Select(version => version.Status)
                 .First() == ContentStatus.Published);
 
-    public async Task<IReadOnlyList<EcosystemOption>> EcosystemsAsync(CancellationToken cancellationToken) =>
+    public async Task<IReadOnlyList<EcosystemOption>> EcosystemsAsync(
+        string areaKey,
+        CancellationToken cancellationToken) =>
         await context.Ecosystems
             .AsNoTracking()
+            .Where(ecosystem => ecosystem.Area!.Key == areaKey)
             .OrderBy(ecosystem => ecosystem.SortOrder)
             .Select(ecosystem => new EcosystemOption(
                 ecosystem.Key,

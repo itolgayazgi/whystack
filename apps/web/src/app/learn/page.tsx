@@ -63,7 +63,7 @@ function Home() {
       // them would add two round trips of latency to the screen a reader opens first, every time.
       const [homeResponse, ecosystemsResponse, linesResponse, roadmapResponse] = await Promise.all([
         progressApi.home(client, { ecosystem, language: CONTENT_LANGUAGE }),
-        roadmapApi.ecosystems(client),
+        roadmapApi.ecosystems(client, area),
         roadmapApi.lines(client, area),
 
         // A 404 here is expected and survivable: a line with nothing published on it yet is a real state,

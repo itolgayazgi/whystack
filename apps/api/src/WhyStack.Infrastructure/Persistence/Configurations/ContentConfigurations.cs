@@ -164,11 +164,29 @@ public class EcosystemConfiguration : IEntityTypeConfiguration<Ecosystem>
         builder.Property(ecosystem => ecosystem.Key).HasMaxLength(64).IsRequired();
         builder.Property(ecosystem => ecosystem.Name).HasMaxLength(128).IsRequired();
 
-        builder.HasIndex(ecosystem => ecosystem.Key).IsUnique().HasDatabaseName("UX_Ecosystems_Key");
 
         // Java, Node.js and PHP are seeded but NOT available. The onboarding screen shows them as "coming
         // soon" rather than hiding them — a promise a reader can see is worth more than a shorter list —
         // and a topic must never be written against one, which is what the flag prevents.
+        // Restrict. Deleting an area must not silently take its whole ecosystem axis with it — the same
+        // call every other reference edge here makes.
+        builder
+            .HasOne(ecosystem => ecosystem.Area)
+            .WithMany()
+            .HasForeignKey(ecosystem => ecosystem.AreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Unique per AREA (ADR-0027). Not globally: the axis means a different thing in each area, and
+        // "sqlserver" as a Database engine has nothing to do with any Backend key. A global unique would
+        // make the first collision somebody else's problem to rename around.
+        builder
+            .HasIndex(ecosystem => new { ecosystem.AreaId, ecosystem.Key })
+            .IsUnique()
+            .HasDatabaseName("UX_Ecosystems_AreaId_Key");
+
+        // BACKEND only, and deliberately. The taxonomy names Frontend's frameworks and Database's engines,
+        // but naming them here would seed a tab strip for an area with no lines behind it — a promise the
+        // product cannot keep yet. They land with their taxonomy.
         builder.HasData(
             Seed("dotnet", ".NET", available: true, 1),
             Seed("java", "Java", available: false, 2),
@@ -181,6 +199,7 @@ public class EcosystemConfiguration : IEntityTypeConfiguration<Ecosystem>
         Id = DeterministicId.For($"ecosystem:{key}"),
         Key = key,
         Name = name,
+        AreaId = DeterministicId.For("area:backend"),
         IsAvailable = available,
         SortOrder = order,
     };

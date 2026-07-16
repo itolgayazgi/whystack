@@ -20,7 +20,7 @@ public static class RoadmapEndpoints
                 "State is a SUGGESTION, not a gate: 'Ahead' stations are dimmed in the UI and remain fully "
                 + "readable. This API enforces no prerequisite, because the product imposes no order.");
 
-        roadmap.MapGet("/ecosystems", EcosystemsAsync)
+        roadmap.MapGet("/areas/{area}/ecosystems", EcosystemsAsync)
             .WithName("GetEcosystems")
             .WithSummary("The tabs, including the ones with no content yet.")
             .WithDescription(
@@ -66,10 +66,11 @@ public static class RoadmapEndpoints
     }
 
     private static async Task<IResult> EcosystemsAsync(
+        string area,
         GetEcosystemsHandler handler,
         HttpContext http,
         CancellationToken cancellationToken) =>
-        Results.Ok(new { data = await handler.HandleAsync(cancellationToken), metadata = Metadata(http) });
+        Results.Ok(new { data = await handler.HandleAsync(area, cancellationToken), metadata = Metadata(http) });
 
     private static async Task<IResult> AreasAsync(
         GetAreasHandler handler,

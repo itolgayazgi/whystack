@@ -108,8 +108,14 @@ export const roadmapApi = {
     return client.request<Single<Roadmap>>(`/api/v1/roadmap?${query}`);
   },
 
-  /** The tabs. An ecosystem is the network switcher (ADR-0027). */
-  ecosystems: (client: ApiClient) => client.request<Single<EcosystemOption[]>>('/api/v1/ecosystems'),
+  /**
+   * The tabs for one AREA. An ecosystem is the network switcher, not a route (ADR-0027).
+   *
+   * Per area because the axis means a different thing in each: Backend's ecosystems are languages, Frontend's
+   * are frameworks, Database's are engines. A flat list would offer .NET on the Frontend tab strip.
+   */
+  ecosystems: (client: ApiClient, area: string) =>
+    client.request<Single<EcosystemOption[]>>(`/api/v1/areas/${encodeURIComponent(area)}/ecosystems`),
 
   /** The lines inside an area. An empty list is a real answer: Frontend has no lines written yet. */
   lines: (client: ApiClient, area: string) =>

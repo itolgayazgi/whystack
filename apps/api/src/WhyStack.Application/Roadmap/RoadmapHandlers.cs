@@ -23,8 +23,8 @@ public sealed class GetRoadmapHandler(IRoadmapRepository repository)
 /// <summary>The ecosystem tabs, unavailable ones included — the design shows them as "YAKINDA".</summary>
 public sealed class GetEcosystemsHandler(IRoadmapRepository repository)
 {
-    public Task<IReadOnlyList<EcosystemOption>> HandleAsync(CancellationToken cancellationToken) =>
-        repository.EcosystemsAsync(cancellationToken);
+    public Task<IReadOnlyList<EcosystemOption>> HandleAsync(string areaKey, CancellationToken cancellationToken) =>
+        repository.EcosystemsAsync(areaKey, cancellationToken);
 }
 
 /// <summary>The sidebar's area rail: Backend, Frontend, Database, DevOps.</summary>
