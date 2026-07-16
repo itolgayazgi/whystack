@@ -259,17 +259,26 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
 
     public async Task<AuthoringCatalog> CatalogAsync(CancellationToken cancellationToken)
     {
-        var domains = await context.Areas
+        // LINES, not areas.
+        //
+        // A topic is authored onto a line (ADR-0027) and SaveAsync looks the key up in Lines. This read the
+        // Areas table and handed the studio "backend" — a key that table has never contained, so every save
+        // came back "No line \"backend\"". The rename moved the TYPE and left the SOURCE behind, which is
+        // the shape of mistake a compiler cannot see: both tables have a Key and a Name.
+        var domains = await context.Lines
             .AsNoTracking()
-            .OrderBy(domain => domain.SortOrder)
-            .Select(domain => new LineOption(domain.Key, domain.Name))
+            .OrderBy(line => line.Area!.SortOrder)
+            .ThenBy(line => line.SortOrder)
+            .Select(line => new LineOption(line.Key, line.Name, line.Area!.Key, line.Area.Name))
             .ToListAsync(cancellationToken);
 
+        // Ordered by their LINE first, so the dropdown groups the way the taxonomy does.
         var subAreas = await context.Scopes
             .AsNoTracking()
-            .OrderBy(scope => scope.SortOrder)
+            .OrderBy(scope => scope.Line!.SortOrder)
+            .ThenBy(scope => scope.SortOrder)
             .ThenBy(scope => scope.Name)
-            .Select(scope => new ScopeOption(scope.Key, scope.Name))
+            .Select(scope => new ScopeOption(scope.Key, scope.Name, scope.Line!.Key))
             .ToListAsync(cancellationToken);
 
         // From the enums and BlockSkeletons — the one definition. A hardcoded copy in the studio would be a

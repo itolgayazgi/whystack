@@ -69,7 +69,7 @@ public static class AuthoringEndpoints
 
         authoring.MapGet("/catalog", CatalogAsync)
             .WithName("GetAuthoringCatalog")
-            .WithSummary("Domains, ecosystems, section types and every existing topic.")
+            .WithSummary("Lines, scopes, ecosystems and every existing topic — everything a dropdown needs.")
             .WithDescription(
                 "What the form is built from. The topic list includes DRAFTS — relating a new topic to one "
                 + "you are still writing is the normal case.");

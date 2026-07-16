@@ -106,7 +106,8 @@ public sealed record TopicQuery(
 
 /// <summary>The lists the authoring form is built from. All of them are reference data; none is user input.</summary>
 public sealed record AuthoringCatalog(
-    IReadOnlyList<LineOption> Domains,
+    /// <summary>The "Hat" dropdown: B1..B8. NOT the areas — a topic is authored onto a line (ADR-0027).</summary>
+    IReadOnlyList<LineOption> Lines,
     IReadOnlyList<ScopeOption> Scopes,
 
     /// <summary>
@@ -141,10 +142,25 @@ public sealed record ArchetypeOption(string Key, IReadOnlyList<string> Skeleton)
 
 public sealed record BlockTypeOption(string Key, bool IsMandatory);
 
-public sealed record LineOption(string Key, string Name);
+/// <summary>
+/// One line for the studio's "Hat" dropdown: B1 Dil &amp; Runtime, B3 Veri Erişimi (ADR-0027).
+/// </summary>
+/// <remarks>
+/// <c>AreaName</c> so the dropdown can group. Eight lines is a long flat list, and an author picking one
+/// thinks "Backend, data access" — not "b3".
+/// </remarks>
+public sealed record LineOption(string Key, string Name, string AreaKey, string AreaName);
 
 /// <summary>A theme a topic may be tagged with (ADR-0023). Curated in the studio.</summary>
-public sealed record ScopeOption(string Key, string Name);
+/// <summary>
+/// One scope for the studio's "Kapsam" dropdown: EF Core, Async / Await (ADR-0027).
+/// </summary>
+/// <remarks>
+/// <c>LineKey</c> is what makes the dropdown filterable. A scope only means something on its line — B1's
+/// "Eşzamanlılık" and B3's "Transaction &amp; Eşzamanlılık" are two neighbourhoods — so offering every
+/// scope on every line would invite exactly the mix-up the composite key exists to prevent.
+/// </remarks>
+public sealed record ScopeOption(string Key, string Name, string LineKey);
 
 public sealed record EcosystemOption(
     string Key,

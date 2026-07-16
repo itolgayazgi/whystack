@@ -23,15 +23,26 @@ export interface ContentProblem {
   message: string;
 }
 
+/** One line for the "Hat" dropdown. `areaName` so eight of them can be grouped rather than listed flat. */
 export interface LineOption {
   key: string;
   name: string;
+  areaKey: string;
+  areaName: string;
 }
 
 /** A theme a topic may be tagged with (ADR-0023). Curated in the studio. */
+/**
+ * One scope for the "Kapsam" dropdown.
+ *
+ * `lineKey` is what makes it filterable. A scope only means something on its line (ADR-0027) — B1's
+ * "Eşzamanlılık" is not B3's "Transaction & Eşzamanlılık" — so offering every scope on every line invites
+ * exactly the mix-up the composite key exists to prevent.
+ */
 export interface ScopeOption {
   key: string;
   name: string;
+  lineKey: string;
 }
 
 export interface LanguageOption {

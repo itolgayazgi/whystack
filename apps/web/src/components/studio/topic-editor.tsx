@@ -527,18 +527,39 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
               </label>
 
               <label className={styles.field}>
-                <span className={styles.label}>Bilgi alanı</span>
+                <span className={styles.label}>Hat — durağın rotası</span>
                 <select
                   className={styles.select}
                   value={form.lineKey}
-                  onChange={(event) => update({ lineKey: event.target.value })}
+                  onChange={(event) =>
+                    // The scope is cleared with the line. A scope belongs to ONE line (ADR-0027), so keeping
+                    // it would leave the topic tagged with a neighbourhood that is not on its route — and the
+                    // save would refuse it with an error about a key the author can still see selected.
+                    update({ lineKey: event.target.value, scopeKey: '' })
+                  }
                 >
-                  {catalog.lines.map((domain) => (
-                    <option key={domain.key} value={domain.key}>
-                      {domain.name}
-                    </option>
-                  ))}
+                  {/*
+                    Grouped by AREA. Eight lines is a long flat list, and the author is thinking "Backend,
+                    data access" — not "b3". The area is not a field they set: it follows from the line
+                    (ADR-0027), which is what stops a B3 topic claiming to be Frontend.
+                  */}
+                  {[...new Map(catalog.lines.map((line) => [line.areaKey, line.areaName])).entries()].map(
+                    ([areaKey, areaName]) => (
+                      <optgroup key={areaKey} label={areaName}>
+                        {catalog.lines
+                          .filter((line) => line.areaKey === areaKey)
+                          .map((line) => (
+                            <option key={line.key} value={line.key}>
+                              {line.name}
+                            </option>
+                          ))}
+                      </optgroup>
+                    ),
+                  )}
                 </select>
+                <span className={styles.hint}>
+                  Haritadaki renkli çizgi. Alan hattan gelir — ayrıca seçilmez.
+                </span>
               </label>
 
               <label className={styles.field}>
@@ -560,24 +581,35 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
               </label>
 
               <label className={styles.field}>
-                <span className={styles.label}>Tema</span>
+                <span className={styles.label}>Kapsam — durağın mahallesi</span>
                 <select
                   className={styles.select}
                   value={form.scopeKey}
                   onChange={(event) => update({ scopeKey: event.target.value })}
                 >
-                  {/* Optional, and the empty option says so. A theme threads a topic across levels — async,
-                      bellek yönetimi — but "Transaction nedir?" belongs to none, and that is normal (ADR-0023). */}
-                  <option value="">— tema yok —</option>
-                  {catalog.scopes.map((scope) => (
-                    <option key={scope.key} value={scope.key}>
-                      {scope.name}
-                    </option>
-                  ))}
+                  {/* Optional, and the empty option says so. A scope groups 3-10 stops — EF Core, async —
+                      but "Transaction nedir?" belongs to no neighbourhood, and that is normal (ADR-0027). */}
+                  <option value="">— kapsam yok —</option>
+
+                  {/*
+                    Filtered to the chosen LINE.
+
+                    A scope only means something on its line: B1's "Eşzamanlılık" is the language's threads
+                    and locks, B3's "Transaction & Eşzamanlılık" is isolation levels. Offering both here
+                    would invite exactly the mix-up the composite key exists to prevent — and the two read
+                    almost identically in a flat list.
+                  */}
+                  {catalog.scopes
+                    .filter((scope) => scope.lineKey === form.lineKey)
+                    .map((scope) => (
+                      <option key={scope.key} value={scope.key}>
+                        {scope.name}
+                      </option>
+                    ))}
                 </select>
                 <span className={styles.hint}>
-                  Seviyeler boyunca ilerleyen iplik. Seviye ve kategoriden bağımsız.{' '}
-                  <Link href="/studio/scopes">Temaları yönet</Link>
+                  3-10 durak eden bütün. Seçilen hatta ait olanlar listelenir.{' '}
+                  <Link href="/studio/scopes">Kapsamları yönet</Link>
                 </span>
               </label>
 
