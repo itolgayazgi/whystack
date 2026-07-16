@@ -178,7 +178,7 @@ function Step({ index, topic }: { index: number; topic: TopicSummary }) {
           <Text style={[textStyle('label'), { color: color.textPrimary }]}>{topic.title}</Text>
 
           <Text style={[textStyle('caption'), { color: color.textMuted }]}>
-            {topic.domainName} · {t('topic.readingTime', { minutes: String(topic.estimatedReadingMinutes) })}
+            {topic.lineName} · {t('topic.readingTime', { minutes: String(topic.estimatedReadingMinutes) })}
           </Text>
         </View>
       </Pressable>

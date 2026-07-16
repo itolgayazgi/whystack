@@ -162,7 +162,7 @@ export function ExploreScreen() {
             </Text>
 
             <Text style={[textStyle('caption'), { color: color.textMuted, marginTop: space[4] }]}>
-              {topic.domainName} · {topic.level} · ~{topic.estimatedReadingMinutes} dk
+              {topic.lineName} · {topic.level} · ~{topic.estimatedReadingMinutes} dk
             </Text>
 
             {/* Per row, and never silent: a Turkish reader handed English text must be told it is English,

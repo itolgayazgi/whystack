@@ -141,7 +141,7 @@ export function HomeScreen() {
               </Text>
 
               <Text style={[textStyle('caption'), { color: color.textSecondary, marginBottom: space[12] }]}>
-                {roadmap?.domainName ?? ''} · {roadmap?.ecosystemName ?? ''}
+                {roadmap?.lineName ?? ''} · {roadmap?.ecosystemName ?? ''}
                 {current ? ` · ${LEVEL_LABEL[current.level] ?? current.level}` : ''}
               </Text>
 

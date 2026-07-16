@@ -90,7 +90,7 @@ export function TopicScreen({ slug }: { slug: string }) {
       {/* The design's segment bar. Above the header, so it is the first thing on screen and stays the
           reader's answer to "how much of this is left?" without them having to guess from the scrollbar. */}
       {topic.blocks.length > 0 ? (
-        <SegmentBar total={topic.blocks.length} current={current} backLabel={`← ${topic.domainName}`} />
+        <SegmentBar total={topic.blocks.length} current={current} backLabel={`← ${topic.lineName}`} />
       ) : null}
 
       <TopicHeader topic={topic} />

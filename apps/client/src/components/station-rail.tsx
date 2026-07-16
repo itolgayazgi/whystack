@@ -1,6 +1,6 @@
 import { radius, space } from '@whystack/theme';
 import { Link } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Station } from '../api/roadmap';
 import { useLanguage } from '../state/language';
 import { useTheme } from '../state/theme';
@@ -32,16 +32,40 @@ export function StationRail({ stations }: { stations: Station[] }) {
 
   return (
     <View>
-      {stations.map((station, index) => (
-        <StationRow
-          key={station.slug}
-          station={station}
-          isLast={index === stations.length - 1}
-          color={color}
-          textStyle={textStyle}
-          t={t}
-        />
-      ))}
+      {stations.map((station, index) => {
+        // The scope heading — the design's neighbourhood bracket, run vertically.
+        //
+        // Drawn on CHANGE rather than grouped into sections, because the stations are already in the
+        // server's order and a scope is a contiguous run of them (ADR-0027). Re-grouping here would let the
+        // phone's idea of the order drift from the map's, and the two are supposed to be one line.
+        const previous = stations[index - 1];
+        const opensScope = station.scopeKey !== null && station.scopeKey !== previous?.scopeKey;
+
+        // "4/8" — how much of this neighbourhood is behind them. The badge the live-content design hangs on.
+        const inScope = stations.filter((other) => other.scopeKey === station.scopeKey);
+        const doneInScope = inScope.filter((other) => other.state === 'Done').length;
+
+        return (
+          <View key={station.slug}>
+            {opensScope ? (
+              <View style={styles.scopeHead}>
+                <Text style={[styles.scopeName, { color: color.accent }]}>{station.scopeName}</Text>
+                <Text style={[textStyle('caption'), { color: color.textMuted }]}>
+                  {doneInScope}/{inScope.length}
+                </Text>
+              </View>
+            ) : null}
+
+            <StationRow
+              station={station}
+              isLast={index === stations.length - 1}
+              color={color}
+              textStyle={textStyle}
+              t={t}
+            />
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -122,6 +146,14 @@ function StationRow({
               {station.title}
             </Text>
 
+            {/* "II / III" — a stop in a numbered chain (ADR-0027). A subject that will not fit in 25 minutes
+                is split, not compressed, and the badge is what says the reader is midway through a set. */}
+            {station.sequence ? (
+              <Text style={[styles.sequence, { color: color.textMuted, borderColor: color.border }]}>
+                {roman(station.sequence.part)}/{roman(station.sequence.of)}
+              </Text>
+            ) : null}
+
             {here ? (
               <Text
                 style={{
@@ -145,16 +177,16 @@ function StationRow({
             {here
               ? `%${station.percent} · ${station.estimatedReadingMinutes} dk`
               : done
-                ? `${t('home.station.done')} · ${station.subAreaName ?? ''}`.trim()
+                ? `${t('home.station.done')} · ${station.scopeName ?? ''}`.trim()
                 : `${t(STATE_LABEL[station.state])} · ${station.estimatedReadingMinutes} dk`}
           </Text>
 
-          {/* The transfer. Drawn only where a line actually crosses another domain — a symbol that marks
-              every stop marks none. */}
+          {/* The transfer. Drawn only where a stop actually leaves the AREA — a link from B1 to B3 is the
+              next stop on the same network, and a symbol that marks everything marks nothing (ADR-0027). */}
           {station.transfer ? (
             <Text style={[textStyle('caption'), { color: color.success, marginTop: space[4] }]}>
               {t('home.transfer', {
-                domain: station.transfer.domainName,
+                domain: station.transfer.areaName,
                 topic: station.transfer.title,
               })}
             </Text>
@@ -163,4 +195,37 @@ function StationRow({
       </Pressable>
     </Link>
   );
+}
+
+const styles = StyleSheet.create({
+  // The neighbourhood bracket, run vertically. Indented to the rail's own gutter so it reads as a heading
+  // OVER the stops below it rather than as one more stop.
+  scopeHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginLeft: 40,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  scopeName: { fontSize: 10.5, letterSpacing: 1.2, fontWeight: '600', textTransform: 'uppercase' },
+  sequence: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    overflow: 'hidden',
+  },
+});
+
+/** 1 → I, 3 → III. Roman because the design writes the chain that way and the reader reads it that way. */
+function roman(value: number): string {
+  // A chain longer than this is not a chain, it is a scope (ADR-0027's 3-10 rule) — so the table stops
+  // where the content model does, and anything past it falls back to the digit rather than to nonsense.
+  const table = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+
+  return table[value] ?? String(value);
 }

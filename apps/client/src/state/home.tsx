@@ -16,8 +16,13 @@ interface Home {
 
 const HomeContext = createContext<Home | null>(null);
 
-/** The domain the phone opens on. The rail is one line at a time; the web picks with a sidebar. */
-const DEFAULT_DOMAIN = 'backend';
+/**
+ * The line the phone opens on, and the network it opens in.
+ *
+ * B1 is the taxonomy's own main line (ADR-0027). The rail shows one line at a time — the web picks with a
+ * sidebar, and a phone has no room for one — so a default is not a shortcut here, it is the design.
+ */
+const DEFAULT_LINE = 'b1-language-runtime';
 const DEFAULT_ECOSYSTEM = 'dotnet';
 
 /**
@@ -43,10 +48,10 @@ export function HomeProvider({ children }: { children: ReactNode }) {
       const [homeResponse, roadmapResponse] = await Promise.all([
         progressApi.home(client, { ecosystem: DEFAULT_ECOSYSTEM, language }),
 
-        // A 404 here is a real state, not a failure: a domain with no line yet. It must not take the streak
-        // and the continue card down with it.
+        // A 404 here is a real state, not a failure: a line with nothing published on it yet. It must not
+        // take the streak and the continue card down with it.
         roadmapApi
-          .get(client, { ecosystem: DEFAULT_ECOSYSTEM, domain: DEFAULT_DOMAIN, language })
+          .get(client, { ecosystem: DEFAULT_ECOSYSTEM, line: DEFAULT_LINE, language })
           .catch(() => null),
       ]);
 

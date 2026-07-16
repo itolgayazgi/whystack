@@ -36,7 +36,7 @@ export function LineScreen() {
       </Text>
 
       <Text style={[textStyle('bodySmall'), { color: color.textSecondary, marginBottom: space[24] }]}>
-        {roadmap?.domainName ?? ''}
+        {roadmap?.lineName ?? ''}
       </Text>
 
       {status === 'loading' && roadmap === null ? (
