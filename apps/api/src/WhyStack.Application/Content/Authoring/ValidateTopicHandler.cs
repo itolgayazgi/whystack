@@ -53,7 +53,8 @@ public sealed class ValidateTopicHandler(ITopicRepository topics)
                     .SelectMany(implementation => implementation.Sections)
                     .Select(section =>
                         new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
-            ]);
+            ],
+            [.. command.Blocks.Select(block => new BlockDraft(block.Order, block.Type, block.LanguageCode))]);
 
         if (!forReview)
         {

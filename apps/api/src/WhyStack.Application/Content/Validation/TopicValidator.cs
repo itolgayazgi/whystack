@@ -1,3 +1,4 @@
+using WhyStack.Application.Content.Blocks;
 using WhyStack.Domain.Content;
 
 namespace WhyStack.Application.Content.Validation;
@@ -35,10 +36,28 @@ public sealed class TopicValidator(IReadOnlyCollection<TerminologyEntry> diction
         return problems;
     }
 
-    /// <summary>Checked before a topic may leave AiDraft. Everything above, plus completeness.</summary>
+    /// <summary>
+    /// Checked before a topic may leave the draft. Everything above, plus completeness.
+    /// </summary>
+    /// <remarks>
+    /// <b>Two models, and a topic uses one.</b> Blocks are the model (ADR-0024); sections are retired and have
+    /// zero rows. Asking a block topic for sections is what made this gate impassable — a finished topic was
+    /// refused for missing `LearningObjectives`, a field no editor has been offered a box for since the
+    /// migration.
+    ///
+    /// So the completeness rules follow the model the topic actually uses. The RULES themselves are the same
+    /// two in both worlds, and always were: what must be present, and whether a translation that exists is
+    /// finished.
+    /// </remarks>
     public IReadOnlyList<ContentProblem> ValidateForReview(TopicDraft draft, IReadOnlyCollection<SectionType> types)
     {
         var problems = new List<ContentProblem>(ValidateDraft(draft));
+
+        if (draft.Blocks.Count > 0)
+        {
+            problems.AddRange(BlockCompleteness(draft));
+            return problems;
+        }
 
         var written = draft.Sections
             .Where(section => section.LanguageCode == draft.CanonicalLanguage)
@@ -76,6 +95,69 @@ public sealed class TopicValidator(IReadOnlyCollection<TerminologyEntry> diction
                     "translation.incomplete",
                     $"\"{missing}\" exists in {draft.CanonicalLanguage} and not in {language}. Finish it, or "
                     + "remove the translation — a topic that changes language halfway through reads as a bug."));
+            }
+        }
+
+        return problems;
+    }
+
+    /// <summary>
+    /// The two completeness rules, for the model a topic actually uses (ADR-0024).
+    /// </summary>
+    /// <remarks>
+    /// Both rules already existed for sections and neither had been carried across. That is the same failure
+    /// twice: a rule written down, correct, and connected to nothing a topic passes through.
+    ///
+    /// <b>The four beats.</b> <see cref="BlockSkeletons.MissingMandatory"/> has always known this and was
+    /// called only from /validate — the "Doğrula" button, which is advisory and skippable. That is how two
+    /// topics shipped with no Checkpoint at all. It stopped being cosmetic when completion became a correct
+    /// Checkpoint answer: a topic with no Checkpoint is a topic nobody can ever finish, so the basamak never
+    /// fills, no station goes gold, and no screen explains why.
+    ///
+    /// <b>Translation completeness.</b> The reader's API reports a fallback when a language has NO blocks, not
+    /// when it has fewer — <c>Blocks.Any(…)</c>. So a topic whose Turkish flow is one block short serves a
+    /// Turkish reader a hole and says nothing. A half-translated topic is worse than an untranslated one: the
+    /// reader concludes the app is broken rather than that the translation is unfinished.
+    /// </remarks>
+    private static IEnumerable<ContentProblem> BlockCompleteness(TopicDraft draft)
+    {
+        var problems = new List<ContentProblem>();
+
+        var canonical = draft.Blocks
+            .Where(block => block.LanguageCode == draft.CanonicalLanguage)
+            .ToList();
+
+        var present = canonical
+            .Select(block => Enum.TryParse<BlockType>(block.Type, out var type) ? type : (BlockType?)null)
+            .OfType<BlockType>()
+            .ToList();
+
+        problems.AddRange(BlockSkeletons.MissingMandatory(present));
+
+        // Compared by POSITION, not by count. Six blocks in each is not the same claim as the same six
+        // positions in each — an author who wrote a Turkish block at a position the English flow does not
+        // have has two flows that merely happen to be the same length.
+        var canonicalOrders = canonical.Select(block => block.Order).ToHashSet();
+
+        foreach (var language in draft.Blocks.Select(block => block.LanguageCode).Distinct())
+        {
+            if (language == draft.CanonicalLanguage) continue;
+
+            var translated = draft.Blocks
+                .Where(block => block.LanguageCode == language)
+                .Select(block => block.Order)
+                .ToHashSet();
+
+            foreach (var missing in canonicalOrders.Except(translated).OrderBy(order => order))
+            {
+                var type = canonical.First(block => block.Order == missing).Type;
+
+                problems.Add(new ContentProblem(
+                    $"blocks.{missing}.{language}",
+                    "translation.incomplete",
+                    $"Block {missing} ({type}) exists in {draft.CanonicalLanguage} and not in {language}. "
+                    + "Finish it, or remove the block — a topic that changes language halfway through reads "
+                    + "as a bug."));
             }
         }
 
@@ -151,9 +233,26 @@ public sealed class TopicValidator(IReadOnlyCollection<TerminologyEntry> diction
 }
 
 /// <summary>A topic as an editor has it on screen — before it is a row.</summary>
-public sealed record TopicDraft(string CanonicalLanguage, IReadOnlyList<SectionDraft> Sections);
+/// <summary>
+/// A topic as the publish gate sees it.
+/// </summary>
+/// <remarks>
+/// <b>Blocks were missing from this record, and that is why nothing could be published.</b> ADR-0024 made
+/// blocks the model and retired sections; `TopicSections` has had zero rows since. But this carried Sections
+/// only, so the gate asked a finished block topic for twelve mandatory sections it does not have and cannot
+/// have, refused it, and never once looked at the blocks — which are the content.
+///
+/// Both are here because one topic uses one model. Sections stay until the retired model is removed.
+/// </remarks>
+public sealed record TopicDraft(
+    string CanonicalLanguage,
+    IReadOnlyList<SectionDraft> Sections,
+    IReadOnlyList<BlockDraft> Blocks);
 
 public sealed record SectionDraft(string SectionTypeKey, string LanguageCode, string Markdown);
+
+/// <summary>One block, as much of it as the gate needs: what beat it is, and which language it is in.</summary>
+public sealed record BlockDraft(int Order, string Type, string LanguageCode);
 
 /// <summary>An approved technical term. The term is preserved; only its explanation is translated.</summary>
 public sealed record TerminologyEntry(

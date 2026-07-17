@@ -219,7 +219,8 @@ public static class AuthoringEndpoints
                     .SelectMany(implementation => implementation.Sections)
                     .Select(section =>
                         new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
-            ]));
+            ],
+            [.. topic.Blocks.Select(block => new BlockDraft(block.Order, block.Type, block.LanguageCode))]));
 
         return Results.Ok(new
         {

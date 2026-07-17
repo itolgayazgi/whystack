@@ -108,7 +108,8 @@ public sealed class SaveTopicHandler(
                     new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
                 .. command.Implementations.SelectMany(implementation => implementation.Sections)
                     .Select(section => new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
-            ]));
+            ],
+            [.. command.Blocks.Select(block => new BlockDraft(block.Order, block.Type, block.LanguageCode))]));
 
         var outcome = await repository.SaveAsync(command, editorId, cancellationToken);
 

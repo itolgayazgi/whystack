@@ -446,6 +446,10 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
     {
         var version = await context.TopicVersions
             .AsNoTracking()
+
+            // The BLOCKS — which this did not load, so the gate could not see the content it was gating.
+            .Include(candidate => candidate.Blocks)
+
             .Include(candidate => candidate.Sections)
             .Include(candidate => candidate.Implementations).ThenInclude(implementation => implementation.Sections)
             .Where(candidate => candidate.TopicId == topicId)
@@ -463,6 +467,13 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                     .SelectMany(implementation => implementation.Sections)
                     .Select(section =>
                         new SectionDraft(section.SectionTypeKey, section.LanguageCode, section.Markdown)),
+            ],
+            [
+                // The body, not the words: the gate asks which beats are present and which languages have
+                // them. Loading the JSON to count blocks would be the topic's whole text, fetched to answer
+                // "is there a Checkpoint?".
+                .. version.Blocks.Select(block =>
+                    new BlockDraft(block.Order, block.Type.ToString(), block.LanguageCode)),
             ]);
     }
 
