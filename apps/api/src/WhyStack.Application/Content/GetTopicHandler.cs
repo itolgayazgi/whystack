@@ -34,6 +34,12 @@ public sealed class GetTopicHandler(ITopicRepository repository)
         var graph = await BuildGraphAsync(topic, language.Returned, cancellationToken);
         var stop = await BuildStopAsync(topic, language.Returned, cancellationToken);
 
+        var ecosystems = await BuildEcosystemsAsync(topic, ecosystem, cancellationToken);
+
+        // The one the blocks below belong to. Null when the topic is entirely shared — the "why" that is true
+        // everywhere, which needs no ecosystem to be read.
+        var showing = ecosystems.FirstOrDefault(option => option.IsSelected)?.Key;
+
         return Result<TopicDetail>.Success(new TopicDetail(
             topic.Id,
             topic.StableKey,
@@ -52,9 +58,10 @@ public sealed class GetTopicHandler(ITopicRepository repository)
             language,
             sections,
             Implementations(topic, language, ecosystem),
+            ecosystems,
             graph,
             stop,
-            BlocksIn(topic.Blocks, language.Returned, ecosystem)));
+            BlocksIn(topic.Blocks, language.Returned, showing)));
     }
 
     /// <summary>
@@ -157,6 +164,46 @@ public sealed class GetTopicHandler(ITopicRepository repository)
                     implementation.EcosystemKey == preferred,
                     SectionsIn(implementation.Sections, language.Returned, topic.CanonicalLanguage)))
         ];
+
+    /// <summary>
+    /// Which ecosystems this topic's blocks offer, and which one the reader is being shown.
+    /// </summary>
+    /// <remarks>
+    /// <b>A reader who asks for nothing gets the FIRST, not an empty page.</b> That is the decision in this
+    /// method, and it is the fix for a real failure: the first topic this project published had every block
+    /// tagged `dotnet` — correctly, since "C# neden var?" is .NET's question — and the reader, which sends no
+    /// ecosystem until somebody picks one, filtered all six away and rendered "bu konunun içeriği henüz
+    /// yazılmadı" over content that was written. A visitor from a search engine has chosen no ecosystem and
+    /// never will; refusing to guess for them is not neutrality, it is a blank page.
+    ///
+    /// First by the product's own SortOrder, not the alphabet. A caller that names an ecosystem still gets
+    /// that one — the default only fills a silence.
+    ///
+    /// The shared blocks come through whatever is selected: they are the "why", true in every ecosystem
+    /// (ADR-0021). So a topic with no tagged blocks at all returns an empty list here and reads fine.
+    /// </remarks>
+    private async Task<IReadOnlyList<TopicEcosystemOption>> BuildEcosystemsAsync(
+        TopicRecord topic,
+        string? requested,
+        CancellationToken cancellationToken)
+    {
+        var keys = topic.Blocks
+            .Select(block => block.EcosystemKey)
+            .OfType<string>()
+            .Distinct()
+            .ToArray();
+
+        var options = await repository.EcosystemsAsync(keys, cancellationToken);
+
+        if (options.Count == 0) return [];
+
+        // The requested one if the topic HAS it; otherwise the first. Asking for "java" on a topic that only
+        // has .NET blocks is not an error — it is a reader whose ecosystem this stop was not written for, and
+        // the honest answer is the treatment that exists, said out loud by IsSelected.
+        var selected = options.Any(option => option.Key == requested) ? requested : options[0].Key;
+
+        return [.. options.Select(option => option with { IsSelected = option.Key == selected })];
+    }
 
     /// <summary>
     /// Where this stop stands on its line, and the stops either side of it.

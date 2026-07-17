@@ -29,6 +29,18 @@ public interface ITopicRepository
     /// </remarks>
     Task<IReadOnlyList<Guid>> StopsOnLineAsync(string lineKey, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The named ecosystems behind a set of keys, in the order the product lists them.
+    /// </summary>
+    /// <remarks>
+    /// A block carries its ecosystem as a bare string, not a foreign key, so the name has to be looked up.
+    /// The ORDER is the point of asking the database rather than sorting the keys here: "which one does a
+    /// reader who chose nothing get?" is answered by the product's own list, not by the alphabet.
+    /// </remarks>
+    Task<IReadOnlyList<TopicEcosystemOption>> EcosystemsAsync(
+        IReadOnlyCollection<string> keys,
+        CancellationToken cancellationToken);
+
     /// <summary>Everything an editor needs to fill the "İçerik Üret" form: domains, ecosystems, sections.</summary>
     Task<AuthoringCatalog> CatalogAsync(CancellationToken cancellationToken);
 

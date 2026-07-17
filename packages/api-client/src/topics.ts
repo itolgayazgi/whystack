@@ -93,6 +93,19 @@ export interface LineStop {
   next: TopicLink | null;
 }
 
+/**
+ * One ecosystem a topic's blocks are written for.
+ *
+ * `isSelected` is the one `blocks` belongs to — and it is not always what was asked for. A reader who names
+ * none gets the first, because a visitor from a search engine has chosen no ecosystem and never will, and an
+ * empty page is a worse answer than the only treatment the topic has.
+ */
+export interface TopicEcosystem {
+  key: string;
+  name: string;
+  isSelected: boolean;
+}
+
 export interface TopicSection {
   sectionType: string;
   markdown: string;
@@ -238,6 +251,18 @@ export interface TopicDetail extends Omit<TopicSummary, 'language'> {
 
   /** Empty for a topic with no code — "what is a transaction?". */
   implementations: TopicImplementation[];
+
+  /**
+   * The ecosystems this topic's BLOCKS offer, and which one `blocks` belongs to.
+   *
+   * The blocks arrive already filtered, so this is the only way to know what is not being shown. Reading the
+   * switch off `implementations` instead — the retired model — is why the first published topic rendered "bu
+   * konunun içeriği henüz yazılmadı" over six blocks that existed: it had no implementations, so no switch
+   * drew, so `.NET` could never be picked, so every block was filtered away.
+   *
+   * Empty for a topic whose blocks are all shared. The "why" is true everywhere and needs no switch.
+   */
+  ecosystems: TopicEcosystem[];
 
   graph: TopicGraph;
 

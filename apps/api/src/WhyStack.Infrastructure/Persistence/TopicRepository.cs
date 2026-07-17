@@ -226,6 +226,26 @@ public sealed class TopicRepository(WhyStackDbContext context) : ITopicRepositor
     }
 
     /// <summary>
+    /// The named ecosystems behind a set of keys, in the product's own order.
+    /// </summary>
+    /// <remarks>
+    /// <c>SortOrder</c>, not the alphabet. It decides which treatment a reader who chose nothing is shown,
+    /// and that is a product decision sitting in a column — sorting the keys here would put it in a string
+    /// comparison instead, where "dotnet" beats "java" for no reason anybody chose.
+    /// </remarks>
+    public async Task<IReadOnlyList<TopicEcosystemOption>> EcosystemsAsync(
+        IReadOnlyCollection<string> keys,
+        CancellationToken cancellationToken) =>
+        keys.Count == 0
+            ? []
+            : await context.Ecosystems
+                .AsNoTracking()
+                .Where(ecosystem => keys.Contains(ecosystem.Key))
+                .OrderBy(ecosystem => ecosystem.SortOrder)
+                .Select(ecosystem => new TopicEcosystemOption(ecosystem.Key, ecosystem.Name, false))
+                .ToListAsync(cancellationToken);
+
+    /// <summary>
     /// The published stops of a line, in the line's own order — ids only.
     /// </summary>
     /// <remarks>

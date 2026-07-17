@@ -83,6 +83,21 @@ public sealed record TopicDetail(
     /// <summary>The `[ .NET ▾ ]` panel. Empty for a topic with no code — "what is a transaction?".</summary>
     IReadOnlyList<TopicImplementationView> Implementations,
 
+    /// <summary>
+    /// The ecosystems this topic's BLOCKS offer, and which one is being shown.
+    /// </summary>
+    /// <remarks>
+    /// <b>Blocks are filtered before they reach the client, so the client cannot see what it is not being
+    /// shown.</b> Under the retired model that was not a problem: implementations came back whole and
+    /// `ecosystem` only said which panel to OPEN. Blocks are different — the reader gets the chosen
+    /// ecosystem's and nothing else — so without this list the switch has nothing to draw and a reader can
+    /// never reach the other treatment. That is not hypothetical: it is why the first published topic showed
+    /// "bu konunun içeriği henüz yazılmadı" over six blocks that were written.
+    ///
+    /// Empty for a topic whose blocks are all shared — the "why" that is true everywhere needs no switch.
+    /// </remarks>
+    IReadOnlyList<TopicEcosystemOption> Ecosystems,
+
     TopicGraph Graph,
 
     /// <summary>Where this stop stands on its line, and the stops either side of it. Null if it is not on one.</summary>
@@ -104,6 +119,17 @@ public sealed record TopicBlockView(int Order, string Type, string? EcosystemKey
 
 /// <summary>One section: what it is, and the Markdown that fills it.</summary>
 public sealed record TopicSectionContent(string SectionType, string Markdown);
+
+/// <summary>
+/// One ecosystem a topic's blocks are written for.
+/// </summary>
+/// <remarks>
+/// <c>IsSelected</c> is the one the blocks in this response belong to. It is not always what the caller
+/// asked for: a caller who asks for nothing gets the first, because a reader who arrives from a search
+/// engine has chosen no ecosystem and showing them an empty page would be a worse answer than showing them
+/// the only treatment the topic has.
+/// </remarks>
+public sealed record TopicEcosystemOption(string Key, string Name, bool IsSelected);
 
 /// <summary>How one ecosystem does it. <c>IsPreferred</c> says which panel opens first, not which one exists.</summary>
 public sealed record TopicImplementationView(

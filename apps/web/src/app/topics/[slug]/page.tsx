@@ -144,7 +144,18 @@ export default function TopicPage() {
     );
   }
 
-  const ecosystems = topic.implementations.map((implementation) => implementation.ecosystemKey);
+  /*
+    From the BLOCKS, via the server — not from `implementations`, the retired model.
+
+    That one line is why the first published topic said "bu konunun içeriği henüz yazılmadı" over six blocks
+    that were written. Every block was tagged `dotnet`; this page sends no ecosystem until somebody picks one;
+    the API filtered all six away. And the switch that would have let somebody pick was drawn from
+    `implementations`, of which a block-based topic has none — so it never rendered, and the content was
+    unreachable by any click.
+
+    The server now names the ecosystems the blocks carry and says which one it served.
+  */
+  const ecosystems = topic.ecosystems;
   const checkpoints = topic.blocks.filter((block) => block.type === 'Checkpoint').length;
   const terms = topic.blocks.filter((block) => block.type === 'Term').map((block) => block.data.term);
 
@@ -284,19 +295,23 @@ export default function TopicPage() {
         ) : null}
 
         {/* The ecosystem switch. It changes which treatment you read — the shared "why" stays put, which is
-            the whole point of writing the reason once (ADR-0024). */}
+            the whole point of writing the reason once (ADR-0024).
+
+            `isSelected` comes from the SERVER, not from local state. The server is what decided which blocks
+            this response carries, and a button lit from a `useState` that starts undefined would show nothing
+            selected while .NET's blocks were on screen — the control disagreeing with the page under it. */}
         {ecosystems.length > 0 ? (
           <div className={styles.links}>
             <p className={styles.railLabel}>Ekosistem</p>
             <div className={styles.ecoSwitch}>
-              {ecosystems.map((key) => (
+              {ecosystems.map((option) => (
                 <button
-                  key={key}
+                  key={option.key}
                   type="button"
-                  className={`${styles.eco} ${ecosystem === key ? styles.ecoActive : ''}`}
-                  onClick={() => setEcosystem(key)}
+                  className={`${styles.eco} ${option.isSelected ? styles.ecoActive : ''}`}
+                  onClick={() => setEcosystem(option.key)}
                 >
-                  {key}
+                  {option.name}
                 </button>
               ))}
             </div>
