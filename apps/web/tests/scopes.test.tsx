@@ -17,15 +17,15 @@ import ScopesPage from '@/app/studio/scopes/page';
 
 const scopes = vi.fn();
 const catalog = vi.fn();
-const saveSubArea = vi.fn();
-const deleteSubArea = vi.fn();
+const saveScope = vi.fn();
+const deleteScope = vi.fn();
 
 vi.mock('@whystack/api-client', () => ({
   authoringApi: {
     scopes: (...args: unknown[]) => scopes(...args),
     catalog: (...args: unknown[]) => catalog(...args),
-    saveSubArea: (...args: unknown[]) => saveSubArea(...args),
-    deleteSubArea: (...args: unknown[]) => deleteSubArea(...args),
+    saveScope: (...args: unknown[]) => saveScope(...args),
+    deleteScope: (...args: unknown[]) => deleteScope(...args),
   },
   ApiError: class ApiError extends Error {
     status = 400;
@@ -50,7 +50,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   scopes.mockResolvedValue({ data: [] });
   catalog.mockResolvedValue({ data: { lines: LINES } });
-  saveSubArea.mockResolvedValue({ data: { id: 'new' } });
+  saveScope.mockResolvedValue({ data: { id: 'new' } });
 });
 
 describe('the Kapsam page', () => {
@@ -67,7 +67,7 @@ describe('the Kapsam page', () => {
     // THE ASSERTION THIS FILE EXISTS FOR. Without lineKey the server answers 422 and no scope is ever
     // created — which is exactly what shipped.
     await waitFor(() =>
-      expect(saveSubArea).toHaveBeenCalledWith(
+      expect(saveScope).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ lineKey: 'b1-language-runtime' }),
       ),
@@ -108,7 +108,7 @@ describe('the Kapsam page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ekle' }));
 
     await waitFor(() =>
-      expect(saveSubArea).toHaveBeenCalledWith(
+      expect(saveScope).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ key: 'language-basics', name: 'Dilin Temelleri' }),
       ),
@@ -125,7 +125,7 @@ describe('the Kapsam page', () => {
 
     // With the derivation gone, the key is a field the author fills — so an empty one has to stop the save
     // rather than post an empty string the server answers in English.
-    expect(saveSubArea).not.toHaveBeenCalled();
+    expect(saveScope).not.toHaveBeenCalled();
   });
 
   it('does not preselect a line', async () => {
@@ -173,7 +173,7 @@ describe('the Kapsam page', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Ekle' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('zaten var');
-    expect(saveSubArea).not.toHaveBeenCalled();
+    expect(saveScope).not.toHaveBeenCalled();
   });
 
   it('allows the same key on a DIFFERENT line', async () => {
@@ -191,7 +191,7 @@ describe('the Kapsam page', () => {
 
     // The clash check must be per line, not global. A global one would be the ADR-0023 model wearing the
     // ADR-0027 vocabulary — and it would refuse a scope the database is perfectly happy to store.
-    await waitFor(() => expect(saveSubArea).toHaveBeenCalled());
+    await waitFor(() => expect(saveScope).toHaveBeenCalled());
   });
 
   it('keeps the line selected after adding, because scopes arrive in batches', async () => {
@@ -203,7 +203,7 @@ describe('the Kapsam page', () => {
     await userEvent.type(screen.getByPlaceholderText('language-basics'), 'language-basics');
     await userEvent.click(screen.getByRole('button', { name: 'Ekle' }));
 
-    await waitFor(() => expect(saveSubArea).toHaveBeenCalled());
+    await waitFor(() => expect(saveScope).toHaveBeenCalled());
 
     // "Dilin Temelleri", then "OOP", then "Koleksiyonlar" — all on B1. Clearing the line would be a step per
     // scope, and the name IS cleared, which is what says the save worked.

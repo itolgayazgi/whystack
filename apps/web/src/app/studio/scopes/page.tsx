@@ -106,7 +106,7 @@ export default function ScopesPage() {
     setFailure(undefined);
 
     try {
-      await authoringApi.saveSubArea(client, { key: finalKey, name: name.trim(), lineKey });
+      await authoringApi.saveScope(client, { key: finalKey, name: name.trim(), lineKey });
       setName('');
       setKey('');
 
@@ -131,7 +131,7 @@ export default function ScopesPage() {
     setFailure(undefined);
 
     try {
-      await authoringApi.deleteSubArea(client, scope.id);
+      await authoringApi.deleteScope(client, scope.id);
       await fetchScopes();
     } catch (error) {
       // The 409 is the whole point: a scope in use is not deleted, and the message says how many topics
@@ -252,6 +252,19 @@ export default function ScopesPage() {
       {load === 'unreachable' ? (
         <div className={styles.notice} role="alert">
           Sunucuya ulaşılamıyor.{' '}
+          <button type="button" className={styles.ghost} onClick={() => void fetchScopes()}>
+            Tekrar dene
+          </button>
+        </div>
+      ) : null}
+
+      {/* `failed` was set and never drawn: the load threw, the table vanished, and the Hat dropdown sat there
+          holding nothing. It looked exactly like "there are no lines yet" — a silent failure wearing an empty
+          state's clothes, which is the one thing CLAUDE.md §1.6 is about. */}
+      {load === 'failed' ? (
+        <div className={styles.notice} role="alert">
+          Kapsamlar ve hatlar yüklenemedi — bu yüzden aşağıdaki liste ve <b>Hat</b> kutusu boş. Sunucu cevap
+          verdi ama beklenen şeyi vermedi.{' '}
           <button type="button" className={styles.ghost} onClick={() => void fetchScopes()}>
             Tekrar dene
           </button>

@@ -118,23 +118,36 @@ public static class AuthoringEndpoints
             .WithName("DeleteTerm")
             .WithSummary("Remove a term from the dictionary.");
 
+        /*
+          /scopes — all three verbs, one path.
+
+          ADR-0027's rename stopped halfway across this stack: GET and POST became "scopes", DELETE stayed
+          "subareas", and the TypeScript client landed on the opposite split — it listed and created against
+          /subareas and deleted against /scopes. So every one of the three was a 404, and scope management had
+          never worked at all.
+
+          Nothing caught it because nothing checked BOTH ends: the C# compiles, the TypeScript compiles, and a
+          route string is just a string on either side. ClientRoutesTests is what checks it now.
+        */
         authoring.MapGet("/scopes", SubAreasAsync)
-            .WithName("ListSubAreas")
-            .WithSummary("The themes a topic may be tagged with (ADR-0023).")
-            .WithDescription("Each carries a topicCount — how many topics use it, which is why a delete may be refused.");
+            .WithName("ListScopes")
+            .WithSummary("The scopes a topic may be tagged with (ADR-0027).")
+            .WithDescription(
+                "Each carries the LINE it lives on — a scope's key is unique per line, not globally — and a "
+                + "topicCount, which is why a delete may be refused.");
 
         authoring.MapPost("/scopes", SaveScopeAsync)
-            .WithName("SaveSubArea")
-            .WithSummary("Create or rename a theme.")
+            .WithName("SaveScope")
+            .WithSummary("Create or rename a scope.")
             .WithDescription(
-                "The key is set once and never changes — tagged topics and roadmap slices resolve through it. "
-                + "An edit changes only the display name.");
+                "The key and the line are set once and never change — tagged topics and roadmap slices "
+                + "resolve through them. An edit changes only the display name.");
 
-        authoring.MapDelete("/subareas/{id:guid}", DeleteScopeAsync)
-            .WithName("DeleteSubArea")
-            .WithSummary("Remove a theme — refused if any topic still uses it.")
+        authoring.MapDelete("/scopes/{id:guid}", DeleteScopeAsync)
+            .WithName("DeleteScope")
+            .WithSummary("Remove a scope — refused if any topic still uses it.")
             .WithDescription(
-                "Deleting a theme in use would silently untag its topics, so it is refused with a 409 naming "
+                "Deleting a scope in use would silently untag its topics, so it is refused with a 409 naming "
                 + "the count. Retag those topics first.");
 
         authoring.MapPost("/topics", SaveAsync)

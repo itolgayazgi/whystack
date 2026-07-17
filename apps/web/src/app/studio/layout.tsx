@@ -78,11 +78,15 @@ export default function StudioLayout({ children }: { children: ReactNode }) {
         >
           Terim sözlüğü
         </Link>
+        {/* /studio/scopes, not /studio/subareas — this pointed at a route that does not exist, so the only
+            way to the page was the "Kapsamları yönet" link inside the topic editor. ADR-0027's rename moved
+            the folder and left the link; Next.js answers a missing route with a 404 page and no build error,
+            so it looked like an empty screen rather than a broken link. */}
         <Link
-          href="/studio/subareas"
-          className={`${styles.railLink} ${pathname.startsWith('/studio/subareas') ? styles.railLinkActive : ''}`}
+          href="/studio/scopes"
+          className={`${styles.railLink} ${pathname.startsWith('/studio/scopes') ? styles.railLinkActive : ''}`}
         >
-          Temalar
+          Kapsamlar
         </Link>
 
         <div className={styles.railFoot}>

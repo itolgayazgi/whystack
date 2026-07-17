@@ -349,9 +349,18 @@ export const authoringApi = {
   deleteTerm: (client: ApiClient, id: string) =>
     client.request<void>(`${BASE}/terms/${id}`, { method: 'DELETE' }),
 
-  scopes: (client: ApiClient) => client.request<Single<EditableScope[]>>(`${BASE}/subareas`),
+  /*
+   * /scopes — all three verbs, one path.
+   *
+   * These read `/subareas` for two of the three, against a server that has served `/scopes`. Every call was a
+   * 404, so scope management had never worked. ADR-0027's rename crossed the two ends: the server moved GET
+   * and POST and left DELETE; this file moved DELETE and left GET and POST.
+   *
+   * A route is a string on both sides, so neither compiler could see it. ClientRoutesTests holds them together
+   * now — it reads THIS file and asserts every path it names is one the API actually maps.
+   */
+  scopes: (client: ApiClient) => client.request<Single<EditableScope[]>>(`${BASE}/scopes`),
 
-  /** The key is set on create and ignored on edit — it is the identity the roadmap slice groups on. */
   /**
    * Create a scope, or rename one.
    *
@@ -359,13 +368,11 @@ export const authoringApi = {
    * key is only unique within one (ADR-0027). The server refuses a create without it with a 422 rather than
    * guessing a line; this signature is what makes forgetting it a compile error instead.
    */
-  saveSubArea: (
-    client: ApiClient,
-    scope: { id?: string | null; key: string; name: string; lineKey: string },
-  ) => client.request<Single<{ id: string }>>(`${BASE}/subareas`, { method: 'POST', body: scope }),
+  saveScope: (client: ApiClient, scope: { id?: string | null; key: string; name: string; lineKey: string }) =>
+    client.request<Single<{ id: string }>>(`${BASE}/scopes`, { method: 'POST', body: scope }),
 
-  /** Rejected with a 409 (ApiError) if any topic still uses the theme — retag those first. */
-  deleteSubArea: (client: ApiClient, id: string) =>
+  /** Rejected with a 409 (ApiError) if any topic still uses the scope — retag those first. */
+  deleteScope: (client: ApiClient, id: string) =>
     client.request<void>(`${BASE}/scopes/${id}`, { method: 'DELETE' }),
 };
 
