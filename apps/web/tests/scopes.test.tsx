@@ -60,7 +60,8 @@ describe('the Kapsam page', () => {
     await screen.findByRole('combobox');
 
     await userEvent.selectOptions(screen.getByRole('combobox'), 'b1-language-runtime');
-    await userEvent.type(screen.getByPlaceholderText('EF Core'), 'Dilin Temelleri');
+    await userEvent.type(screen.getByPlaceholderText('Dilin Temelleri'), 'Dilin Temelleri');
+    await userEvent.type(screen.getByPlaceholderText('language-basics'), 'language-basics');
     await userEvent.click(screen.getByRole('button', { name: 'Ekle' }));
 
     // THE ASSERTION THIS FILE EXISTS FOR. Without lineKey the server answers 422 and no scope is ever
@@ -77,11 +78,54 @@ describe('the Kapsam page', () => {
     render(<ScopesPage />);
 
     await screen.findByRole('combobox');
-    await userEvent.type(screen.getByPlaceholderText('EF Core'), 'Dilin Temelleri');
+    await userEvent.type(screen.getByPlaceholderText('Dilin Temelleri'), 'Dilin Temelleri');
 
     // The server refuses this anyway. A button that fails when pressed is a worse answer than one that
     // visibly cannot be — especially when the reason is a field the author has not noticed.
     expect(screen.getByRole('button', { name: 'Ekle' })).toBeDisabled();
+  });
+
+  it('does not guess the key from the name', async () => {
+    render(<ScopesPage />);
+
+    await screen.findByRole('combobox');
+    await userEvent.type(screen.getByPlaceholderText('Dilin Temelleri'), 'Dilin Temelleri');
+
+    // The page used to fill this in by lowercasing the name and knocking its diacritics off, which produced
+    // `dilin-temelleri` — Turkish with the dots filed away. Keys are English (`07` § Slug and Key Language),
+    // so the guess could only ever be wrong, and it was wrong INTO the box: pre-filled, considered-looking,
+    // and accepted. An author thinks about an empty field and accepts a full one.
+    expect(screen.getByPlaceholderText('language-basics')).toHaveValue('');
+  });
+
+  it('sends the key the author typed, not one derived from the name', async () => {
+    render(<ScopesPage />);
+
+    await screen.findByRole('combobox');
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'b1-language-runtime');
+    await userEvent.type(screen.getByPlaceholderText('Dilin Temelleri'), 'Dilin Temelleri');
+    await userEvent.type(screen.getByPlaceholderText('language-basics'), 'language-basics');
+    await userEvent.click(screen.getByRole('button', { name: 'Ekle' }));
+
+    await waitFor(() =>
+      expect(saveSubArea).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ key: 'language-basics', name: 'Dilin Temelleri' }),
+      ),
+    );
+  });
+
+  it('will not add a scope with no key', async () => {
+    render(<ScopesPage />);
+
+    await screen.findByRole('combobox');
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'b1-language-runtime');
+    await userEvent.type(screen.getByPlaceholderText('Dilin Temelleri'), 'Dilin Temelleri');
+    await userEvent.click(screen.getByRole('button', { name: 'Ekle' }));
+
+    // With the derivation gone, the key is a field the author fills — so an empty one has to stop the save
+    // rather than post an empty string the server answers in English.
+    expect(saveSubArea).not.toHaveBeenCalled();
   });
 
   it('does not preselect a line', async () => {
@@ -124,7 +168,8 @@ describe('the Kapsam page', () => {
 
     await screen.findByRole('combobox');
     await userEvent.selectOptions(screen.getByRole('combobox'), 'b3-data-access');
-    await userEvent.type(screen.getByPlaceholderText('EF Core'), 'EF Core');
+    await userEvent.type(screen.getByPlaceholderText('Dilin Temelleri'), 'EF Core');
+    await userEvent.type(screen.getByPlaceholderText('language-basics'), 'ef-core');
     await userEvent.click(screen.getByRole('button', { name: 'Ekle' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('zaten var');
@@ -140,7 +185,8 @@ describe('the Kapsam page', () => {
 
     await screen.findByRole('combobox');
     await userEvent.selectOptions(screen.getByRole('combobox'), 'b1-language-runtime');
-    await userEvent.type(screen.getByPlaceholderText('EF Core'), 'EF Core');
+    await userEvent.type(screen.getByPlaceholderText('Dilin Temelleri'), 'EF Core');
+    await userEvent.type(screen.getByPlaceholderText('language-basics'), 'ef-core');
     await userEvent.click(screen.getByRole('button', { name: 'Ekle' }));
 
     // The clash check must be per line, not global. A global one would be the ADR-0023 model wearing the
@@ -153,7 +199,8 @@ describe('the Kapsam page', () => {
 
     await screen.findByRole('combobox');
     await userEvent.selectOptions(screen.getByRole('combobox'), 'b1-language-runtime');
-    await userEvent.type(screen.getByPlaceholderText('EF Core'), 'Dilin Temelleri');
+    await userEvent.type(screen.getByPlaceholderText('Dilin Temelleri'), 'Dilin Temelleri');
+    await userEvent.type(screen.getByPlaceholderText('language-basics'), 'language-basics');
     await userEvent.click(screen.getByRole('button', { name: 'Ekle' }));
 
     await waitFor(() => expect(saveSubArea).toHaveBeenCalled());
@@ -161,6 +208,7 @@ describe('the Kapsam page', () => {
     // "Dilin Temelleri", then "OOP", then "Koleksiyonlar" — all on B1. Clearing the line would be a step per
     // scope, and the name IS cleared, which is what says the save worked.
     expect(screen.getByRole('combobox')).toHaveValue('b1-language-runtime');
-    expect(screen.getByPlaceholderText('EF Core')).toHaveValue('');
+    expect(screen.getByPlaceholderText('Dilin Temelleri')).toHaveValue('');
+    expect(screen.getByPlaceholderText('language-basics')).toHaveValue('');
   });
 });

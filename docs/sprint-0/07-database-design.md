@@ -1087,13 +1087,26 @@ Slugs are used for:
 - Content references
 - Human navigation
 
-### Slug Language
+### Slug and Key Language
 
-**Slugs are English.** The examples above were always English; this states it as the rule rather than leaving
-it to whoever authors next.
+**Slugs and keys are English.** That covers the topic slug, the topic's stable key, and the scope key. The
+seeded area and line keys (`backend`, `b1-language-runtime`) already follow it; the examples above always did.
+This states it as the rule rather than leaving it to whoever authors next.
 
-The content is Turkish and stays Turkish — the title, the blocks, the whole reading. The slug is the address,
-not the writing.
+The content is Turkish and stays Turkish — the title, the scope's display name, the blocks, the whole reading.
+An identifier is not the writing:
+
+| | language | changes? |
+|---|---|---|
+| Scope name — "Dilin Temelleri" | Turkish | yes |
+| Topic title — "C# neden var?" | Turkish | yes |
+| Slug — `why-csharp-exists` | English | rarely, and owes a redirect |
+| Scope key — `language-basics` | English | never |
+| Stable key — `csharp.why` | English | never |
+
+**A key cannot be derived from a Turkish name.** The studio used to try — it lowercased the name and knocked
+the diacritics off, so "Dilin Temelleri" became `dilin-temelleri` — and that derivation is gone rather than
+corrected: there is no correct version of it. The author types the key.
 
 Three reasons this is not a preference:
 

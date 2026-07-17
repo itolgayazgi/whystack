@@ -556,7 +556,7 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
                 <span className={styles.hint}>
                   {form.id
                     ? 'Değiştirilemez — grafikteki her kenar bunun üzerinden çözülüyor.'
-                    : 'Bir kez seçilir, bir daha asla değişmez.'}
+                    : 'İngilizce. Bir kez seçilir, bir daha asla değişmez.'}
                 </span>
               </label>
 
@@ -568,10 +568,11 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
                   onChange={(event) => update({ slug: event.target.value })}
                   placeholder="connection-pooling"
                 />
-                {/* The rule lives in `07` § Slug Language. It is repeated here because the author decides it
-                    HERE, and a rule nobody is shown at the moment they break it is a rule that gets broken. */}
+                {/* The rule lives in `07` § Slug and Key Language. It is repeated here because the author
+                    decides it HERE, and a rule nobody is shown at the moment they break it is a rule that
+                    gets broken. */}
                 <span className={styles.hint}>
-                  URL'de görünür. <b>İngilizce</b> yaz — içerik Türkçe kalır, slug adrestir. Küçük harf, rakam
+                  URL'de görünür. <b>İngilizce</b> yaz — başlık Türkçe kalır, slug adrestir. Küçük harf, rakam
                   ve tire.
                 </span>
               </label>

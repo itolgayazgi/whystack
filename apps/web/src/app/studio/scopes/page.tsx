@@ -14,19 +14,16 @@ import styles from '../studio.module.css';
 /** A key is lowercase letters, digits and hyphens — the same shape the server enforces. */
 const KEY_PATTERN = /^[a-z0-9-]+$/;
 
-/** A display name → a key guess. The editor can override it, but a sensible default removes a step. */
-function toKey(name: string): string {
-  return name
-    .toLocaleLowerCase('tr')
-    .replaceAll('ı', 'i')
-    .replaceAll('ş', 's')
-    .replaceAll('ğ', 'g')
-    .replaceAll('ü', 'u')
-    .replaceAll('ö', 'o')
-    .replaceAll('ç', 'c')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
+/*
+  There is deliberately NO name → key derivation here, and there used to be.
+
+  It lowercased the Turkish name and knocked the diacritics off it: "Dilin Temelleri" became
+  `dilin-temelleri`. Keys are English (`07` § Slug and Key Language), so that function could only ever
+  produce the wrong answer — and it produced it INTO the box, pre-filled and looking considered, which is the
+  worst way to be wrong. An author accepts a filled field; they think about an empty one.
+
+  An English key cannot be derived from a Turkish name. The author types it.
+*/
 
 /**
  * The scope vocabulary — managed here, exactly like the terminology dictionary.
@@ -57,7 +54,6 @@ export default function ScopesPage() {
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [lineKey, setLineKey] = useState('');
-  const [keyEdited, setKeyEdited] = useState(false);
 
   const fetchScopes = useCallback(async () => {
     setLoad('loading');
@@ -85,7 +81,7 @@ export default function ScopesPage() {
   async function add(event: FormEvent) {
     event.preventDefault();
 
-    const finalKey = keyEdited ? key.trim() : toKey(name);
+    const finalKey = key.trim();
 
     if (busy || !name.trim() || !finalKey || !lineKey) return;
 
@@ -113,7 +109,6 @@ export default function ScopesPage() {
       await authoringApi.saveSubArea(client, { key: finalKey, name: name.trim(), lineKey });
       setName('');
       setKey('');
-      setKeyEdited(false);
 
       // The LINE is deliberately not cleared. Scopes are added in batches on one line — "Dilin Temelleri",
       // then "OOP", then "Koleksiyonlar", all on B1 — and re-picking it every time is a step per scope.
@@ -212,34 +207,33 @@ export default function ScopesPage() {
           </label>
 
           <label className={styles.field}>
-            <span className={styles.label}>Ad</span>
+            <span className={styles.label}>Ad — okuyucunun gördüğü</span>
             <input
               className={styles.input}
               value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-                if (!keyEdited) setKey(toKey(event.target.value));
-              }}
-              placeholder="EF Core"
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Dilin Temelleri"
             />
+            <span className={styles.hint}>Türkçe. Sonradan değiştirilebilir.</span>
           </label>
 
           <label className={styles.field}>
-            <span className={styles.label}>Anahtar</span>
+            <span className={styles.label}>Anahtar — kalıcı kimlik</span>
             <input
               className={styles.input}
-              value={keyEdited ? key : toKey(name)}
-              onChange={(event) => {
-                setKeyEdited(true);
-                setKey(event.target.value);
-              }}
-              placeholder="ef-core"
+              value={key}
+              onChange={(event) => setKey(event.target.value)}
+              placeholder="language-basics"
             />
             {/* The key never changes after creation — tagged topics and roadmap slices resolve through it,
-                exactly as a topic's stable key does. Renaming it would orphan them. */}
+                exactly as a topic's stable key does. Renaming it would orphan them.
+
+                The rule lives in `07` § Slug and Key Language. It is repeated here because the author decides
+                it HERE, and a rule nobody is shown at the moment they break it is a rule that gets broken. */}
             <span className={styles.hint}>
-              Bir kez belirlenir, sonra değişmez. Küçük harf, rakam, tire. <b>Hat içinde</b> benzersiz — başka
-              bir hatta aynı anahtar serbest.
+              <b>İngilizce</b> yaz — ad Türkçe kalır, anahtar kimliktir. Küçük harf, rakam, tire.{' '}
+              <b>Hat içinde</b> benzersiz; başka bir hatta aynı anahtar serbest. Bir kez belirlenir, sonra
+              değişmez.
             </span>
           </label>
         </div>
