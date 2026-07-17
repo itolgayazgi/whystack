@@ -830,17 +830,17 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
             </div>
           </section>
 
-          {/* ── Bloklar — konunun gövdesi (ADR-0024) ────────────────────────────────────────────── */}
-          {LANGUAGES.map(({ code }) => (
-            <BlockEditor
-              key={code}
-              blocks={form.blocks}
-              blockTypes={catalog.blockTypes}
-              ecosystems={catalog.ecosystems}
-              language={code}
-              onChange={(blocks) => update({ blocks })}
-            />
-          ))}
+          {/* ── Bloklar — konunun gövdesi (ADR-0024) ──────────────────────────────────────────────
+              ONE editor, both languages. This mapped LANGUAGES and rendered two — one flow for `en`, one for
+              `tr`, stacked — so a block was added twice, in two places, and forgetting the second left the
+              Turkish reader a block short with nothing on screen to say so. */}
+          <BlockEditor
+            blocks={form.blocks}
+            blockTypes={catalog.blockTypes}
+            ecosystems={catalog.ecosystems}
+            languages={LANGUAGES}
+            onChange={(blocks) => update({ blocks })}
+          />
 
           {/* ── İlişkiler ───────────────────────────────────────────────────────────────────────── */}
           <section className={styles.panel}>

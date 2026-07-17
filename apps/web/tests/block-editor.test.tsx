@@ -12,6 +12,11 @@ const BLOCK_TYPES: BlockTypeOption[] = [
   { key: 'Story', isMandatory: false },
 ];
 
+const LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'tr', name: 'Türkçe' },
+];
+
 function block(order: number, type: string, languageCode = 'en'): EditableBlock {
   return {
     order,
@@ -22,14 +27,19 @@ function block(order: number, type: string, languageCode = 'en'): EditableBlock 
   } as unknown as EditableBlock;
 }
 
-function editor(blocks: EditableBlock[]) {
+/** A block as it is really created: the same position in both languages. */
+function pair(order: number, type: string): EditableBlock[] {
+  return LANGUAGES.map(({ code }) => block(order, type, code));
+}
+
+function editor(blocks: EditableBlock[], blockTypes = BLOCK_TYPES) {
   const onChange = vi.fn();
 
   render(
     <BlockEditor
       blocks={blocks}
-      language="en"
-      blockTypes={BLOCK_TYPES}
+      languages={LANGUAGES}
+      blockTypes={blockTypes}
       ecosystems={[]}
       onChange={onChange}
     />,
@@ -39,8 +49,51 @@ function editor(blocks: EditableBlock[]) {
 }
 
 describe('the block editor', () => {
-  it('will not let the last mandatory block go', async () => {
-    editor([block(1, 'Hook'), block(2, 'Checkpoint'), block(3, 'Story')]);
+  it('creates the block in BOTH languages at once', async () => {
+    const onChange = editor([]);
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'Story');
+
+    const next = onChange.mock.calls[0]?.[0] as EditableBlock[];
+
+    // THE ASSERTION THIS FILE EXISTS FOR. There were two editors and two add buttons, each making a block in
+    // its own language. Forgetting the second left the Turkish flow a block short — and the API reports a
+    // fallback only when a language has NO blocks, not when it has fewer, so the reader lost it in silence.
+    expect(next).toHaveLength(2);
+    expect(next.map((b) => b.languageCode).sort()).toEqual(['en', 'tr']);
+
+    // The SAME order. The pair is identified by position, so two different orders would be two blocks that
+    // merely look like a pair — and the row would split in half on the next render.
+    expect(new Set(next.map((b) => b.order)).size).toBe(1);
+  });
+
+  it('shows one row per position, not one list per language', () => {
+    editor([...pair(1, 'Hook'), ...pair(2, 'Story')]);
+
+    // Two blocks, not four. The old editor rendered the flow twice, stacked, and adding a block meant
+    // scrolling past the whole English flow to do it again in Turkish.
+    expect(screen.getAllByRole('button', { name: 'Kaldır' })).toHaveLength(2);
+
+    // Each row carries both languages, side by side — you cannot notice a drift you are not looking at.
+    expect(screen.getAllByText('English')).toHaveLength(2);
+    expect(screen.getAllByText('Türkçe')).toHaveLength(2);
+  });
+
+  it('removes the whole position, in every language', async () => {
+    const onChange = editor([...pair(1, 'Hook'), ...pair(2, 'Story')]);
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Kaldır' })[1] as HTMLElement);
+
+    const next = onChange.mock.calls[0]?.[0] as EditableBlock[];
+
+    // Both languages go. Removing one would leave half a block: a Turkish Story with no English source, which
+    // the save accepts and no screen explains.
+    expect(next).toHaveLength(2);
+    expect(next.every((b) => b.order === 1)).toBe(true);
+  });
+
+  it('will not let the last mandatory block go', () => {
+    editor([...pair(1, 'Hook'), ...pair(2, 'Checkpoint'), ...pair(3, 'Story')]);
 
     const remove = screen.getAllByRole('button', { name: 'Kaldır' });
 
@@ -54,7 +107,7 @@ describe('the block editor', () => {
   });
 
   it('unlocks a mandatory block once a second one exists', () => {
-    editor([block(1, 'Checkpoint'), block(2, 'Checkpoint')]);
+    editor([...pair(1, 'Checkpoint'), ...pair(2, 'Checkpoint')]);
 
     // The rule is "a topic needs one", not "this block is sacred". Two checkpoints means either can go.
     for (const button of screen.getAllByRole('button', { name: 'Kaldır' })) {
@@ -62,47 +115,62 @@ describe('the block editor', () => {
     }
   });
 
-  it('takes the mandatory list from the SERVER', async () => {
-    render(
-      <BlockEditor
-        blocks={[block(1, 'Story')]}
-        language="en"
-        // Story is mandatory HERE. A hardcoded set in the component would ignore this and let it be
-        // deleted — and the save would then refuse a topic the editor was told was fine.
-        blockTypes={[{ key: 'Story', isMandatory: true }]}
-        ecosystems={[]}
-        onChange={vi.fn()}
-      />,
-    );
+  it('takes the mandatory list from the SERVER', () => {
+    editor(pair(1, 'Story'), [{ key: 'Story', isMandatory: true }]);
 
+    // Story is mandatory HERE. A hardcoded set in the component would ignore this and let it be deleted — and
+    // the save would then refuse a topic the editor was told was fine.
     expect(screen.getByRole('button', { name: 'Kaldır' })).toBeDisabled();
   });
 
-  it('drops a copy directly beneath the original', async () => {
-    const onChange = editor([block(1, 'Hook'), block(2, 'Story'), block(3, 'Summary')]);
+  it('drops a copy directly beneath the original, in both languages', async () => {
+    const onChange = editor([...pair(1, 'Hook'), ...pair(2, 'Story'), ...pair(3, 'Summary')]);
 
     await userEvent.click(screen.getAllByRole('button', { name: '⧉' })[1] as HTMLElement);
 
     const next = onChange.mock.calls[0]?.[0] as EditableBlock[];
-    const orders = next.map((b) => b.order).sort((a, b) => a - b);
 
     // Beneath, not appended: a copy that lands at the end is a copy the editor has to walk back up the flow.
-    expect(next.filter((b) => b.type === 'Story')).toHaveLength(2);
+    // And the copy is a PAIR — one language's copy would be the half-block this editor exists to prevent.
+    expect(next.filter((b) => b.type === 'Story')).toHaveLength(4);
+
+    const orders = [...new Set(next.map((b) => b.order))].sort((a, b) => a - b);
     expect(orders).toEqual([1, 2, 3, 4]);
+
+    // Every position still has both languages after the shift.
+    for (const order of orders) {
+      expect(next.filter((b) => b.order === order)).toHaveLength(2);
+    }
   });
 
-  it('shifts the OTHER language out of the way too', async () => {
-    // The order space is shared across languages and ecosystem-tagged blocks. Renumbering only this
-    // language's flow leaves a Turkish block sitting on an order an English block now owns, and the unique
-    // index refuses the save with an error pointing at neither.
-    const onChange = editor([block(1, 'Hook'), block(2, 'Story'), block(3, 'Summary', 'tr')]);
+  it('moves the position, not one language of it', async () => {
+    const onChange = editor([...pair(1, 'Hook'), ...pair(2, 'Story')]);
 
-    await userEvent.click(screen.getAllByRole('button', { name: '⧉' })[1] as HTMLElement);
+    await userEvent.click(screen.getAllByRole('button', { name: '↓' })[0] as HTMLElement);
+
+    const next = onChange.mock.calls[0]?.[0] as EditableBlock[];
+
+    // Both languages swap together. Moving one language's block would tear the pair apart at the position
+    // that identifies it, and the two flows would silently diverge from there down.
+    expect(next.filter((b) => b.type === 'Hook').every((b) => b.order === 2)).toBe(true);
+    expect(next.filter((b) => b.type === 'Story').every((b) => b.order === 1)).toBe(true);
+  });
+
+  it('fills in a language a legacy single-language block never had', async () => {
+    // What the old add button produced: a position that exists in English only.
+    const onChange = editor([block(1, 'Hook', 'en')]);
+
+    const inputs = screen.getAllByRole('textbox');
+
+    // The Turkish column renders empty rather than crashing or hiding the row, and typing into it CREATES the
+    // block — an empty box the author can fill beats a gap they cannot see.
+    await userEvent.type(inputs[inputs.length - 1] as HTMLElement, 'S');
 
     const next = onChange.mock.calls[0]?.[0] as EditableBlock[];
     const turkish = next.find((b) => b.languageCode === 'tr');
 
-    expect(turkish?.order).toBe(4);
-    expect(new Set(next.map((b) => b.order)).size).toBe(next.length);
+    expect(turkish).toBeDefined();
+    expect(turkish?.order).toBe(1);
+    expect(turkish?.type).toBe('Hook');
   });
 });

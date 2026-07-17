@@ -54,28 +54,66 @@ interface Props {
   blocks: EditableBlock[];
   blockTypes: BlockTypeOption[];
   ecosystems: EcosystemOption[];
-  language: string;
+
+  /** Every language the topic is written in. The editor shows them all at once — see the note above. */
+  languages: { code: string; name: string }[];
+
   onChange: (blocks: EditableBlock[]) => void;
 }
 
-export function BlockEditor({ blocks, blockTypes, ecosystems, language, onChange }: Props) {
-  const mine = blocks.filter((block) => block.languageCode === language).sort((a, b) => a.order - b.order);
+/**
+ * One flow, both languages, side by side.
+ *
+ * This used to be rendered TWICE — one editor for `en`, one for `tr`, stacked. Adding a Story meant adding it
+ * up in the English list, scrolling past the whole flow, and adding it again in the Turkish one. And the two
+ * add buttons each made a block in their own language, so forgetting the second one left a topic whose
+ * Turkish flow was quietly a block shorter than its English one. Nothing said so: the API reports a fallback
+ * when a language has NO blocks, not when it has fewer, so the reader lost a block in silence.
+ *
+ * Pairing them is the same rule the sections next door already follow, stated at the top of topic-editor.tsx:
+ * you cannot notice a difference you are not looking at. A block is now one row with two columns, and the
+ * only way to make one is to make both.
+ *
+ * <b>The pair is identified by ORDER.</b> Same position, same beat — that is what the archetype skeleton has
+ * always assumed when it scaffolds `1..n` in each language, and what the reader assumes when it merges by
+ * order. A language missing at an order (a block added by the old single-language button) renders as an empty
+ * field that creates its block on the first keystroke, rather than as a crash or a gap.
+ */
+export function BlockEditor({ blocks, blockTypes, ecosystems, languages, onChange }: Props) {
+  /** Every position in the flow, once. The row is the position; the columns are its languages. */
+  const orders = [...new Set(blocks.map((block) => block.order))].sort((a, b) => a - b);
 
-  const replace = useCallback(
-    (order: number, next: Partial<EditableBlock>) => {
-      onChange(
-        blocks.map((block) =>
-          block.languageCode === language && block.order === order ? { ...block, ...next } : block,
-        ),
-      );
-    },
-    [blocks, language, onChange],
+  const at = useCallback(
+    (order: number, code: string) =>
+      blocks.find((block) => block.order === order && block.languageCode === code),
+    [blocks],
   );
 
+  /** The row's type and ecosystem: facts about the POSITION, so any language present can answer. */
+  const rowOf = useCallback((order: number) => blocks.find((block) => block.order === order), [blocks]);
+
   const setData = useCallback(
-    (order: number, patch: Record<string, unknown>) => {
-      const block = mine.find((candidate) => candidate.order === order);
-      if (!block) return;
+    (order: number, code: string, patch: Record<string, unknown>) => {
+      const block = at(order, code);
+      const row = rowOf(order);
+
+      if (!row) return;
+
+      // The block may not exist in this language — a legacy row from the single-language button. Typing into
+      // its empty box CREATES it, rather than dropping the keystroke and leaving the author wondering.
+      if (!block) {
+        onChange([
+          ...blocks,
+          {
+            order,
+            type: row.type,
+            languageCode: code,
+            ecosystemKey: row.ecosystemKey,
+            dataJson: JSON.stringify({ ...EMPTY[row.type], ...patch }),
+          },
+        ]);
+        return;
+      }
 
       let parsed: Record<string, unknown> = {};
       try {
@@ -84,63 +122,80 @@ export function BlockEditor({ blocks, blockTypes, ecosystems, language, onChange
         // A body that will not parse is replaced rather than merged into — the editor is fixing it.
       }
 
-      replace(order, { dataJson: JSON.stringify({ ...parsed, ...patch }) });
+      onChange(
+        blocks.map((candidate) =>
+          candidate.order === order && candidate.languageCode === code
+            ? { ...candidate, dataJson: JSON.stringify({ ...parsed, ...patch }) }
+            : candidate,
+        ),
+      );
     },
-    [mine, replace],
+    [at, blocks, onChange, rowOf],
   );
 
+  /** The ecosystem is a fact about the BLOCK, not about one translation of it. Set on every language. */
+  const setEcosystem = useCallback(
+    (order: number, key: string | null) => {
+      onChange(blocks.map((block) => (block.order === order ? { ...block, ecosystemKey: key } : block)));
+    },
+    [blocks, onChange],
+  );
+
+  /** One position, every language. Adding in one language only is what this editor exists to prevent. */
   function add(type: BlockType) {
-    const nextOrder = blocks.length === 0 ? 1 : Math.max(...blocks.map((block) => block.order)) + 1;
+    const nextOrder = orders.length === 0 ? 1 : Math.max(...orders) + 1;
 
     onChange([
       ...blocks,
-      { order: nextOrder, type, languageCode: language, ecosystemKey: null, dataJson: emptyBlockData(type) },
+      ...languages.map(({ code }) => ({
+        order: nextOrder,
+        type,
+        languageCode: code,
+        ecosystemKey: null,
+        dataJson: emptyBlockData(type),
+      })),
     ]);
   }
 
+  /** The whole position goes, in every language. Half a block is not a state anybody asked for. */
   function remove(order: number) {
-    onChange(blocks.filter((block) => !(block.languageCode === language && block.order === order)));
+    onChange(blocks.filter((block) => block.order !== order));
   }
 
   /**
-   * Copy a block, landing the copy directly beneath the original.
+   * Copy a position, landing the copy directly beneath the original — in every language.
    *
-   * Everything at or below the insertion point shifts down — including the OTHER language's blocks and the
-   * ecosystem-tagged ones, which share this order space. Renumbering only this language's flow would leave a
-   * Turkish block sitting on an order an English block already owns, and the unique index would refuse the
-   * save with an error pointing at neither of them.
+   * Everything below shifts down. The order space is shared across languages and ecosystem-tagged blocks, so
+   * renumbering one language's flow would leave a Turkish block sitting on an order an English block already
+   * owns, and the unique index would refuse the save with an error pointing at neither.
    */
   function duplicate(order: number) {
-    const source = blocks.find((block) => block.languageCode === language && block.order === order);
+    const sources = blocks.filter((block) => block.order === order);
 
-    if (!source) return;
+    if (sources.length === 0) return;
 
     onChange([
       ...blocks.map((block) => (block.order > order ? { ...block, order: block.order + 1 } : block)),
-
-      // A structuredClone of the data, not a shared reference: the copy is a new block, and an editor who
-      // edits it must not watch the original change with it.
-      { ...source, order: order + 1, dataJson: source.dataJson },
+      ...sources.map((source) => ({ ...source, order: order + 1 })),
     ]);
   }
 
   /**
-   * Reorder by SWAPPING the two blocks' order values.
+   * Reorder by SWAPPING the two positions' order values, across every language.
    *
-   * Not by reindexing the list: the order space is shared with the other language's blocks and with the
-   * ecosystem-tagged ones, and renumbering this language's flow would walk over theirs.
+   * Not by reindexing: the order space is shared with the ecosystem-tagged blocks, and renumbering the flow
+   * would walk over theirs.
    */
   function move(order: number, direction: -1 | 1) {
-    const index = mine.findIndex((block) => block.order === order);
-    const swapWith = mine[index + direction];
+    const index = orders.indexOf(order);
+    const swapWith = orders[index + direction];
 
-    if (!swapWith) return;
+    if (swapWith === undefined) return;
 
     onChange(
       blocks.map((block) => {
-        if (block.languageCode !== language) return block;
-        if (block.order === order) return { ...block, order: swapWith.order };
-        if (block.order === swapWith.order) return { ...block, order };
+        if (block.order === order) return { ...block, order: swapWith };
+        if (block.order === swapWith) return { ...block, order };
         return block;
       }),
     );
@@ -150,41 +205,50 @@ export function BlockEditor({ blocks, blockTypes, ecosystems, language, onChange
   // frontend change; a hardcoded set would drift and let an editor delete something the save then refuses.
   const mandatory = new Set(blockTypes.filter((type) => type.isMandatory).map((type) => type.key));
 
+  const typeCount = (type: BlockType) => orders.filter((order) => rowOf(order)?.type === type).length;
+
   return (
     <section className={styles.panel}>
-      <h2 className={styles.panelTitle}>Bloklar — {language.toUpperCase()}</h2>
+      <h2 className={styles.panelTitle}>Bloklar</h2>
       <p className={styles.panelHint}>
         Konunun gövdesi. Arketip bir iskelet kurar; sen ekler, çıkarır, sıralarsın. Zorunlu dört vuruş —
-        Kanca, Checkpoint, Özet, Sonraki — yayınlanmadan önce bulunmalı.
+        Kanca, Checkpoint, Özet, Sonraki — yayınlanmadan önce bulunmalı. Her blok iki dilde birden doğar; yan
+        yana durmalarının sebebi, farkı ancak bakarken görebilmen.
       </p>
 
-      {mine.length === 0 ? (
+      {orders.length === 0 ? (
         <p className={styles.hint}>
           Henüz blok yok. Aşağıdan ekle ya da künyeden bir arketip seçip iskeleti kur.
         </p>
       ) : null}
 
-      {mine.map((block, index) => (
-        <BlockCard
-          key={`${block.languageCode}-${block.order}`}
-          block={block}
-          label={LABEL[block.type]}
-          ecosystems={ecosystems}
-          isFirst={index === 0}
-          isLast={index === mine.length - 1}
-          // The LAST one of a mandatory type cannot go. The rule is the server's — the catalog carries
-          // BlockSkeletons.Mandatory — and the save refuses it anyway; this is the editor finding out before
-          // they delete their only checkpoint rather than after.
-          isLocked={
-            mandatory.has(block.type) && mine.filter((other) => other.type === block.type).length === 1
-          }
-          onMove={(direction) => move(block.order, direction)}
-          onDuplicate={() => duplicate(block.order)}
-          onRemove={() => remove(block.order)}
-          onEcosystem={(key) => replace(block.order, { ecosystemKey: key })}
-          onData={(patch) => setData(block.order, patch)}
-        />
-      ))}
+      {orders.map((order, index) => {
+        const row = rowOf(order);
+        if (!row) return null;
+
+        return (
+          <BlockCard
+            key={order}
+            type={row.type}
+            label={LABEL[row.type]}
+            ecosystemKey={row.ecosystemKey}
+            languages={languages}
+            blockFor={(code) => at(order, code)}
+            ecosystems={ecosystems}
+            isFirst={index === 0}
+            isLast={index === orders.length - 1}
+            // The LAST one of a mandatory type cannot go. The rule is the server's — the catalog carries
+            // BlockSkeletons.Mandatory — and the save refuses it anyway; this is the editor finding out before
+            // they delete their only checkpoint rather than after.
+            isLocked={mandatory.has(row.type) && typeCount(row.type) === 1}
+            onMove={(direction) => move(order, direction)}
+            onDuplicate={() => duplicate(order)}
+            onRemove={() => remove(order)}
+            onEcosystem={(key) => setEcosystem(order, key)}
+            onData={(code, patch) => setData(order, code, patch)}
+          />
+        );
+      })}
 
       <select
         className={styles.select}
@@ -205,9 +269,20 @@ export function BlockEditor({ blocks, blockTypes, ecosystems, language, onChange
   );
 }
 
+/**
+ * One position in the flow: the head is the block, the columns are its languages.
+ *
+ * Type, order and ecosystem live in the head because they are facts about the BLOCK — a Checkpoint is a
+ * Checkpoint in both languages, and a block tagged `.NET` is tagged `.NET` in both. Only the words differ, so
+ * only the words are per column. Putting the ecosystem dropdown in each column would invite two answers to a
+ * question that has one.
+ */
 function BlockCard({
-  block,
+  type,
   label,
+  ecosystemKey,
+  languages,
+  blockFor,
   ecosystems,
   isFirst,
   isLast,
@@ -218,8 +293,14 @@ function BlockCard({
   onEcosystem,
   onData,
 }: {
-  block: EditableBlock;
+  type: BlockType;
   label: string;
+  ecosystemKey: string | null;
+  languages: { code: string; name: string }[];
+
+  /** The block in one language, or undefined — a position a legacy single-language add never filled. */
+  blockFor: (code: string) => EditableBlock | undefined;
+
   ecosystems: EcosystemOption[];
   isFirst: boolean;
   isLast: boolean;
@@ -231,18 +312,8 @@ function BlockCard({
   onDuplicate: () => void;
   onRemove: () => void;
   onEcosystem: (key: string | null) => void;
-  onData: (patch: Record<string, unknown>) => void;
+  onData: (code: string, patch: Record<string, unknown>) => void;
 }) {
-  let data: Record<string, unknown> = {};
-  try {
-    data = JSON.parse(block.dataJson) as Record<string, unknown>;
-  } catch {
-    // Shown as empty fields rather than crashing the editor around it.
-  }
-
-  const text = (key: string) => (typeof data[key] === 'string' ? (data[key] as string) : '');
-  const list = (key: string) => (Array.isArray(data[key]) ? (data[key] as string[]) : []);
-
   return (
     <div className={styles.implementation}>
       <div className={styles.implementationHead}>
@@ -256,7 +327,7 @@ function BlockCard({
           <select
             className={styles.select}
             style={{ width: 'auto' }}
-            value={block.ecosystemKey ?? ''}
+            value={ecosystemKey ?? ''}
             onChange={(event) => onEcosystem(event.target.value || null)}
           >
             <option value="">ortak (her ekosistem)</option>
@@ -301,7 +372,49 @@ function BlockCard({
         </div>
       </div>
 
-      {block.type === 'Hook' ? (
+      {/* The columns. Side by side is the whole point — a drift you are not looking at is a drift you do not
+          see. Two languages fit; a third would want a different layout, and the grid says so rather than
+          squeezing three columns into two columns' worth of screen. */}
+      <div className={styles.bilingual}>
+        {languages.map(({ code, name }) => (
+          <div key={code}>
+            <span className={styles.label}>{name}</span>
+            <BlockFields type={type} block={blockFor(code)} onData={(patch) => onData(code, patch)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The words, for one language.
+ *
+ * `block` may be undefined: a position an old single-language add never filled in this language. The fields
+ * render empty and typing creates the block — an empty box the author can fill beats a gap they cannot see.
+ */
+function BlockFields({
+  type,
+  block,
+  onData,
+}: {
+  type: BlockType;
+  block: EditableBlock | undefined;
+  onData: (patch: Record<string, unknown>) => void;
+}) {
+  let data: Record<string, unknown> = {};
+  try {
+    if (block) data = JSON.parse(block.dataJson) as Record<string, unknown>;
+  } catch {
+    // Shown as empty fields rather than crashing the editor around it.
+  }
+
+  const text = (key: string) => (typeof data[key] === 'string' ? (data[key] as string) : '');
+  const list = (key: string) => (Array.isArray(data[key]) ? (data[key] as string[]) : []);
+
+  return (
+    <>
+      {type === 'Hook' ? (
         <>
           <Field label="Soru — bir tanımla açma, SORUYLA aç">
             <input
@@ -322,9 +435,9 @@ function BlockCard({
         </>
       ) : null}
 
-      {block.type === 'Story' || block.type === 'Concept' || block.type === 'Prod' ? (
+      {type === 'Story' || type === 'Concept' || type === 'Prod' ? (
         <>
-          {block.type === 'Concept' ? (
+          {type === 'Concept' ? (
             <Field label="Analoji (opsiyonel)">
               <input
                 className={styles.input}
@@ -344,7 +457,7 @@ function BlockCard({
         </>
       ) : null}
 
-      {block.type === 'Code' ? (
+      {type === 'Code' ? (
         <>
           <div className={styles.grid}>
             <Field label="Dil">
@@ -397,7 +510,7 @@ function BlockCard({
         </>
       ) : null}
 
-      {block.type === 'Myth' ? (
+      {type === 'Myth' ? (
         <>
           <Field label="Sanılan">
             <input
@@ -418,9 +531,9 @@ function BlockCard({
         </>
       ) : null}
 
-      {block.type === 'Checkpoint' ? <CheckpointFields data={data} onData={onData} /> : null}
+      {type === 'Checkpoint' ? <CheckpointFields data={data} onData={onData} /> : null}
 
-      {block.type === 'Term' ? (
+      {type === 'Term' ? (
         <div className={styles.grid}>
           <Field label="Terim">
             <input
@@ -439,7 +552,7 @@ function BlockCard({
         </div>
       ) : null}
 
-      {block.type === 'Diagram' ? (
+      {type === 'Diagram' ? (
         <>
           <Field label="SVG">
             <textarea
@@ -458,7 +571,7 @@ function BlockCard({
         </>
       ) : null}
 
-      {block.type === 'Summary' ? (
+      {type === 'Summary' ? (
         <Field label="Maddeler — her satır bir madde">
           <textarea
             className={styles.textarea}
@@ -471,7 +584,7 @@ function BlockCard({
         </Field>
       ) : null}
 
-      {block.type === 'Next' ? (
+      {type === 'Next' ? (
         <div className={styles.grid}>
           <Field label="Etiket">
             <input
@@ -492,12 +605,12 @@ function BlockCard({
         </div>
       ) : null}
 
-      {block.type === 'Compare' ? (
+      {type === 'Compare' ? (
         <p className={styles.hint}>
           Karşılaştırma tablosunun formu henüz yok — bu blok tipi kaydedilir ama düzenlenemez. Sıradaki iş.
         </p>
       ) : null}
-    </div>
+    </>
   );
 }
 
