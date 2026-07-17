@@ -21,6 +21,7 @@ public sealed class BlockAuthoringTests(DatabaseFixture fixture)
         ScopeKey: null,
         Category: "Concept",
         Archetype: "Mechanism",
+        Sequence: null,
         Level: "MidLevel",
         EstimatedReadingMinutes: 8,
         SupportedVersions: [],

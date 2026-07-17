@@ -99,6 +99,22 @@ interface Form {
 
   category: string;
   archetype: string;
+
+  /**
+   * The chain — "OOP II / III" (ADR-0027).
+   *
+   * `sequenceGroup` empty means the stop is NOT in a chain, which is most stops. The group is what decides,
+   * rather than a separate checkbox, because the group is the chain: without a name there is nothing tying
+   * "OOP I" to "OOP II", and a checkbox ticked with no group would be a chain of one wearing a badge.
+   *
+   * Part and Of are strings, not numbers, and that is deliberate. A number input bound to a number cannot
+   * hold "" — clearing it to retype snaps to 0 or NaN under the author's cursor, and `parseInt('') || 1`
+   * silently rewrites their empty box to 1. Strings let an empty box stay empty; the payload parses once.
+   */
+  sequenceGroup: string;
+  sequencePart: string;
+  sequenceOf: string;
+
   blocks: EditableBlock[];
   level: SkillLevel;
   estimatedReadingMinutes: number;
@@ -134,6 +150,13 @@ const EMPTY: Form = {
   scopeKey: '',
   category: 'Concept',
   archetype: 'Concept',
+
+  // No chain, and no half-filled one either. A new topic that arrived pre-numbered "1 / 2" would be claiming
+  // a second part nobody has decided to write.
+  sequenceGroup: '',
+  sequencePart: '',
+  sequenceOf: '',
+
   blocks: [],
   level: 'MidLevel',
   estimatedReadingMinutes: 8,
@@ -230,6 +253,13 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
             scopeKey: topic.scopeKey ?? '',
             category: topic.category,
             archetype: topic.archetype,
+
+            // Empty strings, not "null", for a stop with no chain — these are controlled inputs, and React
+            // logs the switch from uncontrolled to controlled while the box silently stops accepting typing.
+            sequenceGroup: topic.sequence?.group ?? '',
+            sequencePart: topic.sequence ? String(topic.sequence.part) : '',
+            sequenceOf: topic.sequence ? String(topic.sequence.of) : '',
+
             blocks: topic.blocks,
             level: topic.level,
             estimatedReadingMinutes: topic.estimatedReadingMinutes,
@@ -311,6 +341,21 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
       scopeKey: form.scopeKey || null,
       category: form.category.trim(),
       archetype: form.archetype,
+
+      // The group decides. No group means no chain — sent as null, explicitly, because this is a full
+      // replacement: an author who cleared the group is asking for the badge to come off, and omitting the
+      // field would leave it on forever.
+      //
+      // Number(), not parseInt(): parseInt('3abc') is 3, and a typo would be silently accepted as a number
+      // the author never typed. Number('3abc') is NaN, which the server refuses out loud.
+      sequence: form.sequenceGroup.trim()
+        ? {
+            group: form.sequenceGroup.trim(),
+            part: Number(form.sequencePart),
+            of: Number(form.sequenceOf),
+          }
+        : null,
+
       blocks: form.blocks,
       level: form.level,
       estimatedReadingMinutes: form.estimatedReadingMinutes,
@@ -615,6 +660,66 @@ export function TopicEditor({ topicId }: { topicId?: string }) {
                 <span className={styles.hint}>
                   3-10 durak eden bütün. Seçilen hatta ait olanlar listelenir.{' '}
                   <Link href="/studio/scopes">Kapsamları yönet</Link>
+                </span>
+              </label>
+
+              {/*
+                Dizi — the design's own cell (whystack-studio.html, `.meta-grid`), kept to one cell so the
+                grid it draws stays six wide.
+
+                The mockup shows only "II / III" and carries the chain's name in the TITLE ("Change Tracking
+                II — Snapshot Mekanizması"). The group is a field here instead, his call: parsing it back out
+                of the title would mean the chain breaks the day somebody rewrites a heading — silently, and
+                everywhere it is counted.
+
+                The GROUP is the switch. No checkbox, because a checkbox ticked with no group would be a
+                chain of one wearing a badge — and there would then be two ways to say "not in a chain" that
+                could disagree.
+              */}
+              <label className={styles.field}>
+                <span className={styles.label}>Dizi — numaralı zincir</span>
+
+                <div className={styles.sequenceRow}>
+                  <input
+                    className={styles.input}
+                    value={form.sequenceGroup}
+                    onChange={(event) => update({ sequenceGroup: event.target.value })}
+                    placeholder="OOP"
+                    aria-label="Dizi grubu"
+                  />
+
+                  <input
+                    className={styles.sequenceNumber}
+                    // `inputMode`, not `type="number"`: a number spinner in a 3-character box is two arrows
+                    // nobody can hit, and Firefox lets "e" and "-" through it anyway. This gets the phone
+                    // keypad without the spinner.
+                    inputMode="numeric"
+                    value={form.sequencePart}
+                    onChange={(event) => update({ sequencePart: event.target.value })}
+                    placeholder="2"
+                    aria-label="Kaçıncı bölüm"
+                    disabled={!form.sequenceGroup.trim()}
+                  />
+
+                  <span className={styles.sequenceSlash} aria-hidden="true">
+                    /
+                  </span>
+
+                  <input
+                    className={styles.sequenceNumber}
+                    inputMode="numeric"
+                    value={form.sequenceOf}
+                    onChange={(event) => update({ sequenceOf: event.target.value })}
+                    placeholder="3"
+                    aria-label="Toplam bölüm"
+                    disabled={!form.sequenceGroup.trim()}
+                  />
+                </div>
+
+                <span className={styles.hint}>
+                  {form.sequenceGroup.trim()
+                    ? `Bu durak "${form.sequenceGroup.trim()}" zincirinin ${form.sequencePart || '?'}. bölümü, toplam ${form.sequenceOf || '?'}.`
+                    : 'Boş = zincir yok. Çoğu durak böyledir. 20-25 dakikaya sığmayan bir konuyu sıkıştırma — böl.'}
                 </span>
               </label>
 

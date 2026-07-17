@@ -18,6 +18,10 @@ public sealed record SaveTopicRequest(
     string? ScopeKey,
     string? Category,
     string? Archetype,
+
+    /// <summary>"OOP II / III", or absent for a stop that is not part of a chain (ADR-0027).</summary>
+    SequenceCommand? Sequence,
+
     string? Level,
     int? EstimatedReadingMinutes,
     IReadOnlyList<string>? SupportedVersions,
@@ -387,6 +391,10 @@ public static class AuthoringEndpoints
         // Concept when unsaid: a topic that has not chosen its shape is a plain explanation, and that is the
         // most common one. The studio always sends it; a raw caller may not.
         Archetype: request.Archetype ?? "Concept",
+
+        // Null is a stop that is not part of a chain — the ordinary case, and not an omission the API should
+        // fill in. There is no sensible default for "which part of what".
+        Sequence: request.Sequence,
 
         Level: request.Level ?? string.Empty,
         EstimatedReadingMinutes: request.EstimatedReadingMinutes ?? 0,

@@ -26,6 +26,9 @@ public sealed record EditableTopic(
     /// <summary>The shape of the explanation — decides the skeleton the editor starts from (ADR-0024).</summary>
     string Archetype,
 
+    /// <summary>The chain badge — "OOP II / III" — or null for a standalone stop (ADR-0027).</summary>
+    EditableSequence? Sequence,
+
     string Level,
     string Status,
     int EstimatedReadingMinutes,
@@ -80,6 +83,9 @@ public sealed record EditableImplementation(
 /// </remarks>
 public sealed record EditableRelationship(string Type, string ToStableKey, string ToTitle);
 
+/// <summary>"OOP II / III", as the editor last saved it (ADR-0027).</summary>
+public sealed record EditableSequence(string Group, int Part, int Of);
+
 /// <summary>One row in the studio's list. Every topic, at every stage — this is the editor's workbench.</summary>
 public sealed record StudioTopic(
     Guid Id,
@@ -119,7 +125,22 @@ public sealed record SaveTermCommand(
     IReadOnlyList<TermExplanationModel> Explanations);
 
 /// <summary>A theme, as the studio manages it (ADR-0023). One row: a stable key and a display name.</summary>
-public sealed record EditableScope(Guid Id, string Key, string Name, int TopicCount);
+/// <summary>
+/// One scope on the studio's list.
+/// </summary>
+/// <remarks>
+/// The LINE travels with it, and it has to: a scope only means something on its line (ADR-0027), and the key
+/// is unique per line rather than globally. Two lines may both have an "Eşzamanlılık" — B1's threads and
+/// locks, B3's isolation levels — and a list that showed only the name would draw them as two identical rows
+/// with a Delete button each.
+/// </remarks>
+public sealed record EditableScope(
+    Guid Id,
+    string Key,
+    string Name,
+    string LineKey,
+    string LineName,
+    int TopicCount);
 
 /// <summary>
 /// Create or rename a scope. <c>LineKey</c> is required on create — a scope only means anything on a line

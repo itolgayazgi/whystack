@@ -83,6 +83,7 @@ public sealed class LineOrderTests(DatabaseFixture fixture)
         ScopeKey: null,
         Category: "Concept",
         Archetype: "Concept",
+        Sequence: null,
         Level: level,
         EstimatedReadingMinutes: 8,
         SupportedVersions: [],

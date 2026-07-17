@@ -334,6 +334,41 @@
   border-color: var(--color-border-interactive);
 }
 
+/*
+  Dizi — "OOP  [2] / [3]" inside ONE grid cell, so the design's six-wide meta grid stays six wide.
+
+  The group takes the leftover space and the numbers are fixed: a chain of more than 99 parts is not a chain,
+  and sizing the boxes to the content they will actually hold is what keeps this readable at one cell wide.
+*/
+.sequenceRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.sequenceNumber {
+  composes: input;
+  width: 3.25rem;
+  flex: none;
+  text-align: center;
+
+  /* Tabular figures: "1" and "8" are the same width, so the slash between them does not shuffle sideways
+     while the author types. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Disabled with the group empty — the boxes stay visible so the control reads as one thing, but they cannot
+   collect a part number for a chain that has no name. */
+.sequenceNumber:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sequenceSlash {
+  color: var(--color-text-muted);
+  flex: none;
+}
+
 /* Two languages, side by side. This is how you SEE a translation drift — not by remembering. */
 .bilingual {
   display: grid;

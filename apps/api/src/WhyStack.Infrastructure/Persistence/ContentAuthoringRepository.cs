@@ -102,6 +102,7 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
                 ScopeId = subAreaId,
                 Category = category,
                 Archetype = archetype,
+                Sequence = SequenceOf(command),
                 DefaultLevel = level,
                 DefaultTitle = command.Translations.First(translation => translation.LanguageCode == "en").Title,
                 CreatedAtUtc = now,
@@ -147,6 +148,12 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             topic.ScopeId = subAreaId;
             topic.Category = category;
             topic.Archetype = archetype;
+
+            // Assigned unconditionally, including to null. This is a full replacement (`08` PUT): an author
+            // who cleared the chain gets it cleared. A `if (command.Sequence is not null)` here would make the
+            // badge unremovable — you could number a stop but never un-number it.
+            topic.Sequence = SequenceOf(command);
+
             topic.DefaultLevel = level;
             topic.DefaultTitle = command.Translations.First(translation => translation.LanguageCode == "en").Title;
             topic.UpdatedAtUtc = now;
@@ -178,6 +185,19 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             Conflict: false,
             null);
     }
+
+    /// <summary>
+    /// The chain badge, or null.
+    /// </summary>
+    /// <remarks>
+    /// The group is trimmed because it is a KEY as much as a label: the parts of a chain are tied together by
+    /// sharing it, and "OOP" with a trailing space is a chain of one that looks exactly like a chain of three
+    /// on screen. The handler already refused an empty group, so the trim cannot produce one here.
+    /// </remarks>
+    private static TopicSequence? SequenceOf(SaveTopicCommand command) =>
+        command.Sequence is { } sequence
+            ? new TopicSequence(sequence.Group.Trim(), sequence.Part, sequence.Of)
+            : null;
 
     /// <summary>
     /// Everything under the version is REPLACED, not merged.
@@ -543,6 +563,11 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
             topic.Scope?.Key,
             topic.Category.ToString(),
             topic.Archetype.ToString(),
+
+            topic.Sequence is { } sequence
+                ? new EditableSequence(sequence.Group, sequence.Part, sequence.Of)
+                : null,
+
             topic.DefaultLevel.ToString(),
             version.Status.ToString(),
             version.EstimatedReadingMinutes,
@@ -666,16 +691,23 @@ public sealed class ContentAuthoringRepository(WhyStackDbContext context, TimePr
 
     public async Task<IReadOnlyList<EditableScope>> SubAreasAsync(CancellationToken cancellationToken)
     {
-        // The topic count travels with the theme, so the studio can say "used by 7 topics" — the number that
+        // The topic count travels with the scope, so the studio can say "used by 7 topics" — the number that
         // turns a refused delete into an explanation the editor can act on.
+        //
+        // Ordered by LINE first: the list is grouped by line on screen, because a scope's key is unique per
+        // line and not globally. Sorted any other way, B1's "Eşzamanlılık" and B3's would sit next to each
+        // other looking like a duplicate somebody should clean up.
         var rows = await context.Scopes
             .AsNoTracking()
-            .OrderBy(scope => scope.SortOrder)
+            .OrderBy(scope => scope.Line!.SortOrder)
+            .ThenBy(scope => scope.SortOrder)
             .ThenBy(scope => scope.Name)
             .Select(scope => new EditableScope(
                 scope.Id,
                 scope.Key,
                 scope.Name,
+                scope.Line!.Key,
+                scope.Line.Name,
                 context.Topics.Count(topic => topic.ScopeId == scope.Id)))
             .ToListAsync(cancellationToken);
 

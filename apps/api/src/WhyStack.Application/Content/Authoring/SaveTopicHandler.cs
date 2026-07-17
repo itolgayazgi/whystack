@@ -170,6 +170,46 @@ public sealed class SaveTopicHandler(
             "English is required. It is the canonical language, and a translation with no source cannot be "
             + "reviewed against anything.");
 
+        // A chain, if the author declared one. Null is the normal case and says nothing is wrong.
+        //
+        // REFUSED rather than reported, like the rest of this method — and that is a choice worth its own
+        // paragraph. A missing Checkpoint is INCOMPLETE: the author has not written it yet, and the to-do list
+        // is the right answer. "OOP IV / III" is not incomplete, it is SELF-CONTRADICTORY — there is no part 4
+        // of a 3-part chain, and no amount of further writing makes one.
+        //
+        // The deciding fact is that the publish gate (TransitionTopicHandler) validates the draft's SECTIONS
+        // and nothing else. A sequence problem reported here would travel back to the studio, sit in a list,
+        // and publish anyway — which is exactly how the mandatory beats came to be documented as "the publish
+        // gate" while being called by nobody, and how the first two topics shipped with no Checkpoint at all.
+        // A rule that does not stop anything is a comment.
+        if (command.Sequence is { } sequence)
+        {
+            Require(
+                !string.IsNullOrWhiteSpace(sequence.Group),
+                "sequence.group",
+                "A numbered chain needs a group — the name its parts share, like \"OOP\". It is what ties "
+                + "\"OOP I\" to \"OOP II\"; without it each part is a stop that merely happens to be numbered.");
+
+            Require(
+                sequence.Part >= 1,
+                "sequence.part",
+                "A part is 1 or more. There is no part 0 of anything — the reader counts from one.");
+
+            Require(
+                sequence.Of >= 2,
+                "sequence.of",
+                "A chain has at least 2 parts. \"I / I\" is not a chain, it is one stop wearing a badge that "
+                + "promises a second one that does not exist.");
+
+            // The one that actually bites. Every field above can be individually sane and still produce
+            // "OOP IV / III" — a badge that tells the reader to go looking for a part nobody will ever write.
+            Require(
+                sequence.Part <= sequence.Of,
+                "sequence.part",
+                $"Part {sequence.Part} of {sequence.Of} cannot exist. The part cannot be past the end of its "
+                + "own chain.");
+        }
+
         return problems;
     }
 

@@ -101,6 +101,7 @@ public class CatalogTests(DatabaseFixture fixture) : IClassFixture<DatabaseFixtu
                 SupportedVersions: [],
                 Translations: [new TranslationCommand("en", "Catalog probe", null)],
                 Archetype: "Concept",
+                Sequence: null,
                 Blocks: [],
                 Sections: [],
                 Implementations: [],

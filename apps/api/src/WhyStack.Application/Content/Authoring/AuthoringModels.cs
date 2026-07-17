@@ -37,6 +37,19 @@ public sealed record SaveTopicCommand(
     string Archetype,
 
     /// <summary>
+    /// Where this stop sits in a numbered chain — "OOP II / III" — or null (ADR-0027).
+    /// </summary>
+    /// <remarks>
+    /// Null for most stops, and that is the normal case: a subject that fits in one sitting is one stop. This
+    /// exists for the subject that does not — split into three finishable stops rather than compressed into
+    /// one 45-minute page.
+    ///
+    /// One value, not three loose fields: a <c>part</c> without an <c>of</c> is meaningless, and a shape that
+    /// can express "2 of null" is a shape somebody eventually stores.
+    /// </remarks>
+    SequenceCommand? Sequence,
+
+    /// <summary>
     /// The block flow — the topic's body (ADR-0024).
     /// </summary>
     /// <remarks>
@@ -87,6 +100,19 @@ public sealed record ImplementationCommand(
     IReadOnlyList<SectionCommand> Sections);
 
 public sealed record RelationshipCommand(string Type, string ToStableKey);
+
+/// <summary>
+/// "OOP II / III" — a stop's place in a numbered chain (ADR-0027).
+/// </summary>
+/// <remarks>
+/// <c>Group</c> is what ties the chain together; the parts share it, and it is what the badge beside the
+/// title and a "kapsam tamamlandı" count both read. It is NOT the title: "OOP" groups three stops whose
+/// titles are all different, which is the entire point of having it.
+///
+/// The prerequisite edges (I → II → III) stay separate and stay the author's to declare — this is the badge,
+/// not the graph. Two stops in one chain with no edge between them is a legitimate thing to author.
+/// </remarks>
+public sealed record SequenceCommand(string Group, int Part, int Of);
 
 /// <summary>What came back. The problems are the point — an editor fixes them before they publish.</summary>
 public sealed record SaveTopicResult(

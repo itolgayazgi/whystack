@@ -130,6 +130,24 @@ export interface StudioTopic {
   ecosystems: string[];
 }
 
+/**
+ * A stop's place in a numbered chain: "OOP II / III" (ADR-0027).
+ *
+ * A subject that will not fit in one sitting is not compressed — it is split. Three finishable stops beat one
+ * 45-minute page, for the reading and for the streak alike.
+ *
+ * `group` is what ties the chain together; the parts share it. It is NOT the title — "OOP" groups three stops
+ * whose titles all differ, which is the whole reason it exists as its own field.
+ *
+ * The server refuses `part > of` and `of < 2`: a badge reading "IV / III" sends the reader looking for a part
+ * nobody will ever write.
+ */
+export interface TopicSequence {
+  group: string;
+  part: number;
+  of: number;
+}
+
 export interface EditableTranslation {
   languageCode: string;
   title: string;
@@ -182,6 +200,9 @@ export interface EditableTopic {
   /** The shape of the explanation — decides the skeleton the editor starts from (ADR-0024). */
   archetype: string;
 
+  /** "OOP II / III", or null for a standalone stop — which is most of them (ADR-0027). */
+  sequence: TopicSequence | null;
+
   /** The block flow, exactly as stored. The editor reshapes it and sends the whole thing back. */
   blocks: EditableBlock[];
   level: SkillLevel;
@@ -217,6 +238,14 @@ export interface SaveTopicRequest {
 
   category: string;
   archetype: string;
+
+  /**
+   * The chain badge, or null.
+   *
+   * Sent on every save, including as null — this is a full replacement, so an author who cleared the chain
+   * gets it cleared. Omitting the field when there is no chain would make the badge unremovable.
+   */
+  sequence: TopicSequence | null;
 
   /** The whole flow. A full replacement — a block left out of this list is deleted. */
   blocks: EditableBlock[];
@@ -260,10 +289,20 @@ export interface EditableTerm {
 }
 
 /** A theme as the studio manages it (ADR-0023). `topicCount` is why a delete may be refused. */
+/**
+ * One scope on the studio's list.
+ *
+ * The LINE travels with it because a scope only means something on its line (ADR-0027), and the key is unique
+ * per line rather than globally. Two lines may both have an "Eşzamanlılık" — B1's threads and locks, B3's
+ * isolation levels — and a list showing only the name would draw them as two identical rows with a Delete
+ * button each.
+ */
 export interface EditableScope {
   id: string;
   key: string;
   name: string;
+  lineKey: string;
+  lineName: string;
   topicCount: number;
 }
 
@@ -313,8 +352,17 @@ export const authoringApi = {
   scopes: (client: ApiClient) => client.request<Single<EditableScope[]>>(`${BASE}/subareas`),
 
   /** The key is set on create and ignored on edit — it is the identity the roadmap slice groups on. */
-  saveSubArea: (client: ApiClient, scope: { id?: string | null; key: string; name: string }) =>
-    client.request<Single<{ id: string }>>(`${BASE}/subareas`, { method: 'POST', body: scope }),
+  /**
+   * Create a scope, or rename one.
+   *
+   * `lineKey` is required on CREATE and ignored on rename — a scope does not move between lines, because its
+   * key is only unique within one (ADR-0027). The server refuses a create without it with a 422 rather than
+   * guessing a line; this signature is what makes forgetting it a compile error instead.
+   */
+  saveSubArea: (
+    client: ApiClient,
+    scope: { id?: string | null; key: string; name: string; lineKey: string },
+  ) => client.request<Single<{ id: string }>>(`${BASE}/subareas`, { method: 'POST', body: scope }),
 
   /** Rejected with a 409 (ApiError) if any topic still uses the theme — retag those first. */
   deleteSubArea: (client: ApiClient, id: string) =>

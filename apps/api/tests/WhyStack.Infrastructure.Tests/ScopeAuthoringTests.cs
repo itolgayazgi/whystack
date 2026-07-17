@@ -34,6 +34,7 @@ public sealed class ScopeAuthoringTests(DatabaseFixture fixture)
         ScopeKey: subAreaKey,
         Category: "Concept",
         Archetype: "Concept",
+        Sequence: null,
         Level: "MidLevel",
         EstimatedReadingMinutes: 8,
         SupportedVersions: [],
