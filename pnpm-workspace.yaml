@@ -13,7 +13,7 @@ packages:
 # hoisted, tsc vanished from two packages that had not been touched.
 catalog:
   typescript: ~6.0.3
-  vitest: ^3.2.7
+  vitest: ^4.1.11
 
   # Parses the educational Markdown into a token tree. We render the tree ourselves — every colour,
   # size and space has to come from packages/theme (CLAUDE.md §1.8), which no off-the-shelf renderer
