@@ -23,7 +23,7 @@ catalog:
   # markdown-it rather than a smaller one because `10` also requires callouts — notes, warnings,
   # best-practice and version boxes — and markdown-it-container gives them a real syntax (`:::warning`)
   # instead of a convention we would have to invent and then police.
-  markdown-it: ^14.1.0
+  markdown-it: ^14.3.1
   markdown-it-container: ^4.0.0
   '@types/markdown-it': ^14.1.2
 
